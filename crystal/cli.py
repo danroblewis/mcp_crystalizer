@@ -5,6 +5,10 @@
   mcp-config                    write .mcp.json for Claude Code from servers.yaml
   tools [server]                list tools of registered servers
   induce <trigger> [--name n] [--out p] [--source s]   compile recorded traces into a draft flow
+  status [--events N]           promotion lifecycle: effective state, counters, last failure per flow
+  test <flow> [--live|--offline]  run the flow's regression (cassette + live fallback); records the result
+  author <trigger> k=v ... --yes  run the agent (costs money): tries existing flows first, explores, induces a new version
+  repair [--all | <run_id>] --yes  hand queued "this didn't help" complaints to the agent (costs money); induces new versions
 """
 from __future__ import annotations
 
@@ -79,6 +83,7 @@ def cmd_tools(args):
 
 def cmd_induce(args):
     """induce <trigger> [--name flow-name] [--out path] [--source scripted|claude-code|runner]"""
+    from crystal.author import expand_flow_calls
     from crystal.induce.inducer import induce, dump_flow
     from crystal.trace.store import load_sessions
     trigger = args[0]
@@ -86,6 +91,9 @@ def cmd_induce(args):
     out = Path(args[args.index("--out") + 1]) if "--out" in args else PROJECT_ROOT / "flows" / f"{name}.yaml"
     source = args[args.index("--source") + 1] if "--source" in args else None
     sessions = [s for s in load_sessions(trigger=trigger) if not source or s.source == source]
+    # agent sessions recorded by `crystal author`/`repair` ran existing flows through the `flows` MCP server:
+    # replace each run_flow call by the calls that flow made (from its archived run record)
+    sessions = [e for e in (expand_flow_calls(s)[0] for s in sessions) if e.calls]
     if not sessions:
         print("no sessions for trigger", trigger)
         return 1
@@ -95,7 +103,66 @@ def cmd_induce(args):
     print(json.dumps(report, indent=1, default=str))
 
 
-COMMANDS = {"flows": cmd_flows, "induce": cmd_induce, "run": cmd_run, "mcp-config": cmd_mcp_config, "tools": cmd_tools}
+def cmd_status(args):
+    """status [--events N]: one row per flow with author intent, effective state, counters and last failure."""
+    from crystal.flow.lifecycle import get_lifecycle, status_table
+    from crystal.flow.runner import list_flows
+    lc = get_lifecycle()
+    rows = status_table(list_flows(), lc)
+    print(f"{'flow':34} {'author':10} {'effective':10} {'streak':>6} {'clean':>5} {'fail':>4} {'tests':>7} {'cmpl':>4}  last failure")
+    for r in rows:
+        eff = r["status"] + ("*" if r["tripped"] else "")
+        lf = (r.get("last_failure") or "")[:60]
+        if r.get("last_failure_at"):
+            lf = f"{r['last_failure_at'][:16]} {lf}"
+        print(f"{r['name']:34} {r['author_status']:10} {eff:10} {r['clean_streak']:>6} {r['clean_runs']:>5} {r['failed_runs']:>4} "
+              f"{str(r['tests_passed']) + '/' + str(r['tests_passed'] + r['tests_failed']):>7} {r['complaints']:>4}  {lf}")
+        if r["hint"]:
+            print(f"{'':34} {'':10} ^ {r['hint']}")
+    print("* = tripped below author intent (circuit breaker); state in", lc.path)
+    if "--events" in args:
+        i = args.index("--events")
+        n = int(args[i + 1]) if len(args) > i + 1 else 20
+        print()
+        for e in reversed(lc.events(limit=n)):
+            tr = f" {e['from_status']} -> {e['to_status']}" if e.get("to_status") else ""
+            ok = "ok" if e["ok"] else ("FAIL" if e["ok"] == 0 else "-")
+            print(f"{e['ts'][:19]} {e['flow']:30} {e['kind']:10} {ok:4}{tr}  {(e.get('detail') or '')[:70]}")
+
+
+def cmd_test(args):
+    """test <flow> [--live | --offline]"""
+    from crystal.replay.regression import regression
+    if not args:
+        print("usage: test <flow> [--live|--offline]")
+        return 1
+    mode = "live" if "--live" in args else ("offline" if "--offline" in args else "auto")
+    rep = regression(args[0], mode=mode)
+    for c in rep["cases"]:
+        print(f"  {'PASS' if c['passed'] else 'FAIL'} inputs={c['inputs']}" + (f"  {c['reason']}" if c["reason"] else ""))
+        if c.get("summary"):
+            print("       " + ", ".join(f"{k}={v['hits']}" + ("!" if v.get("error") else "") for k, v in c["summary"].items()))
+    if rep.get("error"):
+        print("  " + rep["error"])
+    lc = rep.get("lifecycle", {})
+    tr = f"  transition {lc['transition'][0]} -> {lc['transition'][1]}" if lc.get("transition") else ""
+    print(f"{rep['flow']}: {'PASSED' if rep['passed'] else 'FAILED'} ({mode}, cassette misses={rep['misses']})  "
+          f"effective={lc.get('status')} author={lc.get('author_status')}{tr}")
+    return 0 if rep["passed"] else 1
+
+
+def cmd_author(args):
+    from crystal.author import author_main
+    return author_main(args)
+
+
+def cmd_repair(args):
+    from crystal.author import repair_main
+    return repair_main(args)
+
+
+COMMANDS = {"flows": cmd_flows, "induce": cmd_induce, "run": cmd_run, "mcp-config": cmd_mcp_config, "tools": cmd_tools,
+            "status": cmd_status, "test": cmd_test, "author": cmd_author, "repair": cmd_repair}
 
 
 def main(argv=None):

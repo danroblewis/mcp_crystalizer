@@ -207,20 +207,73 @@ metrics; logs after the incident) that the scripted agent does not do. Lessons t
 service through the catalog gazetteer (aliases) instead of guessing a name, anchor the window on the DM's `time`, and
 put the key/class/service search of #incidents before anything time-bound.
 
-**Inducer effect of the real sessions.** Adding one real session per trigger left `unresolved` empty but added 7
-(thread) and 12 (DM) optional steps seen in 1/16 or 1/19 sessions (comments, git_show, second pagerduty, recurrence
-searches, "still happening" checks) and hardcoded-date ladders (`end: 2026-08-24T00:00:00Z`) because whole-day
-bounds are not 15-minute multiples of any anchor. The promoted YAML ignores those; they are visible in the
-`induced-*.yaml` drafts. The hook also stores real responses as content blocks (`[{type: text, text: …}]`) rather
-than parsed JSON, so extracts induced from real sessions use `from: '[*].text'`; the scripted traces store parsed
-JSON. Normalising that in the recorder is a small follow-up.
+**Inducer effect of the real sessions.** Adding one real session per trigger left `unresolved` empty but added
+optional steps seen in 1/16 or 1/19 sessions (comments, git_show, second pagerduty, recurrence searches, "still
+happening" checks). The candidate YAML ignores those; they are visible in the `induced-*.yaml` drafts. Two problems
+seen when the flows were first induced went away in the milestone-2 merge: whole-day bounds no longer become
+hardcoded-date ladders (windows can round their anchor, `round: 1d`, and timestamp arguments never ladder), and real
+responses recorded as content blocks (`[{type: text, text: …}]`) are parsed into JSON by the hook and the trace
+store, so no induced extract reads `[*].text` any more.
+
+## Milestone 2: lifecycle and agent-assisted authoring (done 2026-09-09)
+
+Merged from three parallel branches (inducer alignment + position programs; the Slack flows above; lifecycle +
+author/repair). What exists:
+
+- **Promotion lifecycle + circuit breaker** (`crystal/flow/lifecycle.py`, `state/lifecycle.sqlite`, gitignored). The
+  YAML `status` is the author's intent; the runtime keeps an effective status next to it with clean/failed counters,
+  a clean streak, test results, complaints and an event log. A step error, a required step with zero hits, a failed
+  run, a failed regression test or a UI "This didn't help" demotes one level; N consecutive clean saved runs
+  re-promote (`candidate_after: 2`, `promote_after: 5`, per flow), never above the author's intent. `crystal status`
+  prints the table; the UI shows both badges, counters, the last failure and recent events.
+- **Regression per flow** (`crystal/replay/regression.py`, `crystal test <flow>`): runs the flow's `tests:` cases
+  (or one built from the inputs' examples) through `traces/cassettes/<flow>.json`, seeded from the sessions in
+  `induced_from`; live for cassette misses unless `--offline`; the result feeds the lifecycle.
+- **Flows as tools for the agent** (`sim/servers/flows.py`, registered as `flows` in `servers.yaml`/`.mcp.json`):
+  `list_flows()` and `run_flow(name, inputs_json)` execute the interpreter and return a size-capped evidence summary.
+- **`crystal author <trigger> k=v --yes`** (`crystal/author.py`): the prompt lists the existing flows ordered by trust
+  and tells the agent to call `run_flow` FIRST and use raw tools only for gaps. The run record the agent's `run_flow`
+  produced is archived in `traces/runs/` next to the trace, the call is expanded into the flow's own calls (ladder
+  rungs and fan-out items included) and the session is induced together with every earlier session of the trigger
+  into `flows/<base>.v<N>.yaml`, never overwriting; the new version is regression-tested. `crystal induce` applies
+  the same expansion, so author sessions merge instead of contributing a `flows.run_flow` step.
+  One real run (`author jira_issue key=PAY-108`, $0.50): the agent ran the flow first, then made exactly two raw
+  calls (logs for a third trace id the flow surfaced but never queried; `pagerduty.get_incident`) and named a false
+  extract in the flow (a pod hash taken for a git sha). `flows/investigate-jira-ticket.v2.yaml` is the result.
+- **`crystal repair [--all|<run_id>] --yes`**: hands each queued complaint (flow YAML, inputs, compact evidence,
+  complaint text) to the agent, induces a version the same way and appends a `handled` record. Tested with a fake
+  driver only; never run for real yet.
+- **Inducer** (from milestone 1's follow-up): signature-based alignment, canonical step ids across sessions,
+  majority-vote windows with rounding, id-sized copies, position programs (whose ranking is a total order: two
+  boundary programs that tie on anchor, negatives, runs and |k| are separated by whether they name the span's own
+  token class, then by size and class generality, so learning no longer depends on the hash seed).
+  `crystal/trace/driver.py` is a reusable `run_agent()` used by `author`, `repair` and the standalone driver.
+
+Over the merged corpus, all three triggers induce with zero unresolved bindings (jira 17 sessions / 19 steps, thread
+16 / 17, DM 19 / 25) and every flow in `flows/` passes `crystal test` or its pytest. Real-agent spend for the
+milestone: $0.90 + $0.84 (Slack traces) + $0.50 (author) = $2.24.
+
+What remains:
+
+- The inducer treats a fan-out item that erred (the flow's git_show on the pod hash) like any other call: in the
+  17-session jira draft it splits `commit` into a 16/17 step and a 2/17 `commit_2` with a literal rung. Dropping
+  error results from the expansion, or fixing the false extract in `investigate-jira-ticket.yaml` (the sha regex
+  matches pod hashes), would remove that; the candidate flows are unaffected.
+- The three candidate flows are still hand-fixed copies of the induced drafts (`{% if %}` rung guards, `hits:`,
+  `when:`, precedence chains). Those fixes are the next things the inducer should learn to emit.
+- Flow cards (below) are not produced yet; `author` ends with prose. Content-based list selection (the runbook whose
+  title matched) still binds as `| first`. Recurrence analysis (the real thread agent's Jira/Slack searches for the
+  same error class) is not in any candidate flow.
+- The UI still lists steps in order; the dossier layout (below) is not built. The `flows` MCP server starts the
+  other sim servers as subprocesses on every `run_flow`.
+- No `--offline` guard exists for `author`/`repair` beyond `--budget` and `--yes`; each real run costs money.
 
 ## Later milestones
 
-- **M2.** Agent-assisted authoring: `crystal author` runs the agent with the flow catalog exposed as
-  tools, so it tries flows before exploring; repair command consumes the complaint queue.
-- **M3.** The other two typical flows (Slack thread, Slack DM) — done above as candidates; span synthesis from
-  traces; local SQLite FTS5 index over results for cross-run search.
+- **M2 (done 2026-09-09).** Promotion lifecycle + circuit breaker; `crystal author` / `crystal repair`; see above.
+- **M3.** Slack thread and Slack DM flows (done above as candidates) and position-program span synthesis (done)
+  remain to be exercised on real servers; still open: local SQLite FTS5 index over results for cross-run search,
+  flow cards, the dossier UI.
 - **M4.** Point at real servers: swap sim servers for the public Atlassian, Slack, Grafana,
   Chronosphere, PagerDuty servers; schema-drift check on startup; nightly live regression.
 

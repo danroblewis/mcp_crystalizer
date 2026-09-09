@@ -175,8 +175,17 @@ def _negatives(text: str, span: tuple[int, int]) -> list[tuple[int, int]]:
     return [(m.start(), m.end()) for m in _VALUE_RX.finditer(text) if (m.start(), m.end()) != (s, e)]
 
 
-def _rank_key(prog: dict, neg_hits: int) -> tuple:
-    toks = list(prog.get("left", ())) + list(prog.get("right", ()))
+# final tie-breaker between otherwise equal programs: the more general class first (IDENT covers WORD/HEX/NUM), so
+# the ranking is a total order and does not depend on set iteration order (hash seed)
+_GENERALITY = {c: i for i, c in enumerate(["IDENT", "WORD", "HEX", "NUM", "PUNCT", "WS", "BOL", "EOL", "START", "END"])}
+
+
+def _rank_key(prog: dict, neg_hits: int, side: str = "start") -> tuple:
+    """Total order over boundary programs: literal anchor > fewer negatives > fewer token runs > smaller |k| >
+    the program that names the span's own token class next to the boundary (its shape rather than the text on the
+    far side, which is a different field) > fewer tokens > more general classes > token text."""
+    left, right = list(prog.get("left", ())), list(prog.get("right", ()))
+    toks = left + right
     has_lit = any(t.startswith("lit:") for t in toks)
     runs, prev = 0, None
     for t in toks:
@@ -184,11 +193,16 @@ def _rank_key(prog: dict, neg_hits: int) -> tuple:
         if not (kind == "lit" and prev == "lit"):
             runs += 1
         prev = kind
-    return (0 if has_lit else 1, neg_hits, runs, abs(prog.get("k", 1)))
+    span_tok = (left[-1] if left else None) if side == "end" else (right[0] if right else None)
+    shape = 0 if span_tok is not None and not span_tok.startswith("lit:") else 1
+    generality = tuple(_GENERALITY.get(t, len(_GENERALITY)) for t in toks)
+    return (0 if has_lit else 1, neg_hits, runs, abs(prog.get("k", 1)), shape, len(toks), generality, tuple(toks))
 
 
-def learn_boundary(examples: list[tuple[str, int, int | None, tuple[int, int]]], negatives: list[list[int]] | None = None) -> list[dict]:
-    """examples: (text, position, after, span) per example. Returns consistent boundary programs, best first."""
+def learn_boundary(examples: list[tuple[str, int, int | None, tuple[int, int]]], negatives: list[list[int]] | None = None,
+                   side: str = "start") -> list[dict]:
+    """examples: (text, position, after, span) per example; side is "start" or "end" (which side of the boundary
+    the span lies on). Returns consistent boundary programs, best first."""
     common: dict[tuple, int] | None = None
     for text, p, after, span in examples:
         progs = _boundary_programs(text, p, after, span)
@@ -208,7 +222,7 @@ def learn_boundary(examples: list[tuple[str, int, int | None, tuple[int, int]]],
                 pos = set(boundary_positions(text, l, r))
                 neg += sum(1 for x in negs if x in pos)
         prog = {"left": list(l), "right": list(r), "k": k}
-        ranked.append((_rank_key(prog, neg), prog))
+        ranked.append((_rank_key(prog, neg, side), prog))
     ranked.sort(key=lambda x: x[0])
     return [p for _, p in ranked]
 
@@ -221,7 +235,7 @@ def learn(examples: list[tuple[str, tuple[int, int]]], max_programs: int = 1) ->
         return []
     negs = [_negatives(t, sp) for t, sp in examples]
     starts = learn_boundary([(t, s, None, (s, e)) for t, (s, e) in examples], [[a for a, _ in n] for n in negs])
-    ends = learn_boundary([(t, e, s, (s, e)) for t, (s, e) in examples], [[b for _, b in n] for n in negs])
+    ends = learn_boundary([(t, e, s, (s, e)) for t, (s, e) in examples], [[b for _, b in n] for n in negs], side="end")
     if not starts and all(s == examples[0][1][0] for _, (s, _) in examples):
         starts = [{"abs": examples[0][1][0]}]
     if not ends and all(e == examples[0][1][1] for _, (_, e) in examples):

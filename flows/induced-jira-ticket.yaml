@@ -18,25 +18,49 @@ steps:
   args:
     issue_key: '{{ inputs.key }}'
   extract:
-    error_class_list:
-      from: '[*].text'
+    error_class:
+      from: fields.summary
       using: ids:error_class
-      all: true
-    slack_channels:
-      from: '[*].text'
-      using: ids:slack_channel
-      all: true
-    service:
-      from: '[*].text'
-      using: catalog:service
-    trace_ids:
-      from: '[*].text'
-      using: ids:trace_id
-      all: true
-    iso_ts_list:
-      from: '[*].text'
+    iso_ts:
+      from: fields.description
       using: ids:iso_ts
-      all: true
+    service:
+      from: fields.summary
+      using: catalog:service
+    slack_channel:
+      from: fields.description
+      using: ids:slack_channel
+    trace_id:
+      from: fields.description
+      using: ids:trace_id
+    window:
+      from: fields.created
+      using: window
+      before: 30m
+      after: 2h
+      round: 1h
+    window_1h_7h_r1h:
+      from: fields.created
+      using: window
+      before: 1h
+      after: 7h
+      round: 1h
+    window_7d_r1d:
+      from: fields.created
+      using: window
+      before: 7d
+      round: 1d
+    window_0s_1d_r1d:
+      from: fields.created
+      using: window
+      before: 0s
+      after: 1d
+      round: 1d
+    window_14d_r1d:
+      from: fields.created
+      using: window
+      before: 14d
+      round: 1d
 - id: jira_get_issue_comments
   title: jira get issue comments
   tool: jira.jira_get_issue_comments
@@ -44,7 +68,7 @@ steps:
     issue_key: '{{ inputs.key }}'
   extract:
     sha_shorts:
-      from: '[*].text'
+      from: comments[*].body
       using: ids:sha_short
       all: true
 - id: list_services
@@ -56,56 +80,53 @@ steps:
   tool: slack.conversations_search_messages
   args:
     limit: 20
-    search_query: '{{ issue.error_class_list | first }} in:{{ issue.slack_channels | first }}'
+    search_query: '{{ issue.error_class }} in:{{ issue.slack_channel }}'
   extract:
     slack_channel_ids:
-      from: '[*].text'
-      using: ids:slack_channel_id
+      from: messages.matches[*].channel.id
       all: true
     slack_ts_list:
-      from: '[*].text'
-      using: ids:slack_ts
+      from: messages.matches[*].thread_ts
       all: true
 - id: code
   title: code
   tool: code.grep
   args:
     context: 3
-    pattern: '{{ issue.error_class_list | first }}'
+    pattern: '{{ issue.error_class }}'
+  extract:
+    files:
+      from: matches[*].file
+      all: true
 - id: confluence
   title: confluence
   tool: confluence.confluence_search
   args:
     query: title ~ "{{ issue.service }} runbook"
+  extract:
+    ids:
+      from: results[*].id
+      all: true
 - id: metrics
   title: metrics
   tool: chronosphere.query_prometheus_range
   args:
-    end: '2026-08-27T15:00:00Z'
+    end: '{{ issue.window.end }}'
     query: sum(rate(http_requests_total{ {{ catalog.service[issue.service].prom_selector }},status=~"5.."}[5m])) / sum(rate(http_requests_total{
       {{ catalog.service[issue.service].prom_selector }} }[5m]))
-    start: '2026-08-27T12:30:00Z'
+    start: '{{ issue.window.start }}'
     step_seconds: 300
-- id: logs
-  title: logs
-  tool: logz.search_logs
-  args:
-    from_time: '2026-08-27T12:00:00Z'
-    query: trace_id:{{ issue.trace_ids | first }}
-    size: 100
-    to_time: '2026-08-27T20:00:00Z'
 - id: logs_2
   title: logs 2
   tool: logz.search_logs
   args:
-    from_time: '2026-08-27T12:00:00Z'
-    query: '"{{ issue.error_class_list | first }}" AND service:{{ issue.service }}'
+    from_time: '{{ issue.window_1h_7h_r1h.start }}'
+    query: '"{{ issue.error_class }}" AND service:{{ issue.service }}'
     size: 100
-    to_time: '2026-08-27T20:00:00Z'
+    to_time: '{{ issue.window_1h_7h_r1h.end }}'
   extract:
     trace_ids:
-      from: '[*].text'
-      using: ids:trace_id
+      from: hits[*]._source.trace_id
       all: true
 - id: commits
   title: commits
@@ -113,8 +134,8 @@ steps:
   args:
     max_count: 20
     path: services/{{ issue.service }}
-    since: '2026-08-20T00:00:00Z'
-    until: '{{ issue.iso_ts_list | first }}'
+    since: '{{ issue.window_7d_r1d.start }}'
+    until: '{{ issue.iso_ts }}'
 - id: commit
   title: commit
   tool: git.git_show
@@ -125,13 +146,25 @@ steps:
   tool: pagerduty.list_incidents
   args:
     service_ids: '{{ catalog.service[issue.service].pagerduty_service_id }}'
-    since: '2026-08-27T00:00:00Z'
-    until: '2026-08-28T00:00:00Z'
+    since: '{{ issue.window_0s_1d_r1d.start }}'
+    until: '{{ issue.window_0s_1d_r1d.end }}'
   extract:
-    pd_incident_ids:
-      from: '[*].text'
-      using: ids:pd_incident_id
+    iso_ts_list:
+      from: incidents[*].created_at
       all: true
+    pd_incident_ids:
+      from: incidents[*].id
+      all: true
+- id: logs
+  title: logs
+  tool: logz.search_logs
+  args:
+    from_time: '{{ issue.window_1h_7h_r1h.start }}'
+    query: trace_id:{{ item }}
+    size: 100
+    to_time: '{{ issue.window_1h_7h_r1h.end }}'
+  forEach: ([issue.trace_id] + logs_2.trace_ids) | unique | list
+  max_items: 4
 - id: thread
   title: thread
   tool: slack.conversations_replies
@@ -142,30 +175,20 @@ steps:
   title: runbook
   tool: confluence.confluence_get_page
   args:
-    page_id: 20014
+    page_id: '{{ confluence.ids | first }}'
 - id: owners
   title: owners
   tool: code.codeowners
   args:
-    path: '{{ catalog.service[issue.service].repo_path }}/handler.py'
+    path: '{{ code.files | first }}'
 - id: commits_2
   title: commits 2
   tool: git.git_log
   args:
     max_count: 20
     path: '{{ catalog.service[issue.service].repo_path }}'
-    since: '2026-08-13T00:00:00Z'
-    until: '{{ issue.iso_ts_list | first }}'
-- id: logs_3
-  title: logs 3
-  tool: logz.search_logs
-  args:
-    from_time: '2026-08-27T12:00:00Z'
-    query: trace_id:{{ item }}
-    size: 100
-    to_time: '2026-08-27T20:00:00Z'
-  forEach: logs_2.trace_ids | unique | list
-  max_items: 4
+    since: '{{ issue.window_14d_r1d.start }}'
+    until: '{{ pagerduty.iso_ts_list | first }}'
 - id: pagerduty_incident
   title: pagerduty incident
   tool: pagerduty.get_incident

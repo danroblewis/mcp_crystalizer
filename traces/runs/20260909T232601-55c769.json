@@ -1,0 +1,1555 @@
+{
+ "run_id": "20260909T232601-55c769",
+ "flow": "investigate-jira-ticket",
+ "flow_path": "/Users/danroblewis/mcp_explorer/.claude/worktrees/wf_ce8bbf8e-001-3/flows/investigate-jira-ticket.yaml",
+ "inputs": {
+  "key": "PAY-108"
+ },
+ "started": "2026-09-09T23:26:01.511026+00:00",
+ "steps": [
+  {
+   "id": "issue",
+   "title": "Jira ticket",
+   "tool": "jira.jira_get_issue",
+   "args": {
+    "issue_key": "PAY-108"
+   },
+   "result": {
+    "key": "PAY-108",
+    "id": "98905",
+    "fields": {
+     "summary": "payments-api: elevated 5xx after PaymentGatewayTimeout",
+     "status": {
+      "name": "In Progress"
+     },
+     "issuetype": {
+      "name": "Bug"
+     },
+     "priority": {
+      "name": "P2"
+     },
+     "project": {
+      "key": "PAY"
+     },
+     "components": [
+      {
+       "name": "payments-api"
+      }
+     ],
+     "labels": [
+      "incident",
+      "payments"
+     ],
+     "reporter": {
+      "displayName": "heidi"
+     },
+     "assignee": {
+      "displayName": "bob"
+     },
+     "created": "2026-09-02T17:39:00Z",
+     "updated": "2026-09-02T23:27:00Z",
+     "description": "Alert fired on payments-api at 2026-09-02T17:27:00Z.\n\nError: PaymentGatewayTimeout: gateway did not respond within 30s\nSample trace: trace_id=6e29aec28930b46ce15d68e5691ecaaa\nAffected pod: payments-api-99988c8b3-57e26\n\nCustomers saw failures in charge(). Slack discussion in #incidents. Runbook: payments-api runbook."
+    }
+   },
+   "error": null,
+   "duration_ms": 715.1,
+   "attempts": [],
+   "extracts": {
+    "summary": "payments-api: elevated 5xx after PaymentGatewayTimeout",
+    "created": "2026-09-02T17:39:00Z",
+    "service": "payments-api",
+    "service_in_text": "payments-api",
+    "error_sig": "PaymentGatewayTimeout: gateway did not respond within 30s",
+    "error_class": "PaymentGatewayTimeout",
+    "trace_ids": [
+     "6e29aec28930b46ce15d68e5691ecaaa"
+    ],
+    "pods": [
+     "payments-api-99988c8b3-57e26"
+    ],
+    "window": {
+     "start": "2026-09-02T16:39:00Z",
+     "end": "2026-09-02T23:39:00Z",
+     "anchor": "2026-09-02T17:39:00Z",
+     "start_date": "2026-09-02",
+     "end_date": "2026-09-02"
+    },
+    "commit_window": {
+     "start": "2026-08-29T17:39:00Z",
+     "end": "2026-09-03T17:39:00Z",
+     "anchor": "2026-09-02T17:39:00Z",
+     "start_date": "2026-08-29",
+     "end_date": "2026-09-03"
+    }
+   },
+   "hits": 1
+  },
+  {
+   "id": "slack",
+   "title": "Slack discussion",
+   "tool": "slack.conversations_search_messages",
+   "args": {
+    "limit": 20,
+    "search_query": "\"PaymentGatewayTimeout: gateway did not respond within 30s\" in:#incidents after:2026-09-02 before:2026-09-02"
+   },
+   "result": {
+    "total": 1,
+    "page": 1,
+    "messages": {
+     "matches": [
+      {
+       "ts": "1788370620.000081",
+       "thread_ts": "1788370260.000008",
+       "channel": {
+        "id": "C542575C5",
+        "name": "incidents"
+       },
+       "user": "U48181ACD",
+       "username": "bob",
+       "text": "Seeing `PaymentGatewayTimeout: gateway did not respond within 30s` in logs, e.g. trace_id=6e29aec28930b46ce15d68e5691ecaaa on payments-api-99988c8b3-57e26",
+       "permalink": "https://sim.slack.com/archives/C542575C5/p1788370620000081",
+       "reply_count": 0
+      }
+     ]
+    },
+    "next_cursor": ""
+   },
+   "error": null,
+   "duration_ms": 1780.8,
+   "attempts": [
+    {
+     "rung": 0,
+     "value": "\"PaymentGatewayTimeout: gateway did not respond within 30s\" in:#incidents after:2026-09-02 before:2026-09-02",
+     "hits": 1,
+     "error": null
+    }
+   ],
+   "extracts": {
+    "channel_id": "C542575C5",
+    "thread_ts": [
+     "1788370260.000008"
+    ],
+    "trace_ids": [
+     "6e29aec28930b46ce15d68e5691ecaaa"
+    ]
+   },
+   "hits": 1
+  },
+  {
+   "id": "thread",
+   "title": "Slack thread replies",
+   "tool": "slack.conversations_replies",
+   "items": [
+    {
+     "tool": "slack.conversations_replies",
+     "args": {
+      "channel_id": "C542575C5",
+      "thread_ts": "1788370260.000008",
+      "limit": 50
+     },
+     "result": {
+      "messages": [
+       {
+        "ts": "1788370260.000080",
+        "thread_ts": "1788370260.000008",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "U48181ACD",
+        "username": "bob",
+        "text": "Pager went off for payments-api: PaymentGatewayTimeout. Looking now. Ticket PAY-108 incoming.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1788370260000080",
+        "reply_count": 4
+       },
+       {
+        "ts": "1788370620.000081",
+        "thread_ts": "1788370260.000008",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "U48181ACD",
+        "username": "bob",
+        "text": "Seeing `PaymentGatewayTimeout: gateway did not respond within 30s` in logs, e.g. trace_id=6e29aec28930b46ce15d68e5691ecaaa on payments-api-99988c8b3-57e26",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1788370620000081",
+        "reply_count": 0
+       },
+       {
+        "ts": "1788370800.000082",
+        "thread_ts": "1788370260.000008",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "U0FEBC363",
+        "username": "heidi",
+        "text": "Also trace_id=fc9cea1c190eb876e7e40ecadb7879a3 from a customer report, same error.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1788370800000082",
+        "reply_count": 0
+       },
+       {
+        "ts": "1788371460.000083",
+        "thread_ts": "1788370260.000008",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "U48181ACD",
+        "username": "bob",
+        "text": "Suspect 2e437f3dde touched charge() yesterday. Rolling back.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1788371460000083",
+        "reply_count": 0
+       },
+       {
+        "ts": "1788373560.000084",
+        "thread_ts": "1788370260.000008",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "U48181ACD",
+        "username": "bob",
+        "text": "Rollback done, error rate back to baseline. Will write up in PAY-108.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1788373560000084",
+        "reply_count": 0
+       }
+      ]
+     },
+     "error": null,
+     "duration_ms": 5.9,
+     "attempts": [],
+     "extracts": {
+      "trace_ids": [
+       "6e29aec28930b46ce15d68e5691ecaaa",
+       "fc9cea1c190eb876e7e40ecadb7879a3"
+      ],
+      "shas": [
+       "99988c8b3",
+       "2e437f3dde"
+      ],
+      "people": [
+       "bob",
+       "bob",
+       "heidi",
+       "bob",
+       "bob"
+      ]
+     },
+     "hits": 5,
+     "item": "1788370260.000008"
+    }
+   ],
+   "hits": 5
+  },
+  {
+   "id": "code",
+   "title": "Code that raises or logs the error",
+   "tool": "code.grep",
+   "args": {
+    "pattern": "PaymentGatewayTimeout",
+    "glob": "**/*.py",
+    "context": 2
+   },
+   "result": {
+    "matches": [
+     {
+      "file": "services/payments_api/handler.py",
+      "line": 7,
+      "text": "class PaymentGatewayTimeout(Exception):",
+      "context": [
+       "",
+       "",
+       "class PaymentGatewayTimeout(Exception):",
+       "    pass",
+       ""
+      ]
+     },
+     {
+      "file": "services/payments_api/handler.py",
+      "line": 16,
+      "text": "        log.error(\"PaymentGatewayTimeout: gateway did not respond within 30s (account=%s) trace_id=%s pod=%s fn=charge\", request.account, request.trace_id, request.pod)",
+      "context": [
+       "        return _do_charge(request)",
+       "    except Exception as exc:  # noqa: BLE001",
+       "        log.error(\"PaymentGatewayTimeout: gateway did not respond within 30s (account=%s) trace_id=%s pod=%s fn=charge\", request.account, request.trace_id, request.pod)",
+       "        raise PaymentGatewayTimeout(str(exc)) from exc",
+       ""
+      ]
+     },
+     {
+      "file": "services/payments_api/handler.py",
+      "line": 17,
+      "text": "        raise PaymentGatewayTimeout(str(exc)) from exc",
+      "context": [
+       "    except Exception as exc:  # noqa: BLE001",
+       "        log.error(\"PaymentGatewayTimeout: gateway did not respond within 30s (account=%s) trace_id=%s pod=%s fn=charge\", request.account, request.trace_id, request.pod)",
+       "        raise PaymentGatewayTimeout(str(exc)) from exc",
+       "",
+       ""
+      ]
+     }
+    ],
+    "truncated": false
+   },
+   "error": null,
+   "duration_ms": 1573.3,
+   "attempts": [],
+   "extracts": {
+    "files": [
+     "services/payments_api/handler.py",
+     "services/payments_api/handler.py",
+     "services/payments_api/handler.py"
+    ]
+   },
+   "hits": 3
+  },
+  {
+   "id": "owners",
+   "title": "Owning team (CODEOWNERS)",
+   "tool": "code.codeowners",
+   "items": [
+    {
+     "tool": "code.codeowners",
+     "args": {
+      "path": "services/payments_api/handler.py"
+     },
+     "result": {
+      "path": "services/payments_api/handler.py",
+      "owners": [
+       "@payments"
+      ]
+     },
+     "error": null,
+     "duration_ms": 5.2,
+     "attempts": [],
+     "extracts": {
+      "teams": [
+       "@payments"
+      ]
+     },
+     "hits": 1,
+     "item": "services/payments_api/handler.py"
+    }
+   ],
+   "hits": 1
+  },
+  {
+   "id": "confluence",
+   "title": "Runbook / wiki",
+   "tool": "confluence.confluence_search",
+   "args": {
+    "limit": 5,
+    "query": "text ~ \"PaymentGatewayTimeout\" AND space = PAYMENTS"
+   },
+   "result": {
+    "total": 1,
+    "results": [
+     {
+      "id": "20000",
+      "title": "payments-api runbook",
+      "space": {
+       "key": "PAYMENTS"
+      },
+      "labels": [
+       "runbook",
+       "payments-api"
+      ],
+      "created": "2026-06-04T09:00:00Z",
+      "last_modified": "2026-08-06T09:00:00Z",
+      "url": "https://sim.atlassian.net/wiki/pages/20000",
+      "excerpt": "h1. payments-api runbook\n\nOwned by team payments (alice, bob). Alerts go to #payments-alerts; incidents are discussed in #incidents.\n\nh2. Known failure modes\n\nh3. PaymentGatewayTimeout\nSymptom: log lines containing 'PaymentGatewayTimeout: g"
+     }
+    ]
+   },
+   "error": null,
+   "duration_ms": 1818.5,
+   "attempts": [
+    {
+     "rung": 0,
+     "value": "text ~ \"PaymentGatewayTimeout\" AND space = PAYMENTS",
+     "hits": 1,
+     "error": null
+    }
+   ],
+   "extracts": {
+    "page_ids": [
+     "20000"
+    ]
+   },
+   "hits": 1
+  },
+  {
+   "id": "runbook",
+   "title": "Runbook page",
+   "tool": "confluence.confluence_get_page",
+   "items": [
+    {
+     "tool": "confluence.confluence_get_page",
+     "args": {
+      "page_id": "20000"
+     },
+     "result": {
+      "id": "20000",
+      "title": "payments-api runbook",
+      "space": {
+       "key": "PAYMENTS"
+      },
+      "labels": [
+       "runbook",
+       "payments-api"
+      ],
+      "created": "2026-06-04T09:00:00Z",
+      "last_modified": "2026-08-06T09:00:00Z",
+      "url": "https://sim.atlassian.net/wiki/pages/20000",
+      "body": "h1. payments-api runbook\n\nOwned by team payments (alice, bob). Alerts go to #payments-alerts; incidents are discussed in #incidents.\n\nh2. Known failure modes\n\nh3. PaymentGatewayTimeout\nSymptom: log lines containing 'PaymentGatewayTimeout: gateway did not respond within 30s' from charge().\nCheck: error rate panel for service=payments-api; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of payments-api; if persists, page payments on-call.\n\nh3. LedgerMismatch\nSymptom: log lines containing 'LedgerMismatch: ledger balance mismatch for account' from reconcile().\nCheck: error rate panel for service=payments-api; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of payments-api; if persists, page payments on-call.\n\nh2. Dashboards\nChronosphere: rate(http_requests_total{service=\"payments-api\",code=~\"5..\"}[5m])\n"
+     },
+     "error": null,
+     "duration_ms": 4.0,
+     "attempts": [],
+     "extracts": {
+      "remediation": [
+       "roll back the latest deploy of payments-api; if persists, page payments on-call."
+      ]
+     },
+     "hits": 2,
+     "item": "20000"
+    }
+   ],
+   "hits": 2
+  },
+  {
+   "id": "metrics",
+   "title": "Error rate around the incident",
+   "tool": "chronosphere.query_prometheus_range",
+   "args": {
+    "query": "rate(http_requests_total{service=\"payments-api\",code=~\"5..\"}[5m])",
+    "start": "2026-09-02T16:39:00Z",
+    "end": "2026-09-02T23:39:00Z",
+    "step_seconds": 300
+   },
+   "result": {
+    "status": "success",
+    "data": {
+     "resultType": "matrix",
+     "result": [
+      {
+       "metric": {
+        "__name__": "http_requests_total:error_rate",
+        "service": "payments-api",
+        "env": "prod"
+       },
+       "values": [
+        [
+         1788367140,
+         "0.400"
+        ],
+        [
+         1788367440,
+         "0.400"
+        ],
+        [
+         1788367740,
+         "0.400"
+        ],
+        [
+         1788368040,
+         "0.400"
+        ],
+        [
+         1788368340,
+         "0.400"
+        ],
+        [
+         1788368640,
+         "0.400"
+        ],
+        [
+         1788368940,
+         "0.400"
+        ],
+        [
+         1788369240,
+         "0.400"
+        ],
+        [
+         1788369540,
+         "0.400"
+        ],
+        [
+         1788369840,
+         "18.500"
+        ],
+        [
+         1788370140,
+         "18.500"
+        ],
+        [
+         1788370440,
+         "18.500"
+        ],
+        [
+         1788370740,
+         "18.500"
+        ],
+        [
+         1788371040,
+         "18.500"
+        ],
+        [
+         1788371340,
+         "18.500"
+        ],
+        [
+         1788371640,
+         "18.500"
+        ],
+        [
+         1788371940,
+         "18.500"
+        ],
+        [
+         1788372240,
+         "18.500"
+        ],
+        [
+         1788372540,
+         "18.500"
+        ],
+        [
+         1788372840,
+         "18.500"
+        ],
+        [
+         1788373140,
+         "0.400"
+        ],
+        [
+         1788373440,
+         "0.400"
+        ],
+        [
+         1788373740,
+         "0.400"
+        ],
+        [
+         1788374040,
+         "0.400"
+        ],
+        [
+         1788374340,
+         "0.400"
+        ],
+        [
+         1788374640,
+         "0.400"
+        ],
+        [
+         1788374940,
+         "0.400"
+        ],
+        [
+         1788375240,
+         "0.400"
+        ],
+        [
+         1788375540,
+         "0.400"
+        ],
+        [
+         1788375840,
+         "0.400"
+        ],
+        [
+         1788376140,
+         "0.400"
+        ],
+        [
+         1788376440,
+         "0.400"
+        ],
+        [
+         1788376740,
+         "0.400"
+        ],
+        [
+         1788377040,
+         "0.400"
+        ],
+        [
+         1788377340,
+         "0.400"
+        ],
+        [
+         1788377640,
+         "0.400"
+        ],
+        [
+         1788377940,
+         "0.400"
+        ],
+        [
+         1788378240,
+         "0.400"
+        ],
+        [
+         1788378540,
+         "0.400"
+        ],
+        [
+         1788378840,
+         "0.400"
+        ],
+        [
+         1788379140,
+         "0.400"
+        ],
+        [
+         1788379440,
+         "0.400"
+        ],
+        [
+         1788379740,
+         "0.400"
+        ],
+        [
+         1788380040,
+         "0.400"
+        ],
+        [
+         1788380340,
+         "0.400"
+        ],
+        [
+         1788380640,
+         "0.400"
+        ],
+        [
+         1788380940,
+         "0.400"
+        ],
+        [
+         1788381240,
+         "0.400"
+        ],
+        [
+         1788381540,
+         "0.400"
+        ],
+        [
+         1788381840,
+         "0.400"
+        ],
+        [
+         1788382140,
+         "0.400"
+        ],
+        [
+         1788382440,
+         "0.400"
+        ],
+        [
+         1788382740,
+         "0.400"
+        ],
+        [
+         1788383040,
+         "0.400"
+        ],
+        [
+         1788383340,
+         "0.400"
+        ],
+        [
+         1788383640,
+         "0.400"
+        ],
+        [
+         1788383940,
+         "0.400"
+        ],
+        [
+         1788384240,
+         "0.400"
+        ],
+        [
+         1788384540,
+         "0.400"
+        ],
+        [
+         1788384840,
+         "0.400"
+        ],
+        [
+         1788385140,
+         "0.400"
+        ],
+        [
+         1788385440,
+         "0.400"
+        ],
+        [
+         1788385740,
+         "0.400"
+        ],
+        [
+         1788386040,
+         "0.400"
+        ],
+        [
+         1788386340,
+         "0.400"
+        ],
+        [
+         1788386640,
+         "0.400"
+        ],
+        [
+         1788386940,
+         "0.400"
+        ],
+        [
+         1788387240,
+         "0.400"
+        ],
+        [
+         1788387540,
+         "0.400"
+        ],
+        [
+         1788387840,
+         "0.400"
+        ],
+        [
+         1788388140,
+         "0.400"
+        ],
+        [
+         1788388440,
+         "0.400"
+        ],
+        [
+         1788388740,
+         "0.400"
+        ],
+        [
+         1788389040,
+         "0.400"
+        ],
+        [
+         1788389340,
+         "0.400"
+        ],
+        [
+         1788389640,
+         "0.400"
+        ],
+        [
+         1788389940,
+         "0.400"
+        ],
+        [
+         1788390240,
+         "0.400"
+        ],
+        [
+         1788390540,
+         "0.400"
+        ],
+        [
+         1788390840,
+         "0.400"
+        ],
+        [
+         1788391140,
+         "0.400"
+        ],
+        [
+         1788391440,
+         "0.400"
+        ],
+        [
+         1788391740,
+         "0.400"
+        ],
+        [
+         1788392040,
+         "0.400"
+        ],
+        [
+         1788392340,
+         "0.400"
+        ]
+       ]
+      }
+     ]
+    }
+   },
+   "error": null,
+   "duration_ms": 1722.0,
+   "attempts": [],
+   "extracts": {},
+   "hits": 1
+  },
+  {
+   "id": "logs",
+   "title": "Logs per trace id",
+   "tool": "logz.search_logs",
+   "items": [
+    {
+     "tool": "logz.search_logs",
+     "args": {
+      "query": "trace_id:6e29aec28930b46ce15d68e5691ecaaa",
+      "from_time": "2026-09-02T16:39:00Z",
+      "to_time": "2026-09-02T23:39:00Z",
+      "size": 20
+     },
+     "result": {
+      "total": 8,
+      "range": {
+       "from": "2026-09-02T16:39:00+00:00",
+       "to": "2026-09-02T23:39:00+00:00"
+      },
+      "hits": [
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T18:04:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+         "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_7b7e9f) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:58:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+         "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_07d3a9) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:52:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+         "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1e6f14) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:46:00Z",
+         "level": "WARN",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+         "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_878eeb) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:40:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+         "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5c7dd5) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:34:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+         "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1629d4) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:28:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+         "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_98ab12) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:22:00Z",
+         "level": "WARN",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+         "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_532fca) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+        }
+       }
+      ]
+     },
+     "error": null,
+     "duration_ms": 879.4,
+     "attempts": [],
+     "extracts": {
+      "pods": [
+       "payments-api-99988c8b3-5758c",
+       "payments-api-99988c8b3-57e26",
+       "payments-api-99988c8b3-5758c",
+       "payments-api-99988c8b3-57e26",
+       "payments-api-99988c8b3-5758c",
+       "payments-api-99988c8b3-57e26",
+       "payments-api-99988c8b3-5758c",
+       "payments-api-99988c8b3-57e26"
+      ],
+      "lines": [
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_7b7e9f) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_07d3a9) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1e6f14) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_878eeb) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5c7dd5) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1629d4) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_98ab12) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_532fca) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+      ]
+     },
+     "hits": 8,
+     "item": "6e29aec28930b46ce15d68e5691ecaaa"
+    },
+    {
+     "tool": "logz.search_logs",
+     "args": {
+      "query": "trace_id:fc9cea1c190eb876e7e40ecadb7879a3",
+      "from_time": "2026-09-02T16:39:00Z",
+      "to_time": "2026-09-02T23:39:00Z",
+      "size": 20
+     },
+     "result": {
+      "total": 8,
+      "range": {
+       "from": "2026-09-02T16:39:00+00:00",
+       "to": "2026-09-02T23:39:00+00:00"
+      },
+      "hits": [
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T18:06:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+         "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_afe171) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T18:00:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+         "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e0037c) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:54:00Z",
+         "level": "WARN",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+         "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5b46bd) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:48:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+         "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_770783) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:42:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+         "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e4fa92) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:36:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+         "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_bf3896) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:30:00Z",
+         "level": "WARN",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+         "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_990959) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-09-02T17:24:00Z",
+         "level": "ERROR",
+         "service": "payments-api",
+         "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+         "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+         "logger": "services.payments_api.handler",
+         "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_564ba6) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+        }
+       }
+      ]
+     },
+     "error": null,
+     "duration_ms": 3.8,
+     "attempts": [],
+     "extracts": {
+      "pods": [
+       "payments-api-99988c8b3-57e26",
+       "payments-api-99988c8b3-5758c",
+       "payments-api-99988c8b3-57e26",
+       "payments-api-99988c8b3-5758c",
+       "payments-api-99988c8b3-57e26",
+       "payments-api-99988c8b3-5758c",
+       "payments-api-99988c8b3-57e26",
+       "payments-api-99988c8b3-5758c"
+      ],
+      "lines": [
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_afe171) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e0037c) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5b46bd) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_770783) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e4fa92) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_bf3896) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_990959) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge",
+       "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_564ba6) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+      ]
+     },
+     "hits": 8,
+     "item": "fc9cea1c190eb876e7e40ecadb7879a3"
+    }
+   ],
+   "hits": 16
+  },
+  {
+   "id": "logs_by_error",
+   "title": "All log lines with this error in the window",
+   "tool": "logz.search_logs",
+   "args": {
+    "from_time": "2026-09-02T16:39:00Z",
+    "to_time": "2026-09-02T23:39:00Z",
+    "size": 50,
+    "query": "\"PaymentGatewayTimeout: gateway did not respond within 30s\" AND service:payments-api"
+   },
+   "result": {
+    "total": 24,
+    "range": {
+     "from": "2026-09-02T16:39:00+00:00",
+     "to": "2026-09-02T23:39:00+00:00"
+    },
+    "hits": [
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T18:08:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "352191ca10a2c355f391251b954cf332",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_67bf1a) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T18:06:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_afe171) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T18:04:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_7b7e9f) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T18:02:00Z",
+       "level": "WARN",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "352191ca10a2c355f391251b954cf332",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_fef95e) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T18:00:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e0037c) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:58:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_07d3a9) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:56:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "352191ca10a2c355f391251b954cf332",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_25d0db) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:54:00Z",
+       "level": "WARN",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5b46bd) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:52:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1e6f14) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:50:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "352191ca10a2c355f391251b954cf332",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5ae134) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:48:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_770783) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:46:00Z",
+       "level": "WARN",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_878eeb) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:44:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "352191ca10a2c355f391251b954cf332",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_ceabe0) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:42:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e4fa92) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:40:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5c7dd5) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:38:00Z",
+       "level": "WARN",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "352191ca10a2c355f391251b954cf332",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_b65616) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:36:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_bf3896) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:34:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1629d4) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:32:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "352191ca10a2c355f391251b954cf332",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_ae2f30) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:30:00Z",
+       "level": "WARN",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_990959) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:28:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_98ab12) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:26:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "352191ca10a2c355f391251b954cf332",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1944a0) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:24:00Z",
+       "level": "ERROR",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+       "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_564ba6) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-09-02T17:22:00Z",
+       "level": "WARN",
+       "service": "payments-api",
+       "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+       "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+       "logger": "services.payments_api.handler",
+       "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_532fca) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+      }
+     }
+    ]
+   },
+   "error": null,
+   "duration_ms": 3.5,
+   "attempts": [
+    {
+     "rung": 0,
+     "value": "\"PaymentGatewayTimeout: gateway did not respond within 30s\" AND service:payments-api",
+     "hits": 24,
+     "error": null
+    }
+   ],
+   "extracts": {},
+   "hits": 24
+  },
+  {
+   "id": "commits",
+   "title": "Commits touching the service just before",
+   "tool": "git.git_log",
+   "args": {
+    "path": "services/payments_api",
+    "since": "2026-08-29T17:39:00Z",
+    "until": "2026-09-03T17:39:00Z",
+    "max_count": 10
+   },
+   "result": {
+    "commits": [
+     {
+      "sha": "2e437f3dde3d9a26af62bdec9198cf6599946e24",
+      "author": "bob",
+      "date": "2026-09-01T17:27:00+00:00",
+      "subject": "payments-api: tighten validation in charge"
+     }
+    ]
+   },
+   "error": null,
+   "duration_ms": 957.8,
+   "attempts": [],
+   "extracts": {
+    "shas": [
+     "2e437f3dde3d9a26af62bdec9198cf6599946e24"
+    ]
+   },
+   "hits": 1
+  },
+  {
+   "id": "suspect_commit",
+   "title": "Commit named in Slack",
+   "tool": "git.git_show",
+   "items": [
+    {
+     "tool": "git.git_show",
+     "args": {
+      "sha": "99988c8b3"
+     },
+     "result": "error: fatal: ambiguous argument '99988c8b3': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'",
+     "error": null,
+     "duration_ms": 41.8,
+     "attempts": [],
+     "extracts": {},
+     "hits": 1,
+     "item": "99988c8b3"
+    },
+    {
+     "tool": "git.git_show",
+     "args": {
+      "sha": "2e437f3dde"
+     },
+     "result": "commit 2e437f3dde3d9a26af62bdec9198cf6599946e24\nAuthor: bob <bob@example.com>\nDate:   2026-09-01T17:27:00+00:00\n\n    payments-api: tighten validation in charge\n---\n services/payments_api/handler.py | 2 ++\n 1 file changed, 2 insertions(+)\n\ndiff --git a/services/payments_api/handler.py b/services/payments_api/handler.py\nindex 2f5a72a..4411faf 100644\n--- a/services/payments_api/handler.py\n+++ b/services/payments_api/handler.py\n@@ -45,3 +45,5 @@ def _do_reconcile(request):\n     raise NotImplementedError\n \n # touched for INC-005\n+\n+# touched for INC-009\n",
+     "error": null,
+     "duration_ms": 37.2,
+     "attempts": [],
+     "extracts": {},
+     "hits": 1,
+     "item": "2e437f3dde"
+    }
+   ],
+   "hits": 2
+  },
+  {
+   "id": "pagerduty",
+   "title": "PagerDuty incident",
+   "tool": "pagerduty.list_incidents",
+   "args": {
+    "service_ids": "PXYZ01",
+    "since": "2026-09-02T16:39:00Z",
+    "until": "2026-09-02T23:39:00Z",
+    "limit": 5
+   },
+   "result": {
+    "incidents": [
+     {
+      "id": "Q8373D4D012CC8",
+      "incident_number": 4008,
+      "title": "[payments-api] PaymentGatewayTimeout rate above threshold",
+      "status": "acknowledged",
+      "urgency": "high",
+      "created_at": "2026-09-02T17:27:00Z",
+      "resolved_at": null,
+      "service": {
+       "id": "PXYZ01",
+       "summary": "payments-api"
+      },
+      "assignments": [
+       {
+        "assignee": {
+         "summary": "bob"
+        }
+       }
+      ],
+      "teams": [
+       {
+        "summary": "payments"
+       }
+      ],
+      "html_url": "https://sim.pagerduty.com/incidents/Q8373D4D012CC8",
+      "body": {
+       "details": "PaymentGatewayTimeout: gateway did not respond within 30s\ntrace_id=6e29aec28930b46ce15d68e5691ecaaa\npod=payments-api-99988c8b3-57e26"
+      }
+     }
+    ],
+    "total": 1
+   },
+   "error": null,
+   "duration_ms": 863.2,
+   "attempts": [],
+   "extracts": {},
+   "hits": 1
+  }
+ ],
+ "status": "ok",
+ "finished": "2026-09-09T23:26:12.948537+00:00",
+ "summary": {
+  "issue": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "slack": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "thread": {
+   "hits": 5,
+   "error": null,
+   "skipped": null
+  },
+  "code": {
+   "hits": 3,
+   "error": null,
+   "skipped": null
+  },
+  "owners": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "confluence": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "runbook": {
+   "hits": 2,
+   "error": null,
+   "skipped": null
+  },
+  "metrics": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "logs": {
+   "hits": 16,
+   "error": null,
+   "skipped": null
+  },
+  "logs_by_error": {
+   "hits": 24,
+   "error": null,
+   "skipped": null
+  },
+  "commits": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "suspect_commit": {
+   "hits": 2,
+   "error": null,
+   "skipped": null
+  },
+  "pagerduty": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  }
+ },
+ "lifecycle": {
+  "outcome": "clean",
+  "reason": null,
+  "status": "candidate",
+  "author_status": "candidate",
+  "transition": null
+ }
+}

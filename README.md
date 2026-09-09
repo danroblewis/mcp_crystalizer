@@ -11,15 +11,17 @@ Design: `docs/PLAN.md`. Research behind it: `docs/research/`.
 
 | Path | What |
 |---|---|
-| `sim/` | Synthetic corporate world (`sim/world.py`) and simulated MCP servers for jira, slack, confluence, chronosphere, logz, pagerduty, git, code |
-| `crystal/trace/` | Trace recorder: Claude Code `PostToolUse` hook, scripted agent, trace store |
+| `sim/` | Synthetic corporate world (`sim/world.py`) and simulated MCP servers for jira, slack, confluence, chronosphere, logz, pagerduty, git, code; `sim/servers/flows.py` exposes the crystallized flows as MCP tools for the authoring agent |
+| `crystal/trace/` | Trace recorder: Claude Code `PostToolUse` hook, scripted agent, trace store, headless-agent driver |
 | `crystal/extract/` | Typed ID regex catalog, entity catalog + gazetteer, extractor specs |
-| `crystal/flow/` | Flow schema (YAML), Jinja templating, interpreter with fan-out and precision ladders |
+| `crystal/flow/` | Flow schema (YAML), Jinja templating, interpreter with fan-out and precision ladders; `lifecycle.py` promotion state + circuit breaker |
 | `crystal/induce/` | Trace → flow inducer (no LLM) |
-| `crystal/replay/` | Cassette record/replay so regression tests need no servers |
+| `crystal/replay/` | Cassette record/replay so regression tests need no servers; `regression.py` runs a flow's test cases |
+| `crystal/author.py` | Agent-assisted authoring and repair (`crystal author`, `crystal repair`); the only code that launches the agent |
 | `app/` | FastAPI web UI |
-| `flows/` | Crystallized flows: `investigate-jira-ticket`, `investigate-slack-thread`, `investigate-slack-dm` (candidates) and the raw `induced-*` drafts |
-| `traces/` | Recorded sessions (JSONL) and cassettes; `feedback.jsonl` is the repair queue |
+| `flows/` | Crystallized flows: `investigate-jira-ticket`, `investigate-slack-thread`, `investigate-slack-dm` (candidates), `<name>.v<N>.yaml` versions induced by `crystal author`, and the raw `induced-*` drafts |
+| `traces/` | Recorded sessions (JSONL), `runs/` run records referenced by recorded agent sessions, cassettes (gitignored); `feedback.jsonl` is the repair queue |
+| `state/` | `lifecycle.sqlite`, the per-flow runtime state (gitignored) |
 
 ## Quick start
 
@@ -31,9 +33,14 @@ uv run python -m crystal.cli flows
 uv run python -m crystal.cli run investigate-jira-ticket key=PAY-101
 uv run python -m crystal.cli run investigate-slack-thread channel_id=C542575C5 thread_ts=1786015740.000000
 uv run python -m crystal.cli run investigate-slack-dm "text=is payments healthy? a customer says card charges are hanging"
+uv run python -m crystal.cli status      # promotion state of every flow
 uv run uvicorn app.main:app --port 8765   # then open http://localhost:8765
 uv run pytest -q
 ```
+
+Commands (`uv run python -m crystal.cli <command>`): `flows`, `run`, `induce`, `test`, `status`, `author`, `repair`,
+`tools`, `mcp-config`. Only `author`, `repair` and `python -m crystal.trace.driver` launch Claude Code; nothing else
+ever calls an LLM.
 
 ## Crystallization loop
 
@@ -44,28 +51,62 @@ uv run pytest -q
    uv run python -m crystal.trace.scripted --trigger slack_thread C542575C5/1786015740.000000 --variants 3
    uv run python -m crystal.trace.scripted --trigger slack_dm D59227FD8/1786020840.000500 --variants 3
    ```
-   The real agent is launched only by an explicit command and costs money (`--budget` caps it):
+   The real agent is launched only by an explicit command and costs money (`--budget` caps it; the driver prints
+   the cost at the end):
    ```bash
+   uv run python -m crystal.trace.driver jira_issue key=PAY-108 --budget 3
    uv run python -m crystal.trace.driver slack_thread channel_id=C542575C5 thread_ts=1787484120.000005 --budget 3
    uv run python -m crystal.trace.driver slack_dm "text=hey, are you seeing checkout failures?" --budget 3
    ```
+   The hook parses MCP content-block results into JSON when it records them, and the trace store does the same for
+   older traces, so real and scripted sessions have the same shape.
 2. **Induce.** Compile the traces into a draft flow, no LLM:
    ```bash
-   uv run python -m crystal.cli induce jira_issue --name induced-jira-ticket
+   uv run python -m crystal.cli induce jira_issue   --name induced-jira-ticket-all
+   uv run python -m crystal.cli induce slack_thread --name induced-slack-thread
+   uv run python -m crystal.cli induce slack_dm     --name induced-slack-dm
    ```
+   Sessions recorded by `crystal author`/`repair` ran an existing flow through the `flows` MCP server; `induce`
+   expands each `run_flow` call into the calls that flow made, from the run record archived in `traces/runs/`
+   (tracked, unlike `runs/`), so those sessions merge with the others instead of adding a `flows.run_flow` step.
    The report lists unresolved bindings (values that differ across sessions with no explanation), optional
    steps, ladders, fan-outs, how each session's steps were aligned, the window alternatives that lost the
    majority vote, and the bindings solved by learned position programs. Steps align across sessions by a
    signature of what their bound arguments reference (tool + text/id/window classes), so an agent that runs
    the same tools in a different order still merges; timestamp arguments never become ladders.
-   `flows/induced-jira-ticket-all.yaml` is the merge of the 15 scripted sessions with the real Claude Code
-   session.
+   `flows/induced-jira-ticket-all.yaml` is the merge of the 15 scripted sessions with the two real Claude Code
+   sessions (one exploratory, one `crystal author` run); `induced-slack-thread` / `induced-slack-dm` merge 15 / 18
+   scripted sessions with one real session each. The hand-fixed candidates are `investigate-*.yaml`.
 3. **Test.** `tests/test_inducer.py` runs the induced flow on a ticket that was never traced;
    `tests/test_flow_jira.py` replays the hand-written flow through a cassette; `tests/test_flows_slack.py` runs the
    thread and DM flows on a thread/DMs that were never traced.
-4. **Run.** Promote by setting `status: promoted` in the flow YAML; the UI shows the status.
-5. **Repair.** "This didn't help" on a run page appends to `traces/feedback.jsonl`. Handing that to the
-   agent is milestone 2; nothing in this repo invokes an LLM on its own.
+4. **Run.** Promote by setting `status: promoted` in the flow YAML (the author's intent). The runtime keeps its
+   own *effective* state per flow in `state/lifecycle.sqlite` (gitignored) with a circuit breaker: a run with a step
+   error, a required step with zero hits, a failed regression test or a "this didn't help" from the UI demotes the
+   flow one level (promoted → candidate → draft); it climbs back after N consecutive clean live runs
+   (`candidate_after: 2` and `promote_after: 5` in the YAML, per flow), never above the author's intent. The UI shows
+   both badges plus counters and the last failure.
+   ```bash
+   uv run python -m crystal.cli status                       # table: author intent, effective state, counters
+   uv run python -m crystal.cli test investigate-jira-ticket  # regression via cassette (live for misses); recorded
+   ```
+   `crystal test` runs the flow's `tests:` cases (or one built from the inputs' `example`s) through
+   `traces/cassettes/<flow>.json`, seeded from the sessions the flow was induced from; `--live` re-records,
+   `--offline` never starts a server.
+5. **Author / repair (the only commands that launch the agent; each costs money, capped with `--budget`).**
+   ```bash
+   uv run python -m crystal.cli author jira_issue key=PAY-108 --yes --budget 3
+   uv run python -m crystal.cli repair            # list the queue; then: repair --all --yes  |  repair <run_id> --yes
+   ```
+   `author` runs Claude Code headless with the existing flows listed and the instruction to run the best one FIRST
+   through the `flows` MCP server (`sim/servers/flows.py`: `list_flows`, `run_flow(name, inputs_json)`, which executes
+   the interpreter and returns a compact evidence summary), then explore with the raw tools only for what the flow
+   lacked. The recorded trace reads "ran flow X, then did Y"; the run record is copied to `traces/runs/`, the
+   `run_flow` call is expanded into the calls the flow made, and the inducer compiles that session plus every earlier session of the trigger
+   into `flows/<base>.v<N>.yaml` (`status: draft`, `base`, `authored:` provenance). Nothing is overwritten.
+   `repair` does the same for each unhelpful run queued in `traces/feedback.jsonl`, handing the agent the flow YAML,
+   the inputs, a compact evidence summary and the complaint; it then appends a `handled` record (never deletes).
+   Without `--yes` both commands ask for confirmation on a terminal and refuse when non-interactive.
 
 ## Flow YAML in one screen
 

@@ -94,10 +94,12 @@ def _truthy(v: Any) -> bool:
 
 
 class FlowRunner:
-    def __init__(self, pool: ServerPool, catalog: dict | None = None, recorder=None):
+    def __init__(self, pool: ServerPool, catalog: dict | None = None, recorder=None, lifecycle=None):
         self.pool = pool
         self.catalog = catalog if catalog is not None else load_catalog()
         self.recorder = recorder  # optional crystal.trace.record.Recorder
+        # promotion lifecycle: None = the default store when the run is saved; False = never record; or a Lifecycle
+        self.lifecycle = lifecycle
 
     async def _call(self, server: str, tool: str, args: dict) -> tuple[Any, str | None, float]:
         t0 = time.perf_counter()
@@ -120,19 +122,33 @@ class FlowRunner:
         rendered_base = render(base, ctx)
         attempts = []
         if ladder_keys:
-            key = ladder_keys[0]  # one ladder per step is enough in practice
-            rungs = raw_args[key]["ladder"]
+            # Several args may carry ladders (the inducer emits one per arg whose binding varied across sessions).
+            # Attempt i takes rung i of every laddered arg (a key with fewer rungs keeps its last; a blank rung falls
+            # back to the key's first non-blank one). The primary key (longest ladder) decides blank-skipping.
             hits_path = step.get("hits")
-            result, err, dt, used = None, None, 0.0, None
-            for i, rung in enumerate(rungs):
-                val = render(rung, ctx)
+            key = max(ladder_keys, key=lambda k: len(raw_args[k]["ladder"]))
+            n_rungs = len(raw_args[key]["ladder"])
+            result, err, dt, used, tried = None, None, 0.0, None, []
+            for i in range(n_rungs):
+                vals = {}
+                for k in ladder_keys:
+                    rungs = raw_args[k]["ladder"]
+                    v = render(rungs[min(i, len(rungs) - 1)], ctx)
+                    if not str(v).strip() and k != key:
+                        v = next((x for x in (render(r, ctx) for r in rungs) if str(x).strip()), v)
+                    vals[k] = v
+                val = vals[key]
                 if not str(val).strip():
                     attempts.append({"rung": i, "value": val, "skipped": "blank"})
                     continue
-                args = {**rendered_base, key: val}
+                args = {**rendered_base, **vals}
+                if args in tried:
+                    attempts.append({"rung": i, "value": val, "skipped": "duplicate"})
+                    continue
+                tried.append(args)
                 result, err, dt = await self._call(server, tool, args)
                 n = 0 if err else count_hits(result, hits_path)
-                attempts.append({"rung": i, "value": val, "hits": n, "error": err})
+                attempts.append({"rung": i, "value": val, "hits": n, "error": err, **({"values": vals} if len(ladder_keys) > 1 else {})})
                 used = args
                 if n > 0:
                     break
@@ -203,9 +219,20 @@ class FlowRunner:
         record["finished"] = datetime.now(timezone.utc).isoformat()
         record["summary"] = {s["id"]: {"hits": s.get("hits"), "error": s.get("error"), "skipped": s.get("skipped")} for s in record["steps"]}
         if save:
+            self._record_lifecycle(record, flow)
             RUN_DIR.mkdir(exist_ok=True)
             (RUN_DIR / f"{run_id}.json").write_text(json.dumps(record, indent=1, default=str))
         return record
+
+    def _record_lifecycle(self, record: dict, flow: dict) -> None:
+        """Saved runs are live runs: feed the outcome to the circuit breaker. Unsaved runs (tests, dry runs) do not count."""
+        if self.lifecycle is False:
+            return
+        from crystal.flow.lifecycle import get_lifecycle
+        lc = self.lifecycle or get_lifecycle()
+        st = lc.record_run(record, flow)
+        record["lifecycle"] = {"outcome": st["outcome"], "reason": st["reason"], "status": st["status"],
+                               "author_status": st["author_status"], "transition": st.get("transition")}
 
     @staticmethod
     def _coerce_inputs(flow: dict, inputs: dict) -> dict:
@@ -220,10 +247,10 @@ class FlowRunner:
         return out
 
 
-async def run_flow(name: str, inputs: dict, recorder=None, save: bool = True) -> dict:
+async def run_flow(name: str, inputs: dict, recorder=None, save: bool = True, lifecycle=None) -> dict:
     flow = load_flow(name)
     async with ServerPool() as pool:
-        return await FlowRunner(pool, recorder=recorder).run(flow, inputs, save=save)
+        return await FlowRunner(pool, recorder=recorder, lifecycle=lifecycle).run(flow, inputs, save=save)
 
 
 def run_flow_sync(name: str, inputs: dict, **kw) -> dict:

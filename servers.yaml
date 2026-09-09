@@ -9,3 +9,5 @@ servers:
   pagerduty:    { command: .venv/bin/python, args: [ sim/servers/pagerduty.py] }
   git:          { command: .venv/bin/python, args: [ sim/servers/git.py] }
   code:         { command: .venv/bin/python, args: [ sim/servers/code.py] }
+  # not a sim: exposes the crystallized flows (list_flows / run_flow) so the authoring agent tries them before exploring
+  flows:        { command: .venv/bin/python, args: [ sim/servers/flows.py] }

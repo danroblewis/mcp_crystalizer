@@ -20,6 +20,17 @@ def normalize_output(output):
     return output
 
 
+def _normalize_output(rec: dict) -> dict:
+    """Apply normalize_output to a call record in place; older hook traces also lack `output_text`, which the
+    cassette seeding reads, so fill it from the content blocks."""
+    out = rec.get("output")
+    if isinstance(out, list) and out and all(isinstance(b, dict) and b.get("type") == "text" for b in out):
+        if not rec.get("output_text"):
+            rec["output_text"] = "\n".join(str(b.get("text", "")) for b in out)
+        rec["output"] = normalize_output(out)
+    return rec
+
+
 @dataclass
 class Session:
     session_id: str
@@ -47,9 +58,9 @@ def load_session(path: Path) -> Session:
         elif kind == "note":
             sess.notes.append(rec)
         else:
-            rec["output"] = normalize_output(rec.get("output"))
-            sess.calls.append(rec)
+            sess.calls.append(_normalize_output(rec))
     return sess
+
 
 
 def load_sessions(trace_dir: Path | None = None, trigger: str | None = None) -> list[Session]:
