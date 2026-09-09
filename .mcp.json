@@ -1,0 +1,52 @@
+{
+  "mcpServers": {
+    "jira": {
+      "command": ".venv/bin/python",
+      "args": [
+        "sim/servers/jira.py"
+      ]
+    },
+    "slack": {
+      "command": ".venv/bin/python",
+      "args": [
+        "sim/servers/slack.py"
+      ]
+    },
+    "confluence": {
+      "command": ".venv/bin/python",
+      "args": [
+        "sim/servers/confluence.py"
+      ]
+    },
+    "logz": {
+      "command": ".venv/bin/python",
+      "args": [
+        "sim/servers/logz.py"
+      ]
+    },
+    "chronosphere": {
+      "command": ".venv/bin/python",
+      "args": [
+        "sim/servers/chronosphere.py"
+      ]
+    },
+    "pagerduty": {
+      "command": ".venv/bin/python",
+      "args": [
+        "sim/servers/pagerduty.py"
+      ]
+    },
+    "git": {
+      "command": ".venv/bin/python",
+      "args": [
+        "sim/servers/git.py"
+      ]
+    },
+    "code": {
+      "command": ".venv/bin/python",
+      "args": [
+        "sim/servers/code.py"
+      ]
+    }
+  }
+}

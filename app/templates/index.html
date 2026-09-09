@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block body %}
+<h1>Flows</h1>
+<div class="grid">
+{% for f in flows %}
+<div class="card"><div><a href="/flows/{{ f.name }}"><strong>{{ f.title or f.name }}</strong></a>
+ <span class="pill {{ 'ok' if f.status == 'promoted' else 'draft' }}">{{ f.status }}</span></div>
+<div class="muted small" style="margin:6px 0">{{ f.description or '' }}</div>
+<div class="small">inputs: {% for k, v in (f.inputs or {}).items() %}<span class="extract">{{ k }}: {{ v.type }}</span>{% endfor %}
+ · {{ f.steps | length }} steps</div></div>
+{% endfor %}
+</div>
+{% if runs %}<h2>Recent runs</h2>
+<table><tr><th>run</th><th>flow</th><th>inputs</th><th>status</th><th>hits</th></tr>
+{% for r in runs %}<tr><td><a href="/runs/{{ r.run_id }}" class="mono">{{ r.run_id }}</a></td><td>{{ r.flow }}</td><td class="mono">{{ r.inputs }}</td>
+<td><span class="pill {{ 'ok' if r.status == 'ok' else 'bad' }}">{{ r.status }}</span></td><td>{{ r.hits }}</td></tr>{% endfor %}</table>{% endif %}
+{% endblock %}

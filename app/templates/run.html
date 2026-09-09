@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% block title %}{{ r.flow }} · {{ r.inputs.values() | list | join(' ') }}{% endblock %}{% block body %}
+{% if msg %}<div class="notice">{{ msg }}</div>{% endif %}
+<h1><a href="/flows/{{ r.flow }}">{{ r.flow }}</a> <span class="mono">{{ r.inputs }}</span> <span class="pill {{ 'ok' if r.status == 'ok' else 'bad' }}">{{ r.status }}</span></h1>
+<p class="muted small">run {{ r.run_id }} · {{ r.started[:19] }} · <a href="/runs/{{ r.run_id }}/json">json</a> ·
+{% for sid, s in r.summary.items() %}<a href="#{{ sid }}">{{ sid }}</a>{{ ' (' ~ s.hits ~ ')' if s.hits is not none else '' }}{{ ', ' if not loop.last }}{% endfor %}</p>
+
+{% macro card(c) %}
+{% if c.kind == 'issue' %}<div class="msg"><span class="who">{{ c.key }}</span> {{ c.summary }} <span class="pill">{{ c.status }}</span><span class="pill">{{ c.priority }}</span><span class="muted small">{{ c.assignee }} · {{ c.created }} · {{ c.components | join(', ') }}</span>
+ {% if c.description %}<pre>{{ c.description }}</pre>{% endif %}</div>
+{% elif c.kind == 'message' %}<div class="msg"><span class="who">{{ c.user }}</span> <span class="muted small">#{{ c.channel }} · {{ c.ts }}{% if c.replies %} · {{ c.replies }} replies{% endif %}</span><div>{{ c.text }}</div></div>
+{% elif c.kind == 'page' %}<div class="msg"><span class="who">{{ c.title }}</span> <span class="muted small">{{ c.space }} · {{ c.modified or '' }}</span>{% if c.body %}<pre>{{ c.body }}</pre>{% else %}<div class="small">{{ c.excerpt }}</div>{% endif %}</div>
+{% elif c.kind == 'log' %}<div class="log"><span class="muted">{{ c.ts }}</span> <span class="lvl {{ c.level }}">{{ c.level }}</span> <span class="muted">{{ c.pod }}</span> {{ c.message }}</div>
+{% elif c.kind == 'series' %}<div><div class="small muted">{{ c.labels }} · {{ c.n }} points · max {{ '%.2f' % c.max }}</div><svg class="spark" width="{{ c.w }}" height="{{ c.h }}" viewBox="0 0 {{ c.w }} {{ c.h }}"><polyline fill="none" stroke="#2456c4" stroke-width="1.5" points="{{ c.points }}"/></svg></div>
+{% elif c.kind == 'code' %}<div class="log"><span class="muted">{{ c.file }}:{{ c.line }}</span> {{ c.text }}</div>{% if c.context %}<pre>{{ c.context | join('\n') }}</pre>{% endif %}
+{% elif c.kind == 'commit' %}<div class="log"><span class="muted">{{ c.sha[:10] }}</span> <span class="muted">{{ c.date[:10] }}</span> <strong>{{ c.author }}</strong> {{ c.subject }}</div>
+{% elif c.kind == 'diff' %}<pre>{{ c.text }}</pre>
+{% elif c.kind == 'incident' %}<div class="msg"><span class="who">#{{ c.number }}</span> {{ c.title }} <span class="pill">{{ c.status }}</span><span class="pill">{{ c.urgency }}</span><span class="muted small">{{ c.assignee }} · {{ c.created }}{% if c.resolved %} → {{ c.resolved }}{% endif %}</span>{% if c.details %}<pre>{{ c.details }}</pre>{% endif %}</div>
+{% elif c.kind == 'owners' %}<div class="log">{{ c.path }} → <strong>{{ c.owners | join(', ') }}</strong></div>
+{% elif c.kind == 'source' %}<details><summary>{{ c.path }}</summary><pre>{{ c.content }}</pre></details>
+{% elif c.kind == 'error' %}<div class="pill bad">{{ c.text }}</div>
+{% elif c.kind == 'empty' %}<div class="muted small">{{ c.text }}</div>
+{% else %}<details><summary>raw result</summary><pre>{{ c.text }}</pre></details>{% endif %}
+{% endmacro %}
+
+{% macro call(s) %}
+<div class="query">{{ s.tool }} {{ s.args | tojson }}</div>
+{% if s.attempts and s.attempts | length > 1 %}<div class="attempt">ladder: {% for a in s.attempts %}<span class="{{ 'hit' if a.hits else 'miss' }}">{{ loop.index }}. {{ a.value if a.value else '(blank, skipped)' }} → {{ a.hits if a.hits is defined else 'skipped' }}</span>{{ ' · ' if not loop.last }}{% endfor %}</div>{% endif %}
+{% if s.error %}<div class="pill bad">{{ s.error }}</div>{% endif %}
+{% if s.extracts %}<div>{% for k, v in s.extracts.items() %}<span class="extract">{{ k }} = {{ (v | tojson) if v is not string else v }}</span>{% endfor %}</div>{% endif %}
+{% for c in s.cards or [] %}{{ card(c) }}{% endfor %}
+{% endmacro %}
+
+{% for s in r.steps %}
+<div class="step card" id="{{ s.id }}"><h3>{{ loop.index }}. {{ s.title }} <span class="muted small">{{ s.hits if s.hits is not none else '' }}{{ ' hits' if s.hits is not none }}</span></h3>
+{% if s.skipped %}<div class="muted small">skipped: {{ s.skipped }}</div>
+{% elif 'items' in s %}
+  {% for it in s['items'] %}<details {{ 'open' if it.hits else '' }}><summary>{{ it.item }} · {{ it.hits }} hits</summary>{{ call(it) }}</details>{% endfor %}
+  {% if not s['items'] %}<div class="muted small">nothing to fan out over</div>{% endif %}
+{% else %}{{ call(s) }}{% endif %}
+</div>
+{% endfor %}
+
+<div class="feedback"><form method="post" action="/runs/{{ r.run_id }}/feedback">
+<div class="small muted">Did this run answer the question? If not, say what was missing. The complaint is queued for the flow author (an agent run you start explicitly).</div>
+<textarea name="text" rows="2" placeholder="What was missing or wrong?"></textarea>
+<div style="margin-top:6px"><button name="helpful" value="yes" class="secondary" type="submit">It helped</button> <button name="helpful" value="no" type="submit">This didn't help</button></div>
+</form></div>
+{% endblock %}

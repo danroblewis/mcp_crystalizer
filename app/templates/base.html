@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>{% block title %}mcp_explorer{% endblock %}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--bg:#f6f7f9;--fg:#1c2026;--muted:#6b7280;--line:#e3e6ea;--card:#fff;--acc:#2456c4;--ok:#1a7f4b;--warn:#b45309;--bad:#b91c1c;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+header{background:#fff;border-bottom:1px solid var(--line);padding:10px 24px;display:flex;gap:18px;align-items:baseline}
+header a{color:var(--fg);text-decoration:none}header .brand{font-weight:600}header nav a{color:var(--muted);margin-right:14px}
+main{max-width:1100px;margin:0 auto;padding:20px 24px 60px}h1{font-size:20px;margin:6px 0 14px}h2{font-size:15px;margin:22px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:8px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.muted{color:var(--muted)}.mono{font-family:var(--mono);font-size:12.5px}.small{font-size:12px}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;border:1px solid var(--line);background:#fafafa;margin-right:4px}
+.pill.ok{color:var(--ok);border-color:#bfe3cf}.pill.draft{color:var(--warn);border-color:#f3d9b1}.pill.bad{color:var(--bad);border-color:#f3c0c0}
+table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:500;font-size:12px}
+input[type=text]{font:inherit;padding:7px 9px;border:1px solid #c9cdd3;border-radius:6px;min-width:260px}button{font:inherit;padding:7px 14px;border-radius:6px;border:1px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer}button.secondary{background:#fff;color:var(--acc)}
+.step{margin:14px 0}.step h3{margin:0 0 4px;font-size:15px}.query{background:#f1f3f6;border-radius:6px;padding:6px 9px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;margin:6px 0}
+.attempt{color:var(--muted);font-family:var(--mono);font-size:11.5px}.attempt .hit{color:var(--ok)}.attempt .miss{color:var(--bad)}
+.msg{border-left:3px solid var(--line);padding:4px 10px;margin:6px 0}.msg .who{font-weight:600}.log{font-family:var(--mono);font-size:12px;padding:2px 0;border-bottom:1px dashed var(--line)}
+.log .lvl{display:inline-block;width:46px;color:var(--warn)}.log .lvl.ERROR{color:var(--bad)}pre{background:#f1f3f6;border-radius:6px;padding:8px 10px;overflow:auto;font-size:12px;margin:6px 0}
+details summary{cursor:pointer;color:var(--muted)}.extract{display:inline-block;background:#eef2fb;border:1px solid #d4dcf3;color:#24408a;border-radius:5px;padding:1px 6px;font-family:var(--mono);font-size:11.5px;margin:2px 4px 2px 0}
+svg.spark{display:block;background:#fff;border:1px solid var(--line);border-radius:6px}.notice{background:#eef8f1;border:1px solid #bfe3cf;padding:8px 12px;border-radius:6px;margin-bottom:12px}
+.feedback{margin-top:30px;border-top:1px solid var(--line);padding-top:14px}.feedback textarea{width:100%;max-width:640px;font:inherit;padding:8px;border:1px solid #c9cdd3;border-radius:6px}
+</style></head><body>
+<header><a class="brand" href="/">mcp_explorer</a><nav><a href="/">Flows</a><a href="/runs">Runs</a></nav><span class="muted small">crystallized investigation flows · no AI at runtime</span></header>
+<main>{% block body %}{% endblock %}</main></body></html>

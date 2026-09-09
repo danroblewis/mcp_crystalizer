@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+runs/
+traces/*.jsonl
+sim/repo/
+.pytest_cache/

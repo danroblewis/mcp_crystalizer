@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__.*|Read|Grep|Glob",
+        "hooks": [
+          { "type": "command", "command": "cd \"$CLAUDE_PROJECT_DIR\" && uv run python -m crystal.trace.record" }
+        ]
+      }
+    ]
+  }
+}

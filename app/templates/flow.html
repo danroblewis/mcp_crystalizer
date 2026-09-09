@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block title %}{{ flow.title or flow.name }}{% endblock %}{% block body %}
+<h1>{{ flow.title or flow.name }} <span class="pill {{ 'ok' if flow.status == 'promoted' else 'draft' }}">{{ flow.status }}</span></h1>
+<p class="muted">{{ flow.description or '' }} <a href="/flows/{{ flow.name }}/yaml" class="small">view yaml</a></p>
+<form method="post" action="/flows/{{ flow.name }}/run" class="card">
+{% for k, v in (flow.inputs or {}).items() %}
+<label><div class="small muted">{{ v.label or k }} <span class="mono">({{ v.type }})</span></div>
+<input type="text" name="{{ k }}" placeholder="{{ v.example or '' }}" value="{{ v.default or '' }}" {% if v.required %}required{% endif %}></label>
+{% endfor %}
+<div style="margin-top:10px"><button type="submit">Run flow</button></div>
+</form>
+<h2>Steps</h2>
+<table><tr><th>#</th><th>step</th><th>tool</th><th>fan-out / ladder</th></tr>
+{% for s in flow.steps %}<tr><td>{{ loop.index }}</td><td>{{ s.title or s.id }}</td><td class="mono">{{ s.tool }}</td>
+<td class="small muted">{% if s.forEach %}for each {{ s.forEach }}{% endif %}
+{% for k, v in s.args.items() if v is mapping and v.ladder %}ladder on {{ k }} ({{ v.ladder | length }} rungs){% endfor %}</td></tr>{% endfor %}</table>
+{% if runs %}<h2>Previous runs</h2><table>{% for r in runs %}<tr><td><a href="/runs/{{ r.run_id }}" class="mono">{{ r.run_id }}</a></td><td class="mono">{{ r.inputs }}</td><td>{{ r.hits }} hits</td></tr>{% endfor %}</table>{% endif %}
+{% endblock %}

@@ -1,0 +1,107 @@
+"""Simulated Slack MCP server (tool names after korotovsky/slack-mcp-server)."""
+from datetime import datetime, timezone
+from mcp.server.mcpserver import MCPServer
+from common import world, text, slack_query, match_terms, parse_time
+
+mcp = MCPServer("sim-slack", instructions="Simulated Slack. Search supports quoted phrases, bare terms (AND), in:#channel, from:@user, after:/before: YYYY-MM-DD.")
+
+
+def _channel_by_name(name: str) -> dict | None:
+    name = name.lstrip("#")
+    for c in world()["channels"].values():
+        if c["name"] == name:
+            return c
+    return None
+
+
+def _channel_by_id(cid: str) -> dict | None:
+    for c in world()["channels"].values():
+        if c["id"] == cid:
+            return c
+    return None
+
+
+def _all_messages():
+    w = world()
+    out = []
+    for inc in w["incidents"]:
+        ch = _channel_by_name(inc["slack"]["channel"])
+        thread = inc["slack"]["thread_ts"]
+        for i, m in enumerate(inc["slack"]["messages"]):
+            out.append({"channel": ch, "ts": m["ts"], "thread_ts": thread, "user": m["user"], "user_name": m["user_name"],
+                        "text": m["text"], "reply_count": len(inc["slack"]["messages"]) - 1 if i == 0 else 0, "is_reply": i > 0})
+    for m in w["noise"]["slack"]:
+        out.append({"channel": _channel_by_name(m["channel"]), "ts": m["ts"], "thread_ts": m["ts"], "user": m["user"],
+                    "user_name": m["user_name"], "text": m["text"], "reply_count": 0, "is_reply": False})
+    return out
+
+
+def _fmt(m: dict) -> dict:
+    ch = m["channel"]
+    return {"ts": m["ts"], "thread_ts": m["thread_ts"], "channel": {"id": ch["id"], "name": ch["name"]},
+            "user": m["user"], "username": m["user_name"], "text": m["text"],
+            "permalink": f"https://sim.slack.com/archives/{ch['id']}/p{m['ts'].replace('.', '')}",
+            "reply_count": m["reply_count"]}
+
+
+@mcp.tool(structured_output=False, name="conversations_search_messages", description="Search messages. search_query supports quoted phrases, bare terms (all must match), and modifiers in:#channel from:@user after:YYYY-MM-DD before:YYYY-MM-DD. Returns up to `limit` matches (max 100).")
+def conversations_search_messages(search_query: str = "", filter_in_channel: str = "", filter_users_from: str = "",
+                                  filter_date_after: str = "", filter_date_before: str = "", limit: int = 20, cursor: str = "") -> str:
+    terms, mods = slack_query(search_query)
+    chan = filter_in_channel or mods.get("in", "")
+    after = parse_time(filter_date_after or mods.get("after", "") or None)
+    before = parse_time(filter_date_before or mods.get("before", "") or None)
+    if before and len((filter_date_before or mods.get("before", "")).strip()) == 10:
+        from datetime import timedelta
+        before = before + timedelta(days=1)  # day-granular 'before:' is inclusive of that day
+    user = (filter_users_from or mods.get("from", "")).lstrip("@")
+    hits = []
+    for m in _all_messages():
+        if chan and m["channel"]["name"] != chan.lstrip("#") and m["channel"]["id"] != chan:
+            continue
+        if user and m["user_name"] != user and m["user"] != user:
+            continue
+        when = datetime.fromtimestamp(float(m["ts"]), tz=timezone.utc)
+        if after and when < after:
+            continue
+        if before and when > before:
+            continue
+        if terms and not match_terms(m["text"], terms, "and"):
+            continue
+        hits.append(m)
+    hits.sort(key=lambda m: float(m["ts"]), reverse=True)
+    page = int(cursor or 1)
+    limit = max(1, min(int(limit), 100))
+    chunk = hits[(page - 1) * limit: page * limit]
+    return text({"total": len(hits), "page": page, "messages": {"matches": [_fmt(m) for m in chunk]},
+                 "next_cursor": str(page + 1) if page * limit < len(hits) else ""})
+
+
+@mcp.tool(structured_output=False, name="conversations_replies", description="Fetch a thread: the parent message and its replies. channel_id is the C… id, thread_ts the parent ts.")
+def conversations_replies(channel_id: str, thread_ts: str, limit: int = 100) -> str:
+    ch = _channel_by_id(channel_id) or _channel_by_name(channel_id)
+    msgs = [m for m in _all_messages() if ch and m["channel"]["id"] == ch["id"] and m["thread_ts"] == thread_ts]
+    msgs.sort(key=lambda m: float(m["ts"]))
+    return text({"messages": [_fmt(m) for m in msgs[:limit]]})
+
+
+@mcp.tool(structured_output=False, name="conversations_history", description="Recent top-level messages in a channel (channel_id C… or #name). limit max 200.")
+def conversations_history(channel_id: str, limit: int = 50) -> str:
+    ch = _channel_by_id(channel_id) or _channel_by_name(channel_id)
+    msgs = [m for m in _all_messages() if ch and m["channel"]["id"] == ch["id"] and not m["is_reply"]]
+    msgs.sort(key=lambda m: float(m["ts"]), reverse=True)
+    return text({"messages": [_fmt(m) for m in msgs[:min(int(limit), 200)]]})
+
+
+@mcp.tool(structured_output=False, name="channels_list", description="List channels with ids and names.")
+def channels_list() -> str:
+    return text({"channels": list(world()["channels"].values())})
+
+
+@mcp.tool(structured_output=False, name="users_list", description="List users with ids, names and teams.")
+def users_list() -> str:
+    return text({"users": list(world()["people"].values())})
+
+
+if __name__ == "__main__":
+    mcp.run()

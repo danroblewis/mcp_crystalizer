@@ -1,0 +1,169 @@
+name: investigate-jira-ticket
+title: Investigate a Jira ticket
+description: >
+  Given a Jira key: read the ticket, find the Slack discussion, the code that emits the error, the owning
+  team, the runbook, the error-rate metric, the log lines for every trace id mentioned anywhere, the commits
+  that touched the service just before, and the PagerDuty incident. Mirrors the agent flow
+  jira -> slack -> codebase -> confluence -> chronosphere + logz.
+status: candidate
+version: 1
+trigger: { type: jira_issue }
+inputs:
+  key: { type: jira_key, required: true, label: Jira issue key, example: PAY-101 }
+
+steps:
+  - id: issue
+    title: Jira ticket
+    tool: jira.jira_get_issue
+    required: true
+    args: { issue_key: "{{ inputs.key }}" }
+    extract:
+      summary:     { from: fields.summary }
+      created:     { from: fields.created }
+      service:     { from: "fields.components[*].name", using: "catalog:service" }
+      service_in_text: { from: fields.description, using: "catalog:service" }
+      error_sig:   { from: fields.description, using: regex, pattern: '^Error:\s*(.+)$' }
+      error_class: { from: fields.description, using: "ids:error_class" }
+      trace_ids:   { from: fields.description, using: "ids:trace_id", all: true }
+      pods:        { from: fields.description, using: "ids:k8s_pod", all: true }
+      window:      { from: fields.created, using: window, before: 1h, after: 6h }
+      commit_window: { from: fields.created, using: window, before: 4d, after: 1d }
+
+  - id: slack
+    title: Slack discussion
+    tool: slack.conversations_search_messages
+    hits: messages.matches
+    args:
+      limit: 20
+      search_query:
+        ladder:
+          - '"{{ issue.error_sig }}" in:#{{ catalog.service[issue.service].incident_channel }} after:{{ issue.window.start_date }} before:{{ issue.window.end_date }}'
+          - '"{{ issue.error_sig }}" after:{{ issue.window.start_date }} before:{{ issue.window.end_date }}'
+          - '{{ inputs.key }}'
+          - '"{{ issue.error_sig }}"'
+          - '{{ issue.error_class }} in:#{{ catalog.service[issue.service].slack_channel }}'
+          - '{{ issue.error_class }}'
+    extract:
+      channel_id: { from: "messages.matches[0].channel.id" }
+      thread_ts:  { from: "messages.matches[*].thread_ts", all: true }
+      trace_ids:  { from: "messages.matches[*].text", using: "ids:trace_id", all: true }
+
+  - id: thread
+    title: Slack thread replies
+    tool: slack.conversations_replies
+    forEach: slack.thread_ts | unique | list
+    max_items: 3
+    hits: messages
+    args: { channel_id: "{{ slack.channel_id }}", thread_ts: "{{ item }}", limit: 50 }
+    extract:
+      trace_ids: { from: "messages[*].text", using: "ids:trace_id", all: true }
+      shas:      { from: "messages[*].text", using: "ids:sha_short", all: true }
+      people:    { from: "messages[*].username", all: true }
+
+  - id: code
+    title: Code that raises or logs the error
+    tool: code.grep
+    hits: matches
+    args: { pattern: "{{ issue.error_class }}", glob: "**/*.py", context: 2 }
+    extract:
+      files: { from: "matches[*].file", all: true }
+
+  - id: owners
+    title: Owning team (CODEOWNERS)
+    tool: code.codeowners
+    forEach: code.files | unique | list
+    max_items: 3
+    args: { path: "{{ item }}" }
+    extract:
+      teams: { from: "owners[*]", all: true }
+
+  - id: confluence
+    title: Runbook / wiki
+    tool: confluence.confluence_search
+    hits: results
+    args:
+      limit: 5
+      query:
+        ladder:
+          - 'text ~ "{{ issue.error_class }}" AND space = {{ catalog.service[issue.service].confluence_space }}'
+          - 'text ~ "{{ issue.error_class }}"'
+          - 'title ~ "{{ issue.service }}" AND label = runbook'
+          - 'text ~ "{{ issue.service }}"'
+    extract:
+      page_ids: { from: "results[*].id", all: true }
+
+  - id: runbook
+    title: Runbook page
+    tool: confluence.confluence_get_page
+    forEach: confluence.page_ids | head(2)
+    args: { page_id: "{{ item }}" }
+    extract:
+      remediation: { from: body, using: regex, pattern: '^Remediation:\s*(.+)$', all: true }
+
+  - id: metrics
+    title: Error rate around the incident
+    tool: chronosphere.query_prometheus_range
+    hits: data.result
+    args:
+      query: 'rate(http_requests_total{service="{{ issue.service }}",code=~"5.."}[5m])'
+      start: "{{ issue.window.start }}"
+      end: "{{ issue.window.end }}"
+      step_seconds: 300
+
+  - id: logs
+    title: Logs per trace id
+    tool: logz.search_logs
+    forEach: (issue.trace_ids + slack.trace_ids + thread.trace_ids) | unique | list
+    max_items: 6
+    hits: hits
+    args:
+      query: "trace_id:{{ item }}"
+      from_time: "{{ issue.window.start }}"
+      to_time: "{{ issue.window.end }}"
+      size: 20
+    extract:
+      pods:  { from: "hits[*]._source.['kubernetes.pod_name']", all: true }
+      lines: { from: "hits[*]._source.message", all: true }
+
+  - id: logs_by_error
+    title: All log lines with this error in the window
+    tool: logz.search_logs
+    hits: hits
+    args:
+      query:
+        ladder:
+          - '"{{ issue.error_sig }}" AND service:{{ issue.service }}'
+          - '"{{ issue.error_class }}"'
+          - '{{ issue.error_sig | tokens | head(4) | and }}'
+      from_time: "{{ issue.window.start }}"
+      to_time: "{{ issue.window.end }}"
+      size: 50
+
+  - id: commits
+    title: Commits touching the service just before
+    tool: git.git_log
+    hits: commits
+    args:
+      path: "{{ catalog.service[issue.service].repo_path }}"
+      since: "{{ issue.commit_window.start }}"
+      until: "{{ issue.commit_window.end }}"
+      max_count: 10
+    extract:
+      shas: { from: "commits[*].sha", all: true }
+
+  - id: suspect_commit
+    title: Commit named in Slack
+    tool: git.git_show
+    forEach: thread.shas | unique | list
+    max_items: 2
+    args: { sha: "{{ item }}" }
+
+  - id: pagerduty
+    title: PagerDuty incident
+    tool: pagerduty.list_incidents
+    hits: incidents
+    args:
+      service_ids: "{{ catalog.service[issue.service].pagerduty_service_id }}"
+      since: "{{ issue.window.start }}"
+      until: "{{ issue.window.end }}"
+      limit: 5

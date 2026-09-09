@@ -1,0 +1,230 @@
+"""Flow interpreter: runs a crystallized flow against MCP servers with no AI.
+
+Flow YAML:
+  name, status, trigger, inputs{name: {type, required, default}}, catalog_kinds (optional)
+  steps: list of
+    id, tool "server.tool", args {..templates..}, when (template -> truthy), forEach "<expr over ctx>",
+    max_items, extract {name: extractor spec}, hits (jsonpath to the list that decides whether a ladder rung hit),
+    title (for the UI)
+  Any arg value may be {ladder: [rung, rung, ...]}: rungs are rendered in order, blank rungs are skipped,
+  the first rung whose result has hits wins; if none hit, the last non-blank rung's result is kept.
+"""
+from __future__ import annotations
+
+import asyncio
+import json
+import time
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from crystal import PROJECT_ROOT
+from crystal.extract.catalog import load_catalog
+from crystal.extract.extractors import run_extractor, select
+from crystal.flow.templating import ENV, render
+from crystal.mcp_client import ServerPool
+
+FLOW_DIR = PROJECT_ROOT / "flows"
+RUN_DIR = PROJECT_ROOT / "runs"
+
+
+def load_flow(name_or_path: str | Path) -> dict:
+    p = Path(name_or_path)
+    if not p.exists():
+        p = FLOW_DIR / f"{name_or_path}.yaml"
+    flow = yaml.safe_load(p.read_text())
+    flow["_path"] = str(p)
+    return flow
+
+
+def list_flows() -> list[dict]:
+    out = []
+    for p in sorted(FLOW_DIR.glob("*.yaml")):
+        try:
+            f = yaml.safe_load(p.read_text())
+            f["_path"] = str(p)
+            out.append(f)
+        except Exception as e:  # noqa: BLE001
+            out.append({"name": p.stem, "status": "broken", "error": str(e), "_path": str(p)})
+    return out
+
+
+def count_hits(result: Any, hits_path: str | None) -> int:
+    """How many 'things' a result contains. Uses `hits` jsonpath if given, else the first list in the result."""
+    if hits_path:
+        vals = select(result, hits_path)
+        if len(vals) == 1 and isinstance(vals[0], list):
+            return len(vals[0])
+        return len(vals)
+    if isinstance(result, dict):
+        if "error" in result and len(result) == 1:
+            return 0
+        found = None
+        for v in result.values():
+            if isinstance(v, list):
+                return len(v)
+            if isinstance(v, dict):
+                n = _first_list_len(v)
+                if n is not None:
+                    found = n if found is None else found
+        if found is not None:
+            return found
+        return 1 if result else 0
+    if isinstance(result, list):
+        return len(result)
+    return 1 if result else 0
+
+
+def _first_list_len(d: dict) -> int | None:
+    for v in d.values():
+        if isinstance(v, list):
+            return len(v)
+        if isinstance(v, dict):
+            n = _first_list_len(v)
+            if n is not None:
+                return n
+    return None
+
+
+def _truthy(v: Any) -> bool:
+    return bool(v) and str(v).strip().lower() not in ("", "false", "none", "0", "[]", "{}")
+
+
+class FlowRunner:
+    def __init__(self, pool: ServerPool, catalog: dict | None = None, recorder=None):
+        self.pool = pool
+        self.catalog = catalog if catalog is not None else load_catalog()
+        self.recorder = recorder  # optional crystal.trace.record.Recorder
+
+    async def _call(self, server: str, tool: str, args: dict) -> tuple[Any, str | None, float]:
+        t0 = time.perf_counter()
+        try:
+            out, raw, is_err = await self.pool.call_raw(server, tool, args)
+            err = str(out) if is_err else None
+        except Exception as e:  # noqa: BLE001
+            out, raw, err = None, "", str(e)
+        dt = (time.perf_counter() - t0) * 1000
+        if self.recorder:
+            self.recorder.record(server, tool, args, out, raw, is_error=err is not None, duration_ms=dt)
+        return out, err, dt
+
+    async def _run_call(self, step: dict, ctx: dict) -> dict:
+        """Render args (descending any ladders), call the tool, extract. Returns the step record."""
+        server, tool = step["tool"].split(".", 1)
+        raw_args = step.get("args", {})
+        ladder_keys = [k for k, v in raw_args.items() if isinstance(v, dict) and "ladder" in v]
+        base = {k: v for k, v in raw_args.items() if k not in ladder_keys}
+        rendered_base = render(base, ctx)
+        attempts = []
+        if ladder_keys:
+            key = ladder_keys[0]  # one ladder per step is enough in practice
+            rungs = raw_args[key]["ladder"]
+            hits_path = step.get("hits")
+            result, err, dt, used = None, None, 0.0, None
+            for i, rung in enumerate(rungs):
+                val = render(rung, ctx)
+                if not str(val).strip():
+                    attempts.append({"rung": i, "value": val, "skipped": "blank"})
+                    continue
+                args = {**rendered_base, key: val}
+                result, err, dt = await self._call(server, tool, args)
+                n = 0 if err else count_hits(result, hits_path)
+                attempts.append({"rung": i, "value": val, "hits": n, "error": err})
+                used = args
+                if n > 0:
+                    break
+            args = used or rendered_base
+        else:
+            args = rendered_base
+            result, err, dt = await self._call(server, tool, args)
+        extracts = {}
+        if result is not None and not err:
+            for name, spec in (step.get("extract") or {}).items():
+                try:
+                    extracts[name] = run_extractor(spec, result, self.catalog)
+                except Exception as e:  # noqa: BLE001
+                    extracts[name] = None
+                    err = (err or "") + f" extract[{name}]: {e}"
+        return {"tool": step["tool"], "args": args, "result": result, "error": err, "duration_ms": round(dt, 1),
+                "attempts": attempts, "extracts": extracts, "hits": 0 if err else count_hits(result, step.get("hits"))}
+
+    async def run(self, flow: dict, inputs: dict, save: bool = True) -> dict:
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:6]
+        ctx: dict[str, Any] = {"inputs": self._coerce_inputs(flow, inputs), "catalog": self.catalog}
+        record = {"run_id": run_id, "flow": flow["name"], "flow_path": flow.get("_path"), "inputs": ctx["inputs"],
+                  "started": datetime.now(timezone.utc).isoformat(), "steps": [], "status": "ok"}
+        for step in flow["steps"]:
+            sid = step["id"]
+            entry: dict[str, Any] = {"id": sid, "title": step.get("title", sid), "tool": step.get("tool")}
+            if step.get("when") is not None and not _truthy(render(str(step["when"]), ctx)):
+                entry["skipped"] = "when=false"
+                record["steps"].append(entry)
+                ctx[sid] = {"skipped": True, "items": [], "result": None}
+                continue
+            if "forEach" in step:
+                items = render("{{ (" + step["forEach"] + ") | tojson }}", ctx)
+                try:
+                    items = json.loads(items)
+                except json.JSONDecodeError:
+                    items = []
+                if not isinstance(items, list):
+                    items = [items]
+                items = [i for i in items if i not in (None, "")][: int(step.get("max_items", 10))]
+                entry["items"] = []
+                for item in items:
+                    sub = await self._run_call(step, {**ctx, "item": item})
+                    sub["item"] = item
+                    entry["items"].append(sub)
+                # step namespace: list of item results + merged extracts (lists)
+                merged: dict[str, list] = {}
+                for sub in entry["items"]:
+                    for k, v in sub["extracts"].items():
+                        merged.setdefault(k, [])
+                        if isinstance(v, list):
+                            merged[k].extend(x for x in v if x not in merged[k])
+                        elif v is not None and v not in merged[k]:
+                            merged[k].append(v)
+                ctx[sid] = {"items": entry["items"], "results": [s["result"] for s in entry["items"]], **merged}
+                entry["hits"] = sum(s["hits"] for s in entry["items"])
+                if any(s["error"] for s in entry["items"]):
+                    entry["error"] = "; ".join(s["error"] for s in entry["items"] if s["error"])
+            else:
+                sub = await self._run_call(step, ctx)
+                entry.update(sub)
+                ctx[sid] = {"result": sub["result"], "args": sub["args"], **sub["extracts"]}
+            if entry.get("error") and step.get("required", False):
+                record["status"] = "failed"
+                record["steps"].append(entry)
+                break
+            record["steps"].append(entry)
+        record["finished"] = datetime.now(timezone.utc).isoformat()
+        record["summary"] = {s["id"]: {"hits": s.get("hits"), "error": s.get("error"), "skipped": s.get("skipped")} for s in record["steps"]}
+        if save:
+            RUN_DIR.mkdir(exist_ok=True)
+            (RUN_DIR / f"{run_id}.json").write_text(json.dumps(record, indent=1, default=str))
+        return record
+
+    @staticmethod
+    def _coerce_inputs(flow: dict, inputs: dict) -> dict:
+        out = {}
+        for name, spec in (flow.get("inputs") or {}).items():
+            v = inputs.get(name, spec.get("default"))
+            if v in (None, "") and spec.get("required"):
+                raise ValueError(f"missing required input {name!r}")
+            out[name] = v
+        for k, v in inputs.items():
+            out.setdefault(k, v)
+        return out
+
+
+async def run_flow(name: str, inputs: dict, recorder=None, save: bool = True) -> dict:
+    flow = load_flow(name)
+    async with ServerPool() as pool:
+        return await FlowRunner(pool, recorder=recorder).run(flow, inputs, save=save)
+
+
+def run_flow_sync(name: str, inputs: dict, **kw) -> dict:
+    return asyncio.run(run_flow(name, inputs, **kw))

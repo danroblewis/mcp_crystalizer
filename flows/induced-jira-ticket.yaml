@@ -1,0 +1,181 @@
+name: induced-jira-ticket
+title: induced jira ticket
+status: draft
+version: 1
+induced_from:
+- scripted-PAY-101-v0
+- scripted-PAY-101-v1
+- scripted-PAY-101-v2
+- scripted-PAY-102-v0
+- scripted-PAY-102-v1
+- scripted-PAY-102-v2
+- scripted-PLAT-102-v0
+- scripted-PLAT-102-v1
+- scripted-PLAT-102-v2
+- scripted-STF-109-v0
+- scripted-STF-109-v1
+- scripted-STF-109-v2
+- scripted-SUP-102-v0
+- scripted-SUP-102-v1
+- scripted-SUP-102-v2
+trigger:
+  type: jira_issue
+inputs:
+  key:
+    type: jira_key
+    required: true
+    example: PAY-101
+steps:
+- id: issue
+  title: issue
+  tool: jira.jira_get_issue
+  args:
+    issue_key: '{{ inputs.key }}'
+  extract:
+    window:
+      from: fields.created
+      using: window
+      before: 1h
+      after: 6h
+    window_window:
+      from: fields.created
+      using: window
+      before: 4d
+      after: 1d
+    error:
+      from: fields.description
+      using: regex
+      pattern: ^Error\s*:\s*(.+)$
+    slack_channel:
+      from: fields.description
+      using: ids:slack_channel
+    error_class:
+      from: fields.summary
+      using: ids:error_class
+    service:
+      from: fields.summary
+      using: catalog:service
+    trace_id:
+      from: fields.description
+      using: ids:trace_id
+- id: slack
+  title: slack
+  tool: slack.conversations_search_messages
+  args:
+    limit: 20
+    search_query:
+      ladder:
+      - '"{{ issue.error }}" in:{{ issue.slack_channel }} after:{{ issue.window.start_date }} before:{{ issue.window.end_date }}'
+      - '{{ issue.error_class }} in:{{ issue.slack_channel }} after:{{ issue.window.start_date }} before:{{ issue.window.end_date }}'
+      - '{{ inputs.key }}'
+  extract:
+    slack_channel_ids:
+      from: messages.matches[*].channel.id
+      all: true
+    slack_ts_list:
+      from: messages.matches[*].thread_ts
+      all: true
+- id: thread
+  title: thread
+  tool: slack.conversations_replies
+  args:
+    channel_id: '{{ slack.slack_channel_ids | first }}'
+    limit: 50
+    thread_ts: '{{ slack.slack_ts_list | first }}'
+  extract:
+    trace_ids:
+      from: messages[*].text
+      using: ids:trace_id
+      all: true
+    sha_shorts:
+      from: messages[*].text
+      using: ids:sha_short
+      all: true
+- id: code
+  title: code
+  tool: code.grep
+  args:
+    context: 2
+    glob: '**/*.py'
+    pattern: '{{ issue.error_class }}'
+  extract:
+    files:
+      from: matches[*].file
+      all: true
+- id: owners
+  title: owners
+  tool: code.codeowners
+  args:
+    path: '{{ code.files | first }}'
+  extract:
+    path:
+      from: path
+- id: source
+  title: source
+  tool: code.read_file
+  args:
+    path: '{{ owners.path }}'
+  optional: true
+  seen_in: 10/15 sessions
+- id: confluence
+  title: confluence
+  tool: confluence.confluence_search
+  args:
+    limit: 5
+    query: text ~ "{{ issue.error_class }}" AND space = {{ catalog.service[issue.service].confluence_space }}
+  extract:
+    ids:
+      from: results[*].id
+      all: true
+- id: metrics
+  title: metrics
+  tool: chronosphere.query_prometheus_range
+  args:
+    end: '{{ issue.window.end }}'
+    query: rate(http_requests_total{ {{ catalog.service[issue.service].prom_selector }},code=~"5.."}[5m])
+    start: '{{ issue.window.start }}'
+    step_seconds: 300
+- id: runbook
+  title: runbook
+  tool: confluence.confluence_get_page
+  args:
+    page_id: '{{ confluence.ids | first }}'
+- id: logs
+  title: logs
+  tool: logz.search_logs
+  args:
+    from_time: '{{ issue.window.start }}'
+    query: trace_id:{{ item }}
+    size: 20
+    to_time: '{{ issue.window.end }}'
+  forEach: ([issue.trace_id] + thread.trace_ids) | unique | list
+  max_items: 4
+- id: logs_2
+  title: logs 2
+  tool: logz.search_logs
+  args:
+    from_time: '{{ issue.window.start }}'
+    query: '"{{ issue.error }}" AND service:{{ issue.service }}'
+    size: 50
+    to_time: '{{ issue.window.end }}'
+- id: commits
+  title: commits
+  tool: git.git_log
+  args:
+    max_count: 10
+    path: '{{ catalog.service[issue.service].repo_path }}'
+    since: '{{ issue.window_window.start }}'
+    until: '{{ issue.window_window.end }}'
+- id: commit
+  title: commit
+  tool: git.git_show
+  args:
+    sha: '{{ thread.sha_shorts | first }}'
+- id: pagerduty
+  title: pagerduty
+  tool: pagerduty.list_incidents
+  args:
+    limit: 5
+    service_ids: '{{ catalog.service[issue.service].pagerduty_service_id }}'
+    since: '{{ issue.window.start }}'
+    until: '{{ issue.window.end }}'

@@ -1,0 +1,136 @@
+service:
+  payments-api:
+    aliases:
+    - payments_api
+    - payments_api
+    team: payments
+    owners:
+    - alice
+    - bob
+    jira_project: PAY
+    slack_channel: payments-alerts
+    incident_channel: incidents
+    pagerduty_service_id: PXYZ01
+    repo_path: services/payments_api
+    prom_selector: service="payments-api"
+    logz_type: payments-api
+    confluence_space: PAYMENTS
+  checkout-web:
+    aliases:
+    - checkout_web
+    - checkout_web
+    team: storefront
+    owners:
+    - carol
+    - dan
+    jira_project: STF
+    slack_channel: storefront-alerts
+    incident_channel: incidents
+    pagerduty_service_id: PABC02
+    repo_path: services/checkout_web
+    prom_selector: service="checkout-web"
+    logz_type: checkout-web
+    confluence_space: STOREFRONT
+  inventory-sync:
+    aliases:
+    - inventory_sync
+    - inventory_sync
+    team: supply
+    owners:
+    - erin
+    - frank
+    jira_project: SUP
+    slack_channel: supply-alerts
+    incident_channel: incidents
+    pagerduty_service_id: PDEF03
+    repo_path: services/inventory_sync
+    prom_selector: service="inventory-sync"
+    logz_type: inventory-sync
+    confluence_space: SUPPLY
+  notifier:
+    aliases:
+    - notifier
+    - notifier
+    team: platform
+    owners:
+    - grace
+    - heidi
+    jira_project: PLAT
+    slack_channel: platform-alerts
+    incident_channel: incidents
+    pagerduty_service_id: PGHI04
+    repo_path: services/notifier
+    prom_selector: service="notifier"
+    logz_type: notifier
+    confluence_space: PLATFORM
+team:
+  payments:
+    members:
+    - alice
+    - bob
+    slack_channel: team-payments
+    confluence_space: PAYMENTS
+  storefront:
+    members:
+    - carol
+    - dan
+    slack_channel: team-storefront
+    confluence_space: STOREFRONT
+  supply:
+    members:
+    - erin
+    - frank
+    slack_channel: team-supply
+    confluence_space: SUPPLY
+  platform:
+    members:
+    - grace
+    - heidi
+    slack_channel: team-platform
+    confluence_space: PLATFORM
+slack_channel:
+  incidents:
+    id: C542575C5
+  general:
+    id: C3C525685
+  payments-alerts:
+    id: CF48B2195
+  storefront-alerts:
+    id: C44494DE1
+  supply-alerts:
+    id: C50670B6D
+  platform-alerts:
+    id: C757E06F4
+  team-payments:
+    id: C692ADB90
+  team-storefront:
+    id: C73BAEDF1
+  team-supply:
+    id: C626EB978
+  team-platform:
+    id: C15EC029F
+person:
+  alice:
+    slack_id: U522B276A
+    team: payments
+  bob:
+    slack_id: U48181ACD
+    team: payments
+  carol:
+    slack_id: U28B92B56
+    team: storefront
+  dan:
+    slack_id: U2591E5F4
+    team: storefront
+  erin:
+    slack_id: U2A4B17B1
+    team: supply
+  frank:
+    slack_id: U86A8C2DA
+    team: supply
+  grace:
+    slack_id: UFD1CF5E2
+    team: platform
+  heidi:
+    slack_id: U0FEBC363
+    team: platform
