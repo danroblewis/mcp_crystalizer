@@ -146,3 +146,18 @@ breaks if the agent reorders two uses of the same tool; the UI queues complaints
 - Milestone 1 is one flow end to end, every layer thin.
 - Hard constraint carried over: no additional index or search servers. SQLite and local files only.
 - The agent is never invoked by this codebase without an explicit user command; runtime is AI-free.
+
+## UI direction (owner feedback, 2026-09-09)
+
+The run page must read like a **dossier**: a condensed report on the thing being investigated, the way an agent's
+markdown summary reads, not a log of tool calls.
+
+- Headline first: what happened, when, which service, who owns it, what changed just before, the incident status,
+  whether it is a repeat. These are derived from extracts and typed results, with no LLM.
+- Evidence grouped by information type (issue, thread, log patterns, metric, commits, runbook, incident), each type
+  with its own renderer, compact cards side by side where width allows.
+- Extracted values highlighted inside the content; large results collapse to diff-style excerpts around matches, with
+  expand links.
+- A flow diagram of the research: steps, what flowed where, fan-outs; the same view for agent traces, subagents and
+  workflows, with fan-out summaries (which items hit, union of what they found).
+- Tool call details (queries, ladder attempts) collapsed into a "how" panel, off by default.
