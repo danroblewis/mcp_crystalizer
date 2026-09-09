@@ -1,4 +1,8 @@
-"""Extractor specs used by flows:  {from: <jsonpath into step result>, using: regex|jsonpath|catalog:<kind>|window|ids:<type>|literal, ...}"""
+"""Extractor specs used by flows:  {from: <jsonpath into step result>, using: regex|jsonpath|catalog:<kind>|window|ids:<type>|position|literal, ...}
+
+  window:   {from: <timestamp>, before: 1h, after: 4h, round: 1h}   round (optional) floors the anchor to the hour/day
+  position: {from: <text>, program: {start: {...}, end: {...}}}      learned position program (crystal.extract.positions)
+"""
 from __future__ import annotations
 
 import re
@@ -7,7 +11,7 @@ from typing import Any
 
 from jsonpath_ng.ext import parse as jp_parse
 
-from crystal.extract import ids
+from crystal.extract import ids, positions
 from crystal.extract.catalog import gazetteer_for
 
 _DUR = re.compile(r"^(\d+)([smhd])$")
@@ -94,12 +98,34 @@ def run_extractor(spec: dict, result: Any, catalog: dict | None = None) -> Any:
         if not ts:
             return spec.get("default")
         t = _parse_ts(ts)
+        if spec.get("round"):
+            t = round_down(t, spec["round"])
         start = t - parse_duration(spec.get("before", "1h"))
         end = t + parse_duration(spec.get("after", "4h"))
         return {"start": _iso(start), "end": _iso(end), "anchor": _iso(t),
                 "start_date": start.strftime("%Y-%m-%d"), "end_date": end.strftime("%Y-%m-%d")}
 
+    if using == "position":
+        prog = spec["program"]
+        found, seen = [], set()
+        for t in _as_texts(values):
+            for v in (positions.apply_all(prog, t) if want_all else [positions.apply(prog, t)]):
+                if v is not None and v not in seen:
+                    seen.add(v)
+                    found.append(v)
+            if not want_all and found:
+                return found[0]
+        return found if want_all else spec.get("default")
+
     raise ValueError(f"unknown extractor {using!r}")
+
+
+def round_down(t: datetime, unit: str) -> datetime:
+    """Floor a timestamp to a whole number of `unit` (e.g. 1h, 1d, 15m) since midnight UTC."""
+    step = parse_duration(unit).total_seconds()
+    day = t.astimezone(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    secs = (t - day).total_seconds()
+    return day + timedelta(seconds=secs - secs % step)
 
 
 def _parse_ts(s: Any) -> datetime:

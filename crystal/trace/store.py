@@ -8,6 +8,18 @@ from pathlib import Path
 from crystal.trace.record import TRACE_DIR
 
 
+def normalize_output(output):
+    """Claude Code's hook may store a tool result as a list of content blocks ([{type: text, text: ...}]).
+    Fold those back into the parsed JSON object the sim/scripted traces carry, so extract paths look the same."""
+    if isinstance(output, list) and output and all(isinstance(b, dict) and b.get("type") == "text" for b in output):
+        raw = "\n".join(str(b.get("text", "")) for b in output)
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return raw
+    return output
+
+
 @dataclass
 class Session:
     session_id: str
@@ -35,6 +47,7 @@ def load_session(path: Path) -> Session:
         elif kind == "note":
             sess.notes.append(rec)
         else:
+            rec["output"] = normalize_output(rec.get("output"))
             sess.calls.append(rec)
     return sess
 

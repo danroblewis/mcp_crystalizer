@@ -45,7 +45,12 @@ uv run pytest -q
    uv run python -m crystal.cli induce jira_issue --name induced-jira-ticket
    ```
    The report lists unresolved bindings (values that differ across sessions with no explanation), optional
-   steps, ladders and fan-outs.
+   steps, ladders, fan-outs, how each session's steps were aligned, the window alternatives that lost the
+   majority vote, and the bindings solved by learned position programs. Steps align across sessions by a
+   signature of what their bound arguments reference (tool + text/id/window classes), so an agent that runs
+   the same tools in a different order still merges; timestamp arguments never become ladders.
+   `flows/induced-jira-ticket-all.yaml` is the merge of the 15 scripted sessions with the real Claude Code
+   session.
 3. **Test.** `tests/test_inducer.py` runs the induced flow on a ticket that was never traced;
    `tests/test_flow_jira.py` replays the hand-written flow through a cassette.
 4. **Run.** Promote by setting `status: promoted` in the flow YAML; the UI shows the status.
@@ -78,7 +83,11 @@ steps:
 ```
 
 Extractors: `jsonpath` (default), `regex`, `ids:<type>` (typed ID catalog), `catalog:<kind>` (gazetteer over
-`catalog/entities.yaml`), `window` (timestamp ± durations). `all: true` returns every match.
+`catalog/entities.yaml`), `window` (timestamp ± durations; `round: 1h` floors the anchor first, for agents that
+use 12:00Z instead of created−1h), `position` (a span program learned from traces, `crystal/extract/positions.py`:
+start and end positions given as the k-th place where a left-context and a right-context token regex meet, e.g.
+`{start: {left: ['lit:on', WS], right: [], k: 1}, end: {left: [], right: [WS, 'lit:at'], k: 1}}`). `all: true`
+returns every match.
 
 ## Pointing at real servers
 
