@@ -125,9 +125,16 @@ no AI, and its regression test passes.
 
 Status: all seven parts exist. The hand-written flow passes its regression suite live and via cassette;
 the inducer compiles 15 scripted sessions into a flow with zero unresolved bindings that runs on tickets it
-never saw. Known limits: extractor synthesis stops at typed regexes, label-anchored lines, catalog lookups and
-windows (no FlashExtract-style position programs yet); the inducer aligns steps by (tool, occurrence), which
-breaks if the agent reorders two uses of the same tool; the UI queues complaints but nothing consumes them.
+never saw. Follow-up (same day): the inducer aligns steps across sessions by a signature of the bound argument
+templates (tool + the text/id/window classes each argument references) instead of (tool, occurrence), so the real
+Claude Code session merges with the scripted ones: its late thread read, second git_log, rounded time windows
+(`window: {round: 1h}`) and extra calls (issue comments, list_services, get_incident) become shared or optional
+steps with zero unresolved bindings; timestamp arguments are decided by majority and never ladder. Extractor
+synthesis gained FlashExtract-lite position programs (`crystal/extract/positions.py`, extractor kind `position`)
+as the fallback after catalog/regex/window: start and end positions expressed as the k-th meeting point of small
+left/right token-class or literal contexts, learned by intersecting the candidate programs of every (text, span)
+pair and ranked with free negatives. Known limits: a list element the agent chose by content (the runbook whose
+title matched) still binds as `| first`; the UI queues complaints but nothing consumes them.
 
 ## Later milestones
 

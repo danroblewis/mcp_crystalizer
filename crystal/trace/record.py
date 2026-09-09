@@ -75,8 +75,9 @@ def hook_main() -> int:
     resp = payload.get("tool_response")
     output_text = ""
     output: Any = resp
-    if isinstance(resp, dict) and isinstance(resp.get("content"), list):
-        output_text = "\n".join(c.get("text", "") for c in resp["content"] if isinstance(c, dict) and c.get("type") == "text")
+    blocks = resp.get("content") if isinstance(resp, dict) else resp
+    if isinstance(blocks, list) and blocks and all(isinstance(c, dict) for c in blocks):
+        output_text = "\n".join(c.get("text", "") for c in blocks if c.get("type") == "text")
     elif isinstance(resp, str):
         output_text = resp
     if output_text:
