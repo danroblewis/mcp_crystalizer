@@ -1,0 +1,287 @@
+name: induced-slack-thread
+title: induced slack thread
+status: draft
+version: 1
+induced_from:
+- b4bdae3e-6ff9-4800-a330-31336e17517c
+- scripted-thread-1786015740.000000-v0
+- scripted-thread-1786015740.000000-v1
+- scripted-thread-1786015740.000000-v2
+- scripted-thread-1786298820.000001-v0
+- scripted-thread-1786298820.000001-v1
+- scripted-thread-1786298820.000001-v2
+- scripted-thread-1786462200.000002-v0
+- scripted-thread-1786462200.000002-v1
+- scripted-thread-1786462200.000002-v2
+- scripted-thread-1786806420.000003-v0
+- scripted-thread-1786806420.000003-v1
+- scripted-thread-1786806420.000003-v2
+- scripted-thread-1787164140.000004-v0
+- scripted-thread-1787164140.000004-v1
+- scripted-thread-1787164140.000004-v2
+trigger:
+  type: slack_thread
+inputs:
+  channel_id:
+    type: slack_channel_id
+    required: true
+    example: C542575C5
+  thread_ts:
+    type: slack_ts
+    required: true
+    example: '1787484120.000005'
+steps:
+- id: thread
+  title: thread
+  tool: slack.conversations_replies
+  args:
+    channel_id: '{{ inputs.channel_id }}'
+    limit: 100
+    thread_ts: '{{ inputs.thread_ts }}'
+  extract:
+    jira_keys:
+      from: '[*].text'
+      using: ids:jira_key
+      all: true
+    sha_shorts:
+      from: '[*].text'
+      using: ids:sha_short
+      all: true
+    trace_ids:
+      from: '[*].text'
+      using: ids:trace_id
+      all: true
+    error_class_list:
+      from: '[*].text'
+      using: ids:error_class
+      all: true
+    service:
+      from: '[*].text'
+      using: catalog:service
+    types:
+      from: '[*].type'
+      all: true
+    window:
+      from: messages[*].time
+      using: window
+      before: 1h
+      after: 6h
+    window_window:
+      from: messages[*].time
+      using: window
+      before: 4d
+      after: 1d
+- id: issue
+  title: issue
+  tool: jira.jira_get_issue
+  args:
+    issue_key:
+      ladder:
+      - '{{ thread.jira_keys | first }}'
+      - '{{ issues.jira_keys | first }}'
+  extract:
+    trace_id:
+      from: fields.description
+      using: ids:trace_id
+    error:
+      from: fields.description
+      using: regex
+      pattern: ^Error\s*:\s*(.+)$
+    error_class:
+      from: fields.summary
+      using: ids:error_class
+- id: jira_get_issue_comments
+  title: jira get issue comments
+  tool: jira.jira_get_issue_comments
+  args:
+    issue_key: '{{ thread.jira_keys | first }}'
+  optional: true
+  seen_in: 1/16 sessions
+- id: confluence
+  title: confluence
+  tool: confluence.confluence_search
+  args:
+    limit: 5
+    query:
+      ladder:
+      - text ~ "{{ issue.error_class }}" AND space = {{ catalog.service[thread.service].confluence_space }}
+      - title ~ "{{ thread.service }} runbook"
+      - text ~ "{{ thread.error_class_list | first }}"
+      - '{{ thread.types | first }} ~ "{{ thread.error_class_list | first }}"'
+  extract:
+    ids:
+      from: results[*].id
+      all: true
+- id: commit
+  title: commit
+  tool: git.git_show
+  args:
+    sha: '{{ thread.sha_shorts | first }}'
+  optional: true
+  seen_in: 1/16 sessions
+- id: code
+  title: code
+  tool: code.grep
+  args:
+    context: 2
+    glob: '**/*.py'
+    pattern: '{{ issue.error_class }}'
+  optional: true
+  seen_in: 5/16 sessions
+- id: issues
+  title: issues
+  tool: jira.jira_search
+  args:
+    jql:
+      ladder:
+      - text ~ "{{ thread.error_class_list | first }}" ORDER BY created DESC
+      - component = {{ thread.service }} AND {{ thread.types | first }} ~ "{{ thread.error_class_list | first }}"
+    limit: 5
+  optional: true
+  seen_in: 6/16 sessions
+  extract:
+    jira_keys:
+      from: issues[*].key
+      all: true
+- id: runbook
+  title: runbook
+  tool: confluence.confluence_get_page
+  args:
+    page_id:
+      ladder:
+      - '{{ confluence.ids | first }}'
+      - 20007
+  extract:
+    chronosphere:
+      from: body
+      using: regex
+      pattern: ^Chronosphere\s*:\s*(.+)$
+- id: metrics
+  title: metrics
+  tool: chronosphere.query_prometheus_range
+  args:
+    end:
+      ladder:
+      - '{{ thread.window.end }}'
+      - '2026-08-23T14:00:00Z'
+    query:
+      ladder:
+      - rate(http_requests_total{ {{ catalog.service[thread.service].prom_selector }},code=~"5.."}[5m])
+      - sum({{ runbook.chronosphere }})
+      - sum(rate(http_requests_total{ {{ catalog.service[thread.service].prom_selector }},status=~"5.."}[5m])) / sum(rate(http_requests_total{
+        {{ catalog.service[thread.service].prom_selector }} }[5m]))
+    start:
+      ladder:
+      - '{{ thread.window.start }}'
+      - '2026-08-23T09:00:00Z'
+    step_seconds: 300
+- id: logs
+  title: logs
+  tool: logz.search_logs
+  args:
+    from_time:
+      ladder:
+      - '{{ thread.window.start }}'
+      - '2026-08-22T00:00:00Z'
+    query: trace_id:{{ item }}
+    size: 20
+    to_time:
+      ladder:
+      - '{{ thread.window.end }}'
+      - '2026-08-24T00:00:00Z'
+  forEach: ([issue.trace_id] + thread.trace_ids) | unique | list
+  max_items: 5
+- id: logs_2
+  title: logs 2
+  tool: logz.search_logs
+  args:
+    from_time:
+      ladder:
+      - '{{ thread.window.start }}'
+      - '2026-08-22T00:00:00Z'
+    query:
+      ladder:
+      - '"{{ issue.error }}" AND service:{{ thread.service }}'
+      - '"{{ issue.error_class }}" AND service:{{ thread.service }}'
+      - '"{{ thread.error_class_list | first }}" AND service:{{ thread.service }}'
+    size: 50
+    to_time:
+      ladder:
+      - '{{ thread.window.end }}'
+      - '2026-08-24T00:00:00Z'
+- id: pagerduty
+  title: pagerduty
+  tool: pagerduty.list_incidents
+  args:
+    limit: 5
+    service_ids: '{{ catalog.service[thread.service].pagerduty_service_id }}'
+    since:
+      ladder:
+      - '{{ thread.window.start }}'
+      - '2026-08-22T00:00:00Z'
+    until:
+      ladder:
+      - '{{ thread.window.end }}'
+      - '2026-08-24T00:00:00Z'
+  optional: true
+  seen_in: 11/16 sessions
+- id: commits
+  title: commits
+  tool: git.git_log
+  args:
+    max_count: 10
+    path: '{{ catalog.service[thread.service].repo_path }}'
+    since:
+      ladder:
+      - '{{ thread.window_window.start }}'
+      - '2026-08-20T00:00:00Z'
+    until:
+      ladder:
+      - '{{ thread.window_window.end }}'
+      - '2026-08-24T00:00:00Z'
+  optional: true
+  seen_in: 6/16 sessions
+- id: source
+  title: source
+  tool: code.read_file
+  args:
+    path: '{{ catalog.service[thread.service].repo_path }}/handler.py'
+  optional: true
+  seen_in: 1/16 sessions
+- id: commits_2
+  title: commits 2
+  tool: git.git_log
+  args:
+    max_count: 10
+    path: '{{ catalog.service[thread.service].repo_path }}/handler.py'
+  optional: true
+  seen_in: 1/16 sessions
+  extract:
+    sha40s:
+      from: '[*].text'
+      using: ids:sha40
+      all: true
+- id: commit_2
+  title: commit 2
+  tool: git.git_show
+  args:
+    sha: '{{ commits_2.sha40s | first }}'
+  optional: true
+  seen_in: 1/16 sessions
+- id: pagerduty_2
+  title: pagerduty 2
+  tool: pagerduty.list_incidents
+  args:
+    service_ids: '{{ catalog.service[thread.service].pagerduty_service_id }}'
+    since: '2026-08-01T00:00:00Z'
+    until: '2026-09-10T00:00:00Z'
+  optional: true
+  seen_in: 1/16 sessions
+- id: slack
+  title: slack
+  tool: slack.conversations_search_messages
+  args:
+    limit: 20
+    search_query: '{{ thread.error_class_list | first }} {{ thread.service }}'
+  optional: true
+  seen_in: 1/16 sessions

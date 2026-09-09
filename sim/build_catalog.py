@@ -8,7 +8,7 @@ w = json.loads((ROOT / "sim/data/world.json").read_text())
 services = {}
 for name, s in w["services"].items():
     services[name] = {
-        "aliases": [name.replace("-", "_"), s["repo_path"].split("/")[-1]],
+        "aliases": list(dict.fromkeys([name.replace("-", "_"), s["repo_path"].split("/")[-1], *s.get("aliases", [])])),
         "team": s["team"], "owners": s["owners"], "jira_project": s["jira_project"],
         "slack_channel": s["slack_channel"].lstrip("#"), "incident_channel": s["incident_channel"].lstrip("#"),
         "pagerduty_service_id": s["pagerduty_service_id"], "repo_path": s["repo_path"],
@@ -16,6 +16,7 @@ for name, s in w["services"].items():
     }
 teams = {t: {"members": m, "slack_channel": f"team-{t}", "confluence_space": t.upper()} for t, m in w["teams"].items()}
 channels = {c["name"]: {"id": c["id"]} for c in w["channels"].values()}
+channels.update({f"@{n}": {"id": d["id"], "is_im": True, "user": n} for n, d in w.get("dms", {}).items()})
 people = {p["name"]: {"slack_id": p["id"], "team": p["team"]} for p in w["people"].values()}
 out = {"service": services, "team": teams, "slack_channel": channels, "person": people}
 (ROOT / "catalog").mkdir(exist_ok=True)

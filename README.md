@@ -18,7 +18,7 @@ Design: `docs/PLAN.md`. Research behind it: `docs/research/`.
 | `crystal/induce/` | Trace → flow inducer (no LLM) |
 | `crystal/replay/` | Cassette record/replay so regression tests need no servers |
 | `app/` | FastAPI web UI |
-| `flows/` | Crystallized flows |
+| `flows/` | Crystallized flows: `investigate-jira-ticket`, `investigate-slack-thread`, `investigate-slack-dm` (candidates) and the raw `induced-*` drafts |
 | `traces/` | Recorded sessions (JSONL) and cassettes; `feedback.jsonl` is the repair queue |
 
 ## Quick start
@@ -29,6 +29,8 @@ uv run python sim/world.py            # generate sim/data/world.json and the sim
 uv run python sim/build_catalog.py    # catalog/entities.yaml (the foreign-key hub)
 uv run python -m crystal.cli flows
 uv run python -m crystal.cli run investigate-jira-ticket key=PAY-101
+uv run python -m crystal.cli run investigate-slack-thread channel_id=C542575C5 thread_ts=1786015740.000000
+uv run python -m crystal.cli run investigate-slack-dm "text=is payments healthy? a customer says card charges are hanging"
 uv run uvicorn app.main:app --port 8765   # then open http://localhost:8765
 uv run pytest -q
 ```
@@ -39,6 +41,13 @@ uv run pytest -q
    (`.claude/settings.json` + `.mcp.json`; `claude` in this directory records every MCP call to `traces/`):
    ```bash
    uv run python -m crystal.trace.scripted PAY-101 STF-109 SUP-102 PLAT-102 PAY-102 --variants 3
+   uv run python -m crystal.trace.scripted --trigger slack_thread C542575C5/1786015740.000000 --variants 3
+   uv run python -m crystal.trace.scripted --trigger slack_dm D59227FD8/1786020840.000500 --variants 3
+   ```
+   The real agent is launched only by an explicit command and costs money (`--budget` caps it):
+   ```bash
+   uv run python -m crystal.trace.driver slack_thread channel_id=C542575C5 thread_ts=1787484120.000005 --budget 3
+   uv run python -m crystal.trace.driver slack_dm "text=hey, are you seeing checkout failures?" --budget 3
    ```
 2. **Induce.** Compile the traces into a draft flow, no LLM:
    ```bash
@@ -47,7 +56,8 @@ uv run pytest -q
    The report lists unresolved bindings (values that differ across sessions with no explanation), optional
    steps, ladders and fan-outs.
 3. **Test.** `tests/test_inducer.py` runs the induced flow on a ticket that was never traced;
-   `tests/test_flow_jira.py` replays the hand-written flow through a cassette.
+   `tests/test_flow_jira.py` replays the hand-written flow through a cassette; `tests/test_flows_slack.py` runs the
+   thread and DM flows on a thread/DMs that were never traced.
 4. **Run.** Promote by setting `status: promoted` in the flow YAML; the UI shows the status.
 5. **Repair.** "This didn't help" on a run page appends to `traces/feedback.jsonl`. Handing that to the
    agent is milestone 2; nothing in this repo invokes an LLM on its own.
