@@ -2,6 +2,6 @@
 __pycache__/
 *.pyc
 runs/
-traces/*.jsonl
+traces/cassettes/
 sim/repo/
 .pytest_cache/
