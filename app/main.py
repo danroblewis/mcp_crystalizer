@@ -16,6 +16,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.render import cards
 from crystal import PROJECT_ROOT
+from crystal.flow.lifecycle import describe, get_lifecycle
 from crystal.flow.runner import FlowRunner, RUN_DIR, list_flows, load_flow
 from crystal.mcp_client import ServerPool
 
@@ -49,16 +50,28 @@ def _runs(limit: int = 50) -> list[dict]:
     return out
 
 
+def _lifecycle(flow: dict) -> dict:
+    """Effective runtime state (badge, counters, last failure) next to the author's status from the YAML."""
+    lc = get_lifecycle()
+    st = lc.view(flow)
+    return {**st, **describe(st)}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     flows = [f for f in list_flows() if f.get("status") != "broken"]
+    for f in flows:
+        f["lifecycle"] = _lifecycle(f)
     return TEMPLATES.TemplateResponse(request, "index.html", {"flows": flows, "runs": _runs(15)})
 
 
 @app.get("/flows/{name}", response_class=HTMLResponse)
 async def flow_form(request: Request, name: str):
     flow = load_flow(name)
-    return TEMPLATES.TemplateResponse(request, "flow.html", {"flow": flow, "runs": [r for r in _runs(100) if r["flow"] == name][:10]})
+    flow["lifecycle"] = _lifecycle(flow)
+    events = get_lifecycle().events(name, limit=12)
+    return TEMPLATES.TemplateResponse(request, "flow.html", {"flow": flow, "events": events,
+                                                            "runs": [r for r in _runs(100) if r["flow"] == name][:10]})
 
 
 @app.get("/flows/{name}/yaml", response_class=PlainTextResponse)
@@ -106,6 +119,18 @@ async def feedback(run_id: str, text: str = Form(""), helpful: str = Form("no"))
     record = json.loads(p.read_text()) if p.exists() else {}
     FEEDBACK.parent.mkdir(exist_ok=True)
     with FEEDBACK.open("a") as fh:
-        fh.write(json.dumps({"ts": datetime.now(timezone.utc).isoformat(), "run_id": run_id, "flow": record.get("flow"),
+        fh.write(json.dumps({"ts": datetime.now(timezone.utc).isoformat(), "kind": "feedback", "run_id": run_id, "flow": record.get("flow"),
                              "inputs": record.get("inputs"), "helpful": helpful == "yes", "text": text}) + "\n")
-    return RedirectResponse(f"/runs/{run_id}?msg=Recorded.+A+repair+request+is+queued+for+the+flow+author.", status_code=303)
+    if helpful != "yes" and record.get("flow"):
+        # a complaint is a failure signal: the circuit breaker demotes the flow one level
+        try:
+            flow = load_flow(record["flow"])
+        except Exception:  # noqa: BLE001
+            flow = {"name": record["flow"], "status": "draft"}
+        st = get_lifecycle().record_feedback(flow, run_id, text)
+        tr = st.get("transition")
+        msg = "Recorded.+A+repair+request+is+queued+for+the+flow+author+(crystal+repair)."
+        if tr:
+            msg += f"+Flow+demoted+{tr[0]}+%E2%86%92+{tr[1]}."
+        return RedirectResponse(f"/runs/{run_id}?msg={msg}", status_code=303)
+    return RedirectResponse(f"/runs/{run_id}?msg=Thanks,+recorded.", status_code=303)

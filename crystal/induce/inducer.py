@@ -468,8 +468,13 @@ def _hashable(v: Any) -> Any:
 
 
 def _coerce(v: Any) -> Any:
-    if isinstance(v, str) and re.fullmatch(r"-?\d+", v):
-        return int(v)
+    """Reverse _hashable: lists/dicts come back from their JSON form. Strings stay strings even when numeric
+    (a "20014" page id must not become the int 20014; the tool schema says string)."""
+    if isinstance(v, str) and v[:1] in "[{":
+        try:
+            return json.loads(v)
+        except json.JSONDecodeError:
+            return v
     return v
 
 

@@ -77,6 +77,8 @@ def hook_main() -> int:
     output: Any = resp
     if isinstance(resp, dict) and isinstance(resp.get("content"), list):
         output_text = "\n".join(c.get("text", "") for c in resp["content"] if isinstance(c, dict) and c.get("type") == "text")
+    elif isinstance(resp, list) and resp and all(isinstance(c, dict) and "type" in c for c in resp):
+        output_text = "\n".join(c.get("text", "") for c in resp if c.get("type") == "text")  # bare MCP content blocks
     elif isinstance(resp, str):
         output_text = resp
     if output_text:

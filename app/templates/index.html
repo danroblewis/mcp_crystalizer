@@ -3,8 +3,12 @@
 <div class="grid">
 {% for f in flows %}
 <div class="card"><div><a href="/flows/{{ f.name }}"><strong>{{ f.title or f.name }}</strong></a>
- <span class="pill {{ 'ok' if f.status == 'promoted' else 'draft' }}">{{ f.status }}</span></div>
+ <span class="pill {{ 'ok' if f.status == 'promoted' else 'draft' }}" title="author intent (flow YAML)">{{ f.status }}</span>
+ {% if f.lifecycle %}<span class="pill {{ 'bad' if f.lifecycle.tripped else ('ok' if f.lifecycle.status == 'promoted' else 'draft') }}" title="effective runtime state">{{ 'tripped: ' if f.lifecycle.tripped }}{{ f.lifecycle.status }}</span>{% endif %}</div>
 <div class="muted small" style="margin:6px 0">{{ f.description or '' }}</div>
+{% if f.lifecycle %}<div class="small muted">runs: {{ f.lifecycle.clean_runs }} clean · {{ f.lifecycle.failed_runs }} failed · streak {{ f.lifecycle.clean_streak }} · tests {{ f.lifecycle.tests_passed }}/{{ f.lifecycle.tests_passed + f.lifecycle.tests_failed }} · {{ f.lifecycle.complaints }} complaints
+{% if f.lifecycle.hint %}· {{ f.lifecycle.hint }}{% endif %}
+{% if f.lifecycle.last_failure %}<div class="bad small">last failure {{ (f.lifecycle.last_failure_at or '')[:16] }}: {{ f.lifecycle.last_failure[:120] }}</div>{% endif %}</div>{% endif %}
 <div class="small">inputs: {% for k, v in (f.inputs or {}).items() %}<span class="extract">{{ k }}: {{ v.type }}</span>{% endfor %}
  · {{ f.steps | length }} steps</div></div>
 {% endfor %}

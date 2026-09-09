@@ -47,6 +47,12 @@
       "args": [
         "sim/servers/code.py"
       ]
+    },
+    "flows": {
+      "command": ".venv/bin/python",
+      "args": [
+        "sim/servers/flows.py"
+      ]
     }
   }
 }

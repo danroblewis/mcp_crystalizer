@@ -131,8 +131,11 @@ breaks if the agent reorders two uses of the same tool; the UI queues complaints
 
 ## Later milestones
 
-- **M2.** Agent-assisted authoring: `crystal author` runs the agent with the flow catalog exposed as
-  tools, so it tries flows before exploring; repair command consumes the complaint queue.
+- **M2 (done 2026-09-09).** Promotion lifecycle + circuit breaker (`crystal/flow/lifecycle.py`,
+  `state/lifecycle.sqlite`; `crystal status`, `crystal test`); agent-assisted authoring: `crystal author` runs the
+  agent with the flow catalog exposed as tools (`sim/servers/flows.py`: `list_flows`, `run_flow`), so it tries flows
+  before exploring, and induces `flows/<base>.v<N>.yaml` from that session plus the trigger's earlier sessions;
+  `crystal repair` consumes the complaint queue the same way and marks complaints handled. Both require `--yes`.
 - **M3.** The other two typical flows (Slack thread, Slack DM); span synthesis from traces;
   local SQLite FTS5 index over results for cross-run search.
 - **M4.** Point at real servers: swap sim servers for the public Atlassian, Slack, Grafana,

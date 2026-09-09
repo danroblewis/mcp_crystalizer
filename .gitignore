@@ -5,3 +5,4 @@ runs/
 traces/cassettes/
 sim/repo/
 .pytest_cache/
+state/

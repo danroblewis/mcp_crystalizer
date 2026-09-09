@@ -1,6 +1,15 @@
 {% extends "base.html" %}{% block title %}{{ flow.title or flow.name }}{% endblock %}{% block body %}
-<h1>{{ flow.title or flow.name }} <span class="pill {{ 'ok' if flow.status == 'promoted' else 'draft' }}">{{ flow.status }}</span></h1>
+<h1>{{ flow.title or flow.name }} <span class="pill {{ 'ok' if flow.status == 'promoted' else 'draft' }}" title="author intent (flow YAML)">author: {{ flow.status }}</span>
+{% if flow.lifecycle %}<span class="pill {{ 'bad' if flow.lifecycle.tripped else ('ok' if flow.lifecycle.status == 'promoted' else 'draft') }}" title="effective runtime state">effective: {{ flow.lifecycle.status }}{{ ' (tripped)' if flow.lifecycle.tripped }}</span>{% endif %}</h1>
 <p class="muted">{{ flow.description or '' }} <a href="/flows/{{ flow.name }}/yaml" class="small">view yaml</a></p>
+{% if flow.lifecycle %}<div class="card small">
+<div><strong>Lifecycle</strong> · {{ flow.lifecycle.clean_runs }} clean runs · {{ flow.lifecycle.failed_runs }} failed · current streak {{ flow.lifecycle.clean_streak }}
+ · tests {{ flow.lifecycle.tests_passed }} passed / {{ flow.lifecycle.tests_failed }} failed · {{ flow.lifecycle.complaints }} complaints
+ {% if flow.lifecycle.hint %}· <span class="muted">{{ flow.lifecycle.hint }}</span>{% endif %}
+ {% if flow.lifecycle.status != flow.status and not flow.lifecycle.tripped %}· <span class="muted">effective state differs from author intent</span>{% endif %}</div>
+{% if flow.lifecycle.last_failure %}<div style="color:var(--bad)">last failure {{ (flow.lifecycle.last_failure_at or '')[:19] }}{% if flow.lifecycle.last_failure_run %} (<a href="/runs/{{ flow.lifecycle.last_failure_run }}" class="mono">{{ flow.lifecycle.last_failure_run }}</a>){% endif %}: {{ flow.lifecycle.last_failure }}</div>{% endif %}
+{% if events %}<details><summary>recent lifecycle events</summary><table>{% for e in events %}<tr><td class="mono">{{ e.ts[:19] }}</td><td>{{ e.kind }}</td><td>{{ 'ok' if e.ok else ('fail' if e.ok == 0 else '') }}</td><td>{% if e.to_status %}{{ e.from_status }} → {{ e.to_status }}{% endif %}</td><td class="muted">{{ (e.detail or '')[:100] }}</td></tr>{% endfor %}</table></details>{% endif %}
+</div>{% endif %}
 <form method="post" action="/flows/{{ flow.name }}/run" class="card">
 {% for k, v in (flow.inputs or {}).items() %}
 <label><div class="small muted">{{ v.label or k }} <span class="mono">({{ v.type }})</span></div>

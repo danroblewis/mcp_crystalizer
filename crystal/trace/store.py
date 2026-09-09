@@ -35,8 +35,22 @@ def load_session(path: Path) -> Session:
         elif kind == "note":
             sess.notes.append(rec)
         else:
-            sess.calls.append(rec)
+            sess.calls.append(_normalize_output(rec))
     return sess
+
+
+def _normalize_output(rec: dict) -> dict:
+    """Older hook traces stored the raw MCP content-block list as `output`; present it as the parsed JSON the
+    runner would see, so extract paths induced from real sessions match live results."""
+    out = rec.get("output")
+    if isinstance(out, list) and out and all(isinstance(c, dict) and c.get("type") == "text" for c in out) and not rec.get("output_text"):
+        text = "\n".join(c.get("text", "") for c in out)
+        rec["output_text"] = text
+        try:
+            rec["output"] = json.loads(text)
+        except json.JSONDecodeError:
+            rec["output"] = text
+    return rec
 
 
 def load_sessions(trace_dir: Path | None = None, trigger: str | None = None) -> list[Session]:
