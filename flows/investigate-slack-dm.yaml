@@ -1,0 +1,211 @@
+name: investigate-slack-dm
+title: Investigate a Slack DM
+description: >
+  Given the text of a DM ("hey, are you seeing checkout failures? customers report SessionExpired since about 2pm"):
+  find the DM in Slack (who, when), read the rest of that conversation, find the incident discussion the DM is
+  about (by ticket key, error class or service name around the DM's time), then the runbook, the code that raises
+  the error, the error-rate metric before the DM, the logs for every trace id anyone pasted, all lines with the
+  error, and the Jira ticket. Mirrors the agent flow slack -> confluence -> codebase -> chronosphere + logz + jira.
+  Induced from 18 scripted sessions and one Claude Code session, then hand-fixed (guards on every rung so a value
+  the DM lacks blanks the rung instead of searching everything; hits paths; extract names).
+status: candidate
+version: 1
+induced_from:
+  - scripted-dm-1786020840.000500-v0
+  - scripted-dm-1786020840.000500-v1
+  - scripted-dm-1786020840.000500-v2
+  - scripted-dm-1786302540.000510-v0
+  - scripted-dm-1786302540.000510-v1
+  - scripted-dm-1786302540.000510-v2
+  - scripted-dm-1786466640.000520-v0
+  - scripted-dm-1786466640.000520-v1
+  - scripted-dm-1786466640.000520-v2
+  - scripted-dm-1786810380.000530-v0
+  - scripted-dm-1786810380.000530-v1
+  - scripted-dm-1786810380.000530-v2
+  - scripted-dm-1787169360.000540-v0
+  - scripted-dm-1787169360.000540-v1
+  - scripted-dm-1787169360.000540-v2
+  - scripted-dm-1787486340.000550-v0
+  - scripted-dm-1787486340.000550-v1
+  - scripted-dm-1787486340.000550-v2
+  - 845f1217-8a0f-4135-a734-eea95a181ee5   # Claude Code, PLAT-104 DM
+trigger: { type: slack_dm }
+inputs:
+  text: { type: string, required: true, label: The DM text, example: "hey, are you on PAY-101? support is getting pinged about it" }
+
+steps:
+  - id: dm
+    title: The DM in Slack (who, when)
+    tool: slack.conversations_search_messages
+    required: true
+    hits: messages.matches
+    args: { search_query: '"{{ inputs.text }}"', limit: 5 }
+    extract:
+      window:      { from: "messages.matches[*].time", using: window, before: 6h, after: 2h }
+      channel_id:  { from: "messages.matches[0].channel.id" }
+      sender:      { from: "messages.matches[0].username" }
+      time:        { from: "messages.matches[0].time" }
+      service:     { from: "messages.matches[*].text", using: "catalog:service" }
+      error_class: { from: "messages.matches[*].text", using: "ids:error_class" }
+      jira_key:    { from: "messages.matches[*].text", using: "ids:jira_key" }
+      trace_ids:   { from: "messages.matches[*].text", using: "ids:trace_id", all: true }
+
+  - id: history
+    title: The rest of the DM conversation
+    tool: slack.conversations_history
+    when: "{{ dm.channel_id }}"
+    hits: messages
+    args: { channel_id: "{{ dm.channel_id }}", limit: 20 }
+    extract:
+      trace_ids:   { from: "messages[*].text", using: "ids:trace_id", all: true }
+      pods:        { from: "messages[*].text", using: "ids:k8s_pod", all: true }
+      jira_keys:   { from: "messages[*].text", using: "ids:jira_key", all: true }
+      error_class: { from: "messages[*].text", using: "ids:error_class" }
+
+  - id: incidents
+    title: The incident discussion the DM is about
+    tool: slack.conversations_search_messages
+    hits: messages.matches
+    args:
+      limit: 20
+      search_query:
+        ladder:
+          - '{% if dm.jira_key %}{{ dm.jira_key }} in:#incidents{% endif %}'
+          - '{% if dm.error_class and dm.service %}{{ dm.error_class }} in:#{{ catalog.service[dm.service].incident_channel }} after:{{ dm.window.start_date }} before:{{ dm.window.end_date }}{% endif %}'
+          - '{% if dm.service %}{{ dm.service }} in:#{{ catalog.service[dm.service].incident_channel }} after:{{ dm.window.start_date }} before:{{ dm.window.end_date }}{% endif %}'
+          - '{% if dm.error_class %}{{ dm.error_class }} in:#incidents after:{{ dm.window.start_date }} before:{{ dm.window.end_date }}{% endif %}'
+          - '{% if history.jira_keys %}{{ history.jira_keys | first }} in:#incidents{% endif %}'
+          - '{% if history.error_class %}{{ history.error_class }} in:#incidents{% endif %}'
+          - '{% if dm.service %}{{ dm.service }} in:#incidents{% endif %}'
+    extract:
+      channel_id:  { from: "messages.matches[0].channel.id" }
+      thread_ts:   { from: "messages.matches[*].thread_ts", all: true }
+      service:     { from: "messages.matches[*].text", using: "catalog:service" }
+      error_class: { from: "messages.matches[*].text", using: "ids:error_class" }
+      jira_keys:   { from: "messages.matches[*].text", using: "ids:jira_key", all: true }
+      trace_ids:   { from: "messages.matches[*].text", using: "ids:trace_id", all: true }
+
+  - id: thread
+    title: The incident thread
+    tool: slack.conversations_replies
+    when: "{{ incidents.thread_ts }}"
+    hits: messages
+    args: { channel_id: "{{ incidents.channel_id }}", thread_ts: "{{ incidents.thread_ts | first }}", limit: 100 }
+    extract:
+      service:     { from: "messages[*].text", using: "catalog:service" }
+      error_class: { from: "messages[*].text", using: "ids:error_class" }
+      error_sig:   { from: "messages[*].text", using: regex, pattern: '`([A-Z][A-Za-z]+: [^`]+)`' }
+      jira_keys:   { from: "messages[*].text", using: "ids:jira_key", all: true }
+      trace_ids:   { from: "messages[*].text", using: "ids:trace_id", all: true }
+      shas:        { from: "messages[*].text", using: "ids:sha_short", all: true }
+      people:      { from: "messages[*].username", all: true }
+
+  - id: confluence
+    title: Runbook / wiki
+    tool: confluence.confluence_search
+    hits: results
+    args:
+      limit: 5
+      query:
+        ladder:   # precise first: CQL `title ~ "a b"` ORs the words, so an unscoped title search matches every runbook
+          - '{% set svc = dm.service or thread.service or incidents.service %}{% set cls = dm.error_class or thread.error_class %}{% if svc and cls %}text ~ "{{ cls }}" AND space = {{ catalog.service[svc].confluence_space }}{% endif %}'
+          - '{% set svc = dm.service or thread.service or incidents.service %}{% if svc %}title ~ "{{ svc }} runbook" AND space = {{ catalog.service[svc].confluence_space }}{% endif %}'
+          - '{% set cls = dm.error_class or thread.error_class or history.error_class %}{% if cls %}text ~ "{{ cls }}"{% endif %}'
+          - '{% set svc = dm.service or thread.service or incidents.service %}{% if svc %}{{ svc }} runbook{% endif %}'
+    extract:
+      page_ids: { from: "results[*].id", all: true }
+
+  - id: runbook
+    title: Runbook page
+    tool: confluence.confluence_get_page
+    when: "{{ confluence.page_ids }}"
+    args: { page_id: "{{ confluence.page_ids | first }}" }
+    extract:
+      remediation: { from: body, using: regex, pattern: '^Remediation:\s*(.+)$', all: true }
+
+  - id: code
+    title: Code that raises or logs the error
+    tool: code.grep
+    when: "{{ dm.error_class or thread.error_class or history.error_class }}"
+    hits: matches
+    args: { pattern: "{{ dm.error_class or thread.error_class or history.error_class }}", glob: "**/*.py", context: 2 }
+    extract:
+      files: { from: "matches[*].file", all: true }
+
+  - id: owners
+    title: Owning team (CODEOWNERS)
+    tool: code.codeowners
+    forEach: code.files | unique | list | head(1)
+    args: { path: "{{ item }}" }
+    extract:
+      teams: { from: "owners[*]", all: true }
+
+  - id: metrics
+    title: Error rate in the hours before the DM
+    tool: chronosphere.query_prometheus_range
+    when: "{{ dm.service or thread.service or incidents.service }}"
+    hits: data.result
+    args:
+      query: 'rate(http_requests_total{service="{{ dm.service or thread.service or incidents.service }}",code=~"5.."}[5m])'
+      start: "{{ dm.window.start }}"
+      end: "{{ dm.window.end }}"
+      step_seconds: 300
+
+  - id: logs
+    title: Logs per trace id anyone pasted
+    tool: logz.search_logs
+    forEach: ((dm.trace_ids or []) + (history.trace_ids or []) + (incidents.trace_ids or []) + (thread.trace_ids or [])) | unique | list
+    max_items: 6
+    hits: hits
+    args:
+      query: "trace_id:{{ item }}"
+      from_time: "{{ dm.window.start }}"
+      to_time: "{{ dm.window.end }}"
+      size: 20
+    extract:
+      pods:  { from: "hits[*]._source.['kubernetes.pod_name']", all: true }
+      lines: { from: "hits[*]._source.message", all: true }
+
+  - id: logs_by_error
+    title: All log lines with this error before the DM
+    tool: logz.search_logs
+    hits: hits
+    args:
+      query:
+        ladder:
+          - '{% set svc = dm.service or thread.service or incidents.service %}{% set cls = dm.error_class or thread.error_class or history.error_class %}{% if svc and cls %}"{{ cls }}" AND service:{{ svc }}{% endif %}'
+          - '{% if thread.error_sig %}"{{ thread.error_sig }}"{% endif %}'
+          - '{% set cls = dm.error_class or thread.error_class or history.error_class %}{% if cls %}"{{ cls }}"{% endif %}'
+      from_time: "{{ dm.window.start }}"
+      to_time: "{{ dm.window.end }}"
+      size: 50
+
+  - id: issues
+    title: Find the ticket (nobody named one)
+    tool: jira.jira_search
+    when: "{{ not (dm.jira_key or thread.jira_keys or history.jira_keys) and (dm.service or thread.service or incidents.service) }}"
+    hits: issues
+    args:
+      jql: 'component = {{ dm.service or thread.service or incidents.service }} AND labels = incident ORDER BY created DESC'
+      limit: 5
+    extract:
+      jira_keys: { from: "issues[*].key", all: true }
+
+  - id: issue
+    title: Jira ticket
+    tool: jira.jira_get_issue
+    when: "{{ dm.jira_key or thread.jira_keys or history.jira_keys or issues.jira_keys }}"
+    args:
+      issue_key:
+        ladder:
+          - "{{ dm.jira_key }}"
+          - "{{ thread.jira_keys | first }}"
+          - "{{ history.jira_keys | first }}"
+          - "{{ issues.jira_keys | first }}"
+    extract:
+      summary:   { from: fields.summary }
+      status:    { from: fields.status.name }
+      assignee:  { from: fields.assignee.displayName }
+      created:   { from: fields.created }
+      error_sig: { from: fields.description, using: regex, pattern: '^Error:\s*(.+)$' }

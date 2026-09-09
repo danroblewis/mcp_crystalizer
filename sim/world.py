@@ -32,6 +32,21 @@ TEAMS = {
     "supply": ["erin", "frank"],
     "platform": ["grace", "heidi"],
 }
+ALIASES = {
+    # how people refer to the service in prose (DMs); becomes catalog aliases for the gazetteer
+    "payments-api": ["payments", "payment gateway"],
+    "checkout-web": ["checkout", "storefront checkout"],
+    "inventory-sync": ["inventory sync", "inventory", "warehouse sync"],
+    "notifier": ["notifications", "notification service", "sms notifier"],
+}
+SYMPTOMS = {
+    "payments-api": "a customer says card charges are hanging",
+    "checkout-web": "people can't complete checkout",
+    "inventory-sync": "warehouse team says stock levels look stale",
+    "notifier": "sms confirmations aren't arriving",
+}
+DM_NOISE = ["lunch?", "can you review my PR when you get a sec?", "thanks for the help yesterday",
+            "are you around for the retro?", "quick q about the deploy pipeline, no rush", "did the staging deploy go out?"]
 ERRORS = {
     "payments-api": [
         ("PaymentGatewayTimeout", "gateway did not respond within 30s", "charge"),
@@ -81,6 +96,7 @@ def build_world(seed: int = 7) -> dict:
             "incident_channel": "#incidents",
             "pagerduty_service_id": pd,
             "repo_path": f"services/{name.replace('-', '_')}",
+            "aliases": ALIASES[name],
             "prom_labels": {"service": name, "env": "prod"},
             "logz_type": name,
         }
@@ -239,8 +255,49 @@ def build_world(seed: int = 7) -> dict:
                       "created": ts(BASE - timedelta(days=90)), "last_modified": ts(BASE - timedelta(days=10)),
                       "body": f"h1. Team {t} on-call\n\nRotation in PagerDuty. Escalate in #team-{t}. Services: " + ", ".join(s for s, v in services.items() if v["team"] == t)})
 
+    # direct messages: one im channel per person with "me" (the on-call engineer). Each incident produces one DM
+    # from a colleague outside the owning team, phrased one of three ways: ticket key / error class + service alias /
+    # service alias + symptom. A follow-up carries a trace id a customer pasted. Plus noise DMs.
+    me = {"id": "U" + h("me", 8).upper(), "name": "me", "real_name": "On-call Engineer", "team": "oncall"}
+    dms = {n: {"id": "D" + h(f"dm:{n}", 8).upper(), "user": p["id"], "user_name": n, "messages": []} for n, p in people.items()}
+    for k, inc in enumerate(incidents):
+        svc_name, svc = inc["service"], services[inc["service"]]
+        alias = ALIASES[svc_name][k % len(ALIASES[svc_name])]
+        sender = rnd.choice([n for n, p in people.items() if p["team"] != svc["team"]])
+        t0 = datetime.fromisoformat(inc["started_at"].replace("Z", "+00:00"))
+        when = t0 + timedelta(minutes=rnd.randint(25, 95))
+        key, cls = inc["jira"]["key"], inc["error_class"]
+        hour = (t0 - timedelta(minutes=t0.minute)).strftime("%-I%p").lower()
+        mode = k % 3
+        if mode == 0:
+            text = rnd.choice([f"hey, are you on {key}? support is getting pinged about it and I have nothing to tell them",
+                               f"quick one: any progress on {key}? {alias} customers are asking for an update"])
+        elif mode == 1:
+            text = rnd.choice([f"hey, are you seeing {alias} failures? customers report {cls} since about {hour}",
+                               f"heads up, support has a few reports of {cls} errors in {alias} since {hour}, is that known?"])
+        else:
+            text = rnd.choice([f"is {alias} healthy? {SYMPTOMS[svc_name]}",
+                               f"something off with {alias} since about {hour}: {SYMPTOMS[svc_name]}. anyone looking?"])
+        follow = (f"fwiw one of them pasted this from the error page: trace_id={inc['trace_ids'][2]}" if mode else
+                  f"they also sent a screenshot mentioning pod {inc['pods'][1]}")
+        thread = [(sender, when, text), ("me", when + timedelta(minutes=3), "on it, will update here"),
+                  (sender, when + timedelta(minutes=8), follow)]
+        for i, (who, at, txt) in enumerate(thread):
+            u = me if who == "me" else people[who]
+            dms[sender]["messages"].append({"user": u["id"], "user_name": who, "ts": slack_ts(at, 500 + k * 10 + i), "text": txt})
+        inc["dm"] = {"channel_id": dms[sender]["id"], "ts": dms[sender]["messages"][-3]["ts"], "user_name": sender, "text": text, "mode": mode}
+    for n, d in dms.items():
+        for i in range(rnd.randint(2, 4)):
+            at = BASE + timedelta(days=rnd.randint(0, 35), hours=rnd.randint(8, 18), minutes=rnd.randint(0, 59))
+            who = n if i % 2 == 0 else "me"
+            u = me if who == "me" else people[n]
+            d["messages"].append({"user": u["id"], "user_name": who, "ts": slack_ts(at, 700 + i), "text": rnd.choice(DM_NOISE) if who == n else "sure, later today"})
+        d["messages"].sort(key=lambda m: float(m["ts"]))
+
     return {
         "generated_from_seed": seed,
+        "me": me,
+        "dms": dms,
         "base_time": ts(BASE),
         "services": services,
         "teams": TEAMS,

@@ -2,7 +2,8 @@ service:
   payments-api:
     aliases:
     - payments_api
-    - payments_api
+    - payments
+    - payment gateway
     team: payments
     owners:
     - alice
@@ -18,7 +19,8 @@ service:
   checkout-web:
     aliases:
     - checkout_web
-    - checkout_web
+    - checkout
+    - storefront checkout
     team: storefront
     owners:
     - carol
@@ -34,7 +36,9 @@ service:
   inventory-sync:
     aliases:
     - inventory_sync
-    - inventory_sync
+    - inventory sync
+    - inventory
+    - warehouse sync
     team: supply
     owners:
     - erin
@@ -50,7 +54,9 @@ service:
   notifier:
     aliases:
     - notifier
-    - notifier
+    - notifications
+    - notification service
+    - sms notifier
     team: platform
     owners:
     - grace
@@ -109,6 +115,38 @@ slack_channel:
     id: C626EB978
   team-platform:
     id: C15EC029F
+  '@alice':
+    id: DEA6423F1
+    is_im: true
+    user: alice
+  '@bob':
+    id: D78C6F02A
+    is_im: true
+    user: bob
+  '@carol':
+    id: D26FD8537
+    is_im: true
+    user: carol
+  '@dan':
+    id: D53881EE9
+    is_im: true
+    user: dan
+  '@erin':
+    id: D59227FD8
+    is_im: true
+    user: erin
+  '@frank':
+    id: D74871682
+    is_im: true
+    user: frank
+  '@grace':
+    id: D89FCC4D5
+    is_im: true
+    user: grace
+  '@heidi':
+    id: D88F07D54
+    is_im: true
+    user: heidi
 person:
   alice:
     slack_id: U522B276A

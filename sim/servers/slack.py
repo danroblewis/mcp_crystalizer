@@ -6,16 +6,21 @@ from common import world, text, slack_query, match_terms, parse_time
 mcp = MCPServer("sim-slack", instructions="Simulated Slack. Search supports quoted phrases, bare terms (AND), in:#channel, from:@user, after:/before: YYYY-MM-DD.")
 
 
+def _im_channels() -> list[dict]:
+    """Direct-message channels look like Slack `im` conversations: D… id, no real name (we show @user)."""
+    return [{"id": d["id"], "name": f"@{n}", "is_im": True, "user": d["user"]} for n, d in world().get("dms", {}).items()]
+
+
 def _channel_by_name(name: str) -> dict | None:
     name = name.lstrip("#")
-    for c in world()["channels"].values():
-        if c["name"] == name:
+    for c in [*world()["channels"].values(), *_im_channels()]:
+        if c["name"] == name or c["name"] == "@" + name:
             return c
     return None
 
 
 def _channel_by_id(cid: str) -> dict | None:
-    for c in world()["channels"].values():
+    for c in [*world()["channels"].values(), *_im_channels()]:
         if c["id"] == cid:
             return c
     return None
@@ -33,12 +38,18 @@ def _all_messages():
     for m in w["noise"]["slack"]:
         out.append({"channel": _channel_by_name(m["channel"]), "ts": m["ts"], "thread_ts": m["ts"], "user": m["user"],
                     "user_name": m["user_name"], "text": m["text"], "reply_count": 0, "is_reply": False})
+    for ch in _im_channels():
+        for m in w["dms"][ch["name"].lstrip("@")]["messages"]:
+            out.append({"channel": ch, "ts": m["ts"], "thread_ts": m["ts"], "user": m["user"], "user_name": m["user_name"],
+                        "text": m["text"], "reply_count": 0, "is_reply": False})
     return out
 
 
 def _fmt(m: dict) -> dict:
     ch = m["channel"]
-    return {"ts": m["ts"], "thread_ts": m["thread_ts"], "channel": {"id": ch["id"], "name": ch["name"]},
+    when = datetime.fromtimestamp(float(m["ts"]), tz=timezone.utc).replace(microsecond=0)
+    return {"ts": m["ts"], "thread_ts": m["thread_ts"], "time": when.isoformat().replace("+00:00", "Z"),
+            "channel": {"id": ch["id"], "name": ch["name"], **({"is_im": True} if ch.get("is_im") else {})},
             "user": m["user"], "username": m["user_name"], "text": m["text"],
             "permalink": f"https://sim.slack.com/archives/{ch['id']}/p{m['ts'].replace('.', '')}",
             "reply_count": m["reply_count"]}
@@ -77,7 +88,7 @@ def conversations_search_messages(search_query: str = "", filter_in_channel: str
                  "next_cursor": str(page + 1) if page * limit < len(hits) else ""})
 
 
-@mcp.tool(structured_output=False, name="conversations_replies", description="Fetch a thread: the parent message and its replies. channel_id is the C… id, thread_ts the parent ts.")
+@mcp.tool(structured_output=False, name="conversations_replies", description="Fetch a thread: the parent message and its replies. channel_id is the C… (or D… for a DM) id, thread_ts the parent ts.")
 def conversations_replies(channel_id: str, thread_ts: str, limit: int = 100) -> str:
     ch = _channel_by_id(channel_id) or _channel_by_name(channel_id)
     msgs = [m for m in _all_messages() if ch and m["channel"]["id"] == ch["id"] and m["thread_ts"] == thread_ts]
@@ -85,7 +96,7 @@ def conversations_replies(channel_id: str, thread_ts: str, limit: int = 100) -> 
     return text({"messages": [_fmt(m) for m in msgs[:limit]]})
 
 
-@mcp.tool(structured_output=False, name="conversations_history", description="Recent top-level messages in a channel (channel_id C… or #name). limit max 200.")
+@mcp.tool(structured_output=False, name="conversations_history", description="Recent top-level messages in a channel or DM (channel_id C…, D… for a DM, #name or @user). limit max 200.")
 def conversations_history(channel_id: str, limit: int = 50) -> str:
     ch = _channel_by_id(channel_id) or _channel_by_name(channel_id)
     msgs = [m for m in _all_messages() if ch and m["channel"]["id"] == ch["id"] and not m["is_reply"]]
@@ -93,14 +104,19 @@ def conversations_history(channel_id: str, limit: int = 50) -> str:
     return text({"messages": [_fmt(m) for m in msgs[:min(int(limit), 200)]]})
 
 
-@mcp.tool(structured_output=False, name="channels_list", description="List channels with ids and names.")
-def channels_list() -> str:
-    return text({"channels": list(world()["channels"].values())})
+@mcp.tool(structured_output=False, name="channels_list", description="List channels (C…) and direct-message conversations (D…, is_im=true, name @user) with ids and names.")
+def channels_list(channel_types: str = "public_channel,im") -> str:
+    kinds = {k.strip() for k in channel_types.split(",") if k.strip()}
+    out = [{**c, "is_im": False} for c in world()["channels"].values()] if kinds & {"public_channel", "private_channel"} else []
+    if "im" in kinds:
+        out += _im_channels()
+    return text({"channels": out})
 
 
 @mcp.tool(structured_output=False, name="users_list", description="List users with ids, names and teams.")
 def users_list() -> str:
-    return text({"users": list(world()["people"].values())})
+    w = world()
+    return text({"users": [*w["people"].values(), *([w["me"]] if w.get("me") else [])]})
 
 
 if __name__ == "__main__":

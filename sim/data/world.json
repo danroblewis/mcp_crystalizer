@@ -1,5 +1,405 @@
 {
  "generated_from_seed": 7,
+ "me": {
+  "id": "UB1C1D873",
+  "name": "me",
+  "real_name": "On-call Engineer",
+  "team": "oncall"
+ },
+ "dms": {
+  "alice": {
+   "id": "DEA6423F1",
+   "user": "U522B276A",
+   "user_name": "alice",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786323780.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U522B276A",
+     "user_name": "alice",
+     "ts": "1786810380.000530",
+     "text": "quick one: any progress on PLAT-102? notifications customers are asking for an update"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786810560.000531",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U522B276A",
+     "user_name": "alice",
+     "ts": "1786810860.000532",
+     "text": "they also sent a screenshot mentioning pod notifier-f47e24742-f1c4b"
+    },
+    {
+     "user": "U522B276A",
+     "user_name": "alice",
+     "ts": "1787084220.000702",
+     "text": "lunch?"
+    },
+    {
+     "user": "U522B276A",
+     "user_name": "alice",
+     "ts": "1788658500.000700",
+     "text": "are you around for the retro?"
+    }
+   ]
+  },
+  "bob": {
+   "id": "D78C6F02A",
+   "user": "U48181ACD",
+   "user_name": "bob",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786148400.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U48181ACD",
+     "user_name": "bob",
+     "ts": "1788568500.000700",
+     "text": "lunch?"
+    }
+   ]
+  },
+  "carol": {
+   "id": "D26FD8537",
+   "user": "U28B92B56",
+   "user_name": "carol",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787272320.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U28B92B56",
+     "user_name": "carol",
+     "ts": "1788575520.000700",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788645540.000703",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U28B92B56",
+     "user_name": "carol",
+     "ts": "1788741120.000702",
+     "text": "can you review my PR when you get a sec?"
+    }
+   ]
+  },
+  "dan": {
+   "id": "D53881EE9",
+   "user": "U2591E5F4",
+   "user_name": "dan",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786404480.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1786838880.000700",
+     "text": "are you around for the retro?"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1787510520.000702",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1788088980.000570",
+     "text": "hey, are you seeing notification service failures? customers report RateLimited since about 10am"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788089160.000571",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1788089460.000572",
+     "text": "fwiw one of them pasted this from the error page: trace_id=0826f94af685bc62c0d5fc0d6090f802"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788113580.000703",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1788372840.000580",
+     "text": "is payments healthy? a customer says card charges are hanging"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788373020.000581",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1788373320.000582",
+     "text": "fwiw one of them pasted this from the error page: trace_id=352191ca10a2c355f391251b954cf332"
+    }
+   ]
+  },
+  "erin": {
+   "id": "D59227FD8",
+   "user": "U2A4B17B1",
+   "user_name": "erin",
+   "messages": [
+    {
+     "user": "U2A4B17B1",
+     "user_name": "erin",
+     "ts": "1786020840.000500",
+     "text": "hey, are you on PAY-101? support is getting pinged about it and I have nothing to tell them"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786021020.000501",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U2A4B17B1",
+     "user_name": "erin",
+     "ts": "1786021320.000502",
+     "text": "they also sent a screenshot mentioning pod payments-api-53c134792-85419"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786319760.000703",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U2A4B17B1",
+     "user_name": "erin",
+     "ts": "1786493640.000702",
+     "text": "did the staging deploy go out?"
+    },
+    {
+     "user": "U2A4B17B1",
+     "user_name": "erin",
+     "ts": "1787425020.000700",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787771760.000701",
+     "text": "sure, later today"
+    }
+   ]
+  },
+  "frank": {
+   "id": "D74871682",
+   "user": "U86A8C2DA",
+   "user_name": "frank",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786663920.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U86A8C2DA",
+     "user_name": "frank",
+     "ts": "1786679580.000700",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "U86A8C2DA",
+     "user_name": "frank",
+     "ts": "1787955960.000702",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "U86A8C2DA",
+     "user_name": "frank",
+     "ts": "1788616500.000590",
+     "text": "hey, are you on STF-119? support is getting pinged about it and I have nothing to tell them"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788616680.000591",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U86A8C2DA",
+     "user_name": "frank",
+     "ts": "1788616980.000592",
+     "text": "they also sent a screenshot mentioning pod checkout-web-e8a4cc3a7-a6140"
+    }
+   ]
+  },
+  "grace": {
+   "id": "D89FCC4D5",
+   "user": "UFD1CF5E2",
+   "user_name": "grace",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1785882900.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1786302540.000510",
+     "text": "heads up, support has a few reports of SessionExpired errors in storefront checkout since 6pm, is that known?"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786302720.000511",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1786303020.000512",
+     "text": "fwiw one of them pasted this from the error page: trace_id=cde22ca34c18a4d82e3e8e4dd8003e14"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1786466640.000520",
+     "text": "is warehouse sync healthy? warehouse team says stock levels look stale"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786466820.000521",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1786467120.000522",
+     "text": "fwiw one of them pasted this from the error page: trace_id=71ab51c775260f172388a29ef9b26aad"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787486340.000550",
+     "text": "is storefront checkout healthy? people can't complete checkout"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787486520.000551",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787486820.000552",
+     "text": "fwiw one of them pasted this from the error page: trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787510760.000700",
+     "text": "thanks for the help yesterday"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787843100.000560",
+     "text": "hey, are you on SUP-105? support is getting pinged about it and I have nothing to tell them"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787843280.000561",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787843580.000562",
+     "text": "they also sent a screenshot mentioning pod inventory-sync-b74149eab-f0ef4"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1788309900.000702",
+     "text": "lunch?"
+    }
+   ]
+  },
+  "heidi": {
+   "id": "D88F07D54",
+   "user": "U0FEBC363",
+   "user_name": "heidi",
+   "messages": [
+    {
+     "user": "U0FEBC363",
+     "user_name": "heidi",
+     "ts": "1786989900.000702",
+     "text": "thanks for the help yesterday"
+    },
+    {
+     "user": "U0FEBC363",
+     "user_name": "heidi",
+     "ts": "1787169360.000540",
+     "text": "heads up, support has a few reports of PaymentGatewayTimeout errors in payments since 6pm, is that known?"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787169540.000541",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U0FEBC363",
+     "user_name": "heidi",
+     "ts": "1787169840.000542",
+     "text": "fwiw one of them pasted this from the error page: trace_id=b7db6eca1ec7e1447b4db666b276a8e0"
+    },
+    {
+     "user": "U0FEBC363",
+     "user_name": "heidi",
+     "ts": "1787621940.000700",
+     "text": "thanks for the help yesterday"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788545220.000701",
+     "text": "sure, later today"
+    }
+   ]
+  }
+ },
  "base_time": "2026-08-03T09:00:00Z",
  "services": {
   "payments-api": {
@@ -14,6 +414,10 @@
    "incident_channel": "#incidents",
    "pagerduty_service_id": "PXYZ01",
    "repo_path": "services/payments_api",
+   "aliases": [
+    "payments",
+    "payment gateway"
+   ],
    "prom_labels": {
     "service": "payments-api",
     "env": "prod"
@@ -32,6 +436,10 @@
    "incident_channel": "#incidents",
    "pagerduty_service_id": "PABC02",
    "repo_path": "services/checkout_web",
+   "aliases": [
+    "checkout",
+    "storefront checkout"
+   ],
    "prom_labels": {
     "service": "checkout-web",
     "env": "prod"
@@ -50,6 +458,11 @@
    "incident_channel": "#incidents",
    "pagerduty_service_id": "PDEF03",
    "repo_path": "services/inventory_sync",
+   "aliases": [
+    "inventory sync",
+    "inventory",
+    "warehouse sync"
+   ],
    "prom_labels": {
     "service": "inventory-sync",
     "env": "prod"
@@ -68,6 +481,11 @@
    "incident_channel": "#incidents",
    "pagerduty_service_id": "PGHI04",
    "repo_path": "services/notifier",
+   "aliases": [
+    "notifications",
+    "notification service",
+    "sms notifier"
+   ],
    "prom_labels": {
     "service": "notifier",
     "env": "prod"
@@ -497,6 +915,13 @@
    "metric_spike": {
     "start": "2026-08-06T11:20:00Z",
     "end": "2026-08-06T12:15:00Z"
+   },
+   "dm": {
+    "channel_id": "D59227FD8",
+    "ts": "1786020840.000500",
+    "user_name": "erin",
+    "text": "hey, are you on PAY-101? support is getting pinged about it and I have nothing to tell them",
+    "mode": 0
    }
   },
   {
@@ -810,6 +1235,13 @@
    "metric_spike": {
     "start": "2026-08-09T17:58:00Z",
     "end": "2026-08-09T18:53:00Z"
+   },
+   "dm": {
+    "channel_id": "D89FCC4D5",
+    "ts": "1786302540.000510",
+    "user_name": "grace",
+    "text": "heads up, support has a few reports of SessionExpired errors in storefront checkout since 6pm, is that known?",
+    "mode": 1
    }
   },
   {
@@ -1123,6 +1555,13 @@
    "metric_spike": {
     "start": "2026-08-11T15:21:00Z",
     "end": "2026-08-11T16:16:00Z"
+   },
+   "dm": {
+    "channel_id": "D89FCC4D5",
+    "ts": "1786466640.000520",
+    "user_name": "grace",
+    "text": "is warehouse sync healthy? warehouse team says stock levels look stale",
+    "mode": 2
    }
   },
   {
@@ -1436,6 +1875,13 @@
    "metric_spike": {
     "start": "2026-08-15T14:58:00Z",
     "end": "2026-08-15T15:53:00Z"
+   },
+   "dm": {
+    "channel_id": "DEA6423F1",
+    "ts": "1786810380.000530",
+    "user_name": "alice",
+    "text": "quick one: any progress on PLAT-102? notifications customers are asking for an update",
+    "mode": 0
    }
   },
   {
@@ -1749,6 +2195,13 @@
    "metric_spike": {
     "start": "2026-08-19T18:20:00Z",
     "end": "2026-08-19T19:15:00Z"
+   },
+   "dm": {
+    "channel_id": "D88F07D54",
+    "ts": "1787169360.000540",
+    "user_name": "heidi",
+    "text": "heads up, support has a few reports of PaymentGatewayTimeout errors in payments since 6pm, is that known?",
+    "mode": 1
    }
   },
   {
@@ -2062,6 +2515,13 @@
    "metric_spike": {
     "start": "2026-08-23T11:13:00Z",
     "end": "2026-08-23T12:08:00Z"
+   },
+   "dm": {
+    "channel_id": "D89FCC4D5",
+    "ts": "1787486340.000550",
+    "user_name": "grace",
+    "text": "is storefront checkout healthy? people can't complete checkout",
+    "mode": 2
    }
   },
   {
@@ -2375,6 +2835,13 @@
    "metric_spike": {
     "start": "2026-08-27T13:30:00Z",
     "end": "2026-08-27T14:25:00Z"
+   },
+   "dm": {
+    "channel_id": "D89FCC4D5",
+    "ts": "1787843100.000560",
+    "user_name": "grace",
+    "text": "hey, are you on SUP-105? support is getting pinged about it and I have nothing to tell them",
+    "mode": 0
    }
   },
   {
@@ -2688,6 +3155,13 @@
    "metric_spike": {
     "start": "2026-08-30T10:30:00Z",
     "end": "2026-08-30T11:25:00Z"
+   },
+   "dm": {
+    "channel_id": "D53881EE9",
+    "ts": "1788088980.000570",
+    "user_name": "dan",
+    "text": "hey, are you seeing notification service failures? customers report RateLimited since about 10am",
+    "mode": 1
    }
   },
   {
@@ -3001,6 +3475,13 @@
    "metric_spike": {
     "start": "2026-09-02T17:22:00Z",
     "end": "2026-09-02T18:17:00Z"
+   },
+   "dm": {
+    "channel_id": "D53881EE9",
+    "ts": "1788372840.000580",
+    "user_name": "dan",
+    "text": "is payments healthy? a customer says card charges are hanging",
+    "mode": 2
    }
   },
   {
@@ -3314,6 +3795,13 @@
    "metric_spike": {
     "start": "2026-09-05T13:10:00Z",
     "end": "2026-09-05T14:05:00Z"
+   },
+   "dm": {
+    "channel_id": "D74871682",
+    "ts": "1788616500.000590",
+    "user_name": "frank",
+    "text": "hey, are you on STF-119? support is getting pinged about it and I have nothing to tell them",
+    "mode": 0
    }
   }
  ],

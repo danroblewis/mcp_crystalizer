@@ -1,0 +1,173 @@
+name: investigate-slack-thread
+title: Investigate a Slack thread I was added to
+description: >
+  Given a channel id and thread ts: read the thread, pull the ticket it names (or find it in Jira by the error
+  class), the runbook, the code that emits the error, the error-rate metric around the thread, the log lines for
+  every trace id in the thread or ticket, all lines with the error, the PagerDuty incident and the commits just
+  before. Mirrors the agent flow slack -> jira + confluence -> chronosphere + logz. Induced from 15 scripted
+  sessions and one Claude Code session, then hand-fixed (guards, hits paths, extract names).
+status: candidate
+version: 1
+induced_from:
+  - scripted-thread-1786015740.000000-v0
+  - scripted-thread-1786015740.000000-v1
+  - scripted-thread-1786015740.000000-v2
+  - scripted-thread-1786298820.000001-v0
+  - scripted-thread-1786298820.000001-v1
+  - scripted-thread-1786298820.000001-v2
+  - scripted-thread-1786462200.000002-v0
+  - scripted-thread-1786462200.000002-v1
+  - scripted-thread-1786462200.000002-v2
+  - scripted-thread-1786806420.000003-v0
+  - scripted-thread-1786806420.000003-v1
+  - scripted-thread-1786806420.000003-v2
+  - scripted-thread-1787164140.000004-v0
+  - scripted-thread-1787164140.000004-v1
+  - scripted-thread-1787164140.000004-v2
+  - b4bdae3e-6ff9-4800-a330-31336e17517c   # Claude Code, STF-116 thread
+trigger: { type: slack_thread }
+inputs:
+  channel_id: { type: slack_channel_id, required: true, label: Slack channel id, example: C542575C5 }
+  thread_ts:  { type: slack_ts, required: true, label: Thread ts (parent message), example: "1786015740.000000" }
+
+steps:
+  - id: thread
+    title: The thread
+    tool: slack.conversations_replies
+    required: true
+    hits: messages
+    args: { channel_id: "{{ inputs.channel_id }}", thread_ts: "{{ inputs.thread_ts }}", limit: 100 }
+    extract:
+      window:        { from: "messages[*].time", using: window, before: 1h, after: 6h }
+      commit_window: { from: "messages[*].time", using: window, before: 4d, after: 1d }
+      service:       { from: "messages[*].text", using: "catalog:service" }
+      error_class:   { from: "messages[*].text", using: "ids:error_class" }
+      error_sig:     { from: "messages[*].text", using: regex, pattern: '`([A-Z][A-Za-z]+: [^`]+)`' }
+      jira_keys:     { from: "messages[*].text", using: "ids:jira_key", all: true }
+      trace_ids:     { from: "messages[*].text", using: "ids:trace_id", all: true }
+      pods:          { from: "messages[*].text", using: "ids:k8s_pod", all: true }
+      shas:          { from: "messages[*].text", using: "ids:sha_short", all: true }
+      people:        { from: "messages[*].username", all: true }
+
+  - id: issues
+    title: Find the ticket (thread names none)
+    tool: jira.jira_search
+    when: "{{ not thread.jira_keys and thread.error_class }}"
+    hits: issues
+    args: { jql: 'text ~ "{{ thread.error_class }}" ORDER BY created DESC', limit: 5 }
+    extract:
+      jira_keys: { from: "issues[*].key", all: true }
+
+  - id: issue
+    title: Jira ticket
+    tool: jira.jira_get_issue
+    when: "{{ thread.jira_keys or issues.jira_keys }}"
+    args:
+      issue_key:
+        ladder:
+          - "{{ thread.jira_keys | first }}"
+          - "{{ issues.jira_keys | first }}"
+    extract:
+      summary:     { from: fields.summary }
+      created:     { from: fields.created }
+      service:     { from: "fields.components[*].name", using: "catalog:service" }
+      error_sig:   { from: fields.description, using: regex, pattern: '^Error:\s*(.+)$' }
+      error_class: { from: fields.summary, using: "ids:error_class" }
+      trace_ids:   { from: fields.description, using: "ids:trace_id", all: true }
+
+  - id: confluence
+    title: Runbook / wiki
+    tool: confluence.confluence_search
+    hits: results
+    args:
+      limit: 5
+      query:
+        ladder:   # precise first: CQL `title ~ "a b"` ORs the words, so an unscoped title search matches every runbook
+          - '{% if thread.error_class and thread.service %}text ~ "{{ thread.error_class }}" AND space = {{ catalog.service[thread.service].confluence_space }}{% endif %}'
+          - '{% if thread.service %}title ~ "{{ thread.service }} runbook" AND space = {{ catalog.service[thread.service].confluence_space }}{% endif %}'
+          - '{% if issue.error_class and issue.service %}text ~ "{{ issue.error_class }}" AND space = {{ catalog.service[issue.service].confluence_space }}{% endif %}'
+          - '{% if thread.error_class %}text ~ "{{ thread.error_class }}"{% endif %}'
+          - '{% if thread.service or issue.service %}title ~ "{{ thread.service or issue.service }} runbook"{% endif %}'
+    extract:
+      page_ids: { from: "results[*].id", all: true }
+
+  - id: runbook
+    title: Runbook page
+    tool: confluence.confluence_get_page
+    when: "{{ confluence.page_ids }}"
+    args: { page_id: "{{ confluence.page_ids | first }}" }
+    extract:
+      remediation: { from: body, using: regex, pattern: '^Remediation:\s*(.+)$', all: true }
+
+  - id: code
+    title: Code that raises or logs the error
+    tool: code.grep
+    when: "{{ thread.error_class or issue.error_class }}"
+    hits: matches
+    args: { pattern: "{{ thread.error_class or issue.error_class }}", glob: "**/*.py", context: 2 }
+    extract:
+      files: { from: "matches[*].file", all: true }
+
+  - id: metrics
+    title: Error rate around the thread
+    tool: chronosphere.query_prometheus_range
+    hits: data.result
+    args:
+      query: 'rate(http_requests_total{service="{{ thread.service or issue.service }}",code=~"5.."}[5m])'
+      start: "{{ thread.window.start }}"
+      end: "{{ thread.window.end }}"
+      step_seconds: 300
+
+  - id: logs
+    title: Logs per trace id
+    tool: logz.search_logs
+    forEach: ((thread.trace_ids or []) + (issue.trace_ids or [])) | unique | list
+    max_items: 6
+    hits: hits
+    args:
+      query: "trace_id:{{ item }}"
+      from_time: "{{ thread.window.start }}"
+      to_time: "{{ thread.window.end }}"
+      size: 20
+    extract:
+      pods:  { from: "hits[*]._source.['kubernetes.pod_name']", all: true }
+      lines: { from: "hits[*]._source.message", all: true }
+
+  - id: logs_by_error
+    title: All log lines with this error in the window
+    tool: logz.search_logs
+    hits: hits
+    args:
+      query:
+        ladder:
+          - '{% if issue.error_sig and thread.service %}"{{ issue.error_sig }}" AND service:{{ thread.service }}{% endif %}'
+          - '{% if thread.error_sig and thread.service %}"{{ thread.error_sig }}" AND service:{{ thread.service }}{% endif %}'
+          - '{% if thread.error_class and thread.service %}"{{ thread.error_class }}" AND service:{{ thread.service }}{% endif %}'
+          - '{% if thread.error_class %}"{{ thread.error_class }}"{% endif %}'
+      from_time: "{{ thread.window.start }}"
+      to_time: "{{ thread.window.end }}"
+      size: 50
+
+  - id: pagerduty
+    title: PagerDuty incident
+    tool: pagerduty.list_incidents
+    when: "{{ thread.service }}"
+    hits: incidents
+    args:
+      service_ids: "{{ catalog.service[thread.service].pagerduty_service_id }}"
+      since: "{{ thread.window.start }}"
+      until: "{{ thread.window.end }}"
+      limit: 5
+
+  - id: commits
+    title: Commits touching the service just before
+    tool: git.git_log
+    when: "{{ thread.service }}"
+    hits: commits
+    args:
+      path: "{{ catalog.service[thread.service].repo_path }}"
+      since: "{{ thread.commit_window.start }}"
+      until: "{{ thread.commit_window.end }}"
+      max_count: 10
+    extract:
+      shas: { from: "commits[*].sha", all: true }

@@ -16,6 +16,7 @@ ID_PATTERNS: dict[str, tuple[str, str]] = {
     "date":         (r"\b\d{4}-\d{2}-\d{2}\b", "calendar date"),
     "slack_ts":     (r"\b1[6-9]\d{8}\.\d{6}\b", "Slack message ts"),
     "slack_channel_id": (r"\bC[0-9A-F]{8,10}\b", "Slack channel id"),
+    "slack_dm_id":      (r"\bD[0-9A-F]{8,10}\b", "Slack direct-message (im) channel id"),
     "slack_user_id":    (r"\bU[0-9A-F]{8,10}\b", "Slack user id"),
     "pd_incident_id":   (r"\bQ[0-9A-Z]{13}\b", "PagerDuty incident id"),
     "pd_service_id":    (r"\bP[0-9A-Z]{6}\b", "PagerDuty service id"),

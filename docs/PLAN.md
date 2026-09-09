@@ -136,12 +136,91 @@ left/right token-class or literal contexts, learned by intersecting the candidat
 pair and ranked with free negatives. Known limits: a list element the agent chose by content (the runbook whose
 title matched) still binds as `| first`; the UI queues complaints but nothing consumes them.
 
+## Milestone 3 (part): the Slack-thread and Slack-DM flows (2026-09-09)
+
+Both remaining typical flows exist as `status: candidate` in `flows/`:
+
+| Flow | Trigger / inputs | Steps |
+|---|---|---|
+| `investigate-slack-thread` | `slack_thread`: `channel_id`, `thread_ts` | thread -> (jira_search if no key) -> issue -> confluence -> runbook -> code -> metrics -> logs per trace id -> logs by error -> pagerduty -> commits |
+| `investigate-slack-dm` | `slack_dm`: `text` (the DM, as the driver's prompt carries it) | dm (find it in Slack: who/when) -> history (rest of the DM conversation) -> incidents (search #incidents by key / error class / service around the DM time) -> thread -> confluence -> runbook -> code -> owners -> metrics -> logs per trace id -> logs by error -> (jira_search if nobody named a ticket) -> issue |
+
+What was added to make them inducible and runnable:
+
+- **World.** Every person has a DM channel (`D…`, `is_im`) with "me"; each incident produces one DM from a colleague
+  outside the owning team phrased one of three ways: ticket key only ("hey, are you on PAY-101?"), error class +
+  service alias ("customers report SessionExpired ... in storefront checkout"), or service alias + symptom ("is
+  warehouse sync healthy? stock levels look stale"), a follow-up with a trace id a customer pasted, plus noise DMs.
+  Services carry prose aliases (`checkout`, `payments`, `warehouse sync`, `notification service`) that the catalog
+  gazetteer resolves. The Slack sim lists ims in `channels_list`, serves `conversations_history`/`replies` on `D…`
+  ids, and every message now carries an ISO `time` next to `ts` (as real search results do) so the inducer can anchor
+  time windows on a Slack message.
+- **Scripted agent.** `investigate_slack_thread(channel_id, thread_ts)` and `investigate_slack_dm(channel_id, ts)`
+  with three order/phrasing variants each; 15 + 18 sessions recorded over incidents INC-001..006. The DM variant
+  records `inputs: {text}` only; the channel/ts merely locate the text.
+- **Induction.** Both triggers induce with zero unresolved bindings. The raw drafts are kept as
+  `flows/induced-slack-thread.yaml` / `flows/induced-slack-dm.yaml` (re-induced after the real sessions were added).
+  Hand fixes applied in the promoted YAML: `{% if %}` guards on every ladder rung so a value the trigger lacks blanks
+  the rung instead of searching the whole workspace (the inducer emits `{{ dm.service }} in:#…` which renders as
+  ` in:#…` when the DM names no service); `hits:` paths; `when:` on steps that only make sense with a key/service;
+  precedence chains (`dm.service or thread.service or incidents.service`) in place of the inducer's flat ladders;
+  dropped two accidental bindings (`sum({{ runbook.chronosphere }})` as a PromQL rung, `runbook.error_class` as the
+  grep pattern, both true in the traces and wrong in general); `unique | list | head(1)` instead of `unique | head(1)`
+  (Jinja's `unique` is a generator).
+- **Tests.** `tests/test_flows_slack.py` runs each flow live on inputs that were never traced (SUP-105's thread; the
+  PAY-108 service-only DM; the STF-119 key-only DM) and asserts the evidence: thread found, ticket found, logs per
+  trace id, metrics, runbook, no step errors.
+
+### Observed agent behaviour (real Claude Code vs. scripted agent)
+
+One headless Claude Code session per trigger, recorded through the hook (`--budget 3`; actual cost $0.90 for
+`slack_thread`, 18 calls/23 turns, and $0.84 for `slack_dm`, 21 calls/24 turns; no retries needed). Traces:
+`traces/b4bdae3e-….jsonl` (thread, STF-116) and `traces/845f1217-….jsonl` (DM, PLAT-104).
+
+**Thread trigger.** Same skeleton as the scripted agent (replies -> get_issue -> logz per trace id -> logz by error
+-> pagerduty -> chronosphere -> confluence -> get_page), but:
+
+- It read `jira_get_issue_comments` and immediately `git_show`ed the short sha named in the thread (step 4), before
+  any logs or metrics. The scripted agent never reads comments and only lists commits.
+- Time bounds are whole days derived from the thread date (`2026-08-22T00:00Z`..`2026-08-24T00:00Z`) rather than
+  ±hours around the parent message; the metric query used `status=~"5.."` and a ratio
+  (`sum(rate(...5..)) / sum(rate(...))`) where the scripted agent uses `code=~"5.."` and a plain rate.
+- `pagerduty.list_incidents` was called with dates only (no `service_ids`), then again for the service over a month.
+- It found the handler by deriving the path from the service name (`code.read_file services/checkout_web/handler.py`)
+  instead of `grep`, then ran `git_log` on that file.
+- It widened scope on its own: searched Slack (`SessionExpired checkout-web`, no `in:`/dates) and Jira
+  (`component = checkout-web AND text ~ "SessionExpired"`) for recurrences and produced a table of three incidents.
+  Nothing in the scripted flows does recurrence analysis; this is the one behaviour worth adding as extra steps.
+
+**DM trigger.** The real agent's first move matches the scripted one (search Slack for tokens of the DM:
+`RateLimited notification`, which found the DM and its `time`), but it then spent six calls on a wrong premise:
+it took "since about 10am" to mean *today* and queried PagerDuty, Logz and Chronosphere for 2026-09-09 with a
+guessed service name `notification-service` (`service:notification-service AND RateLimited`,
+`http_requests_total{service="notification-service",status="429"}`), all empty. It re-anchored only after
+`jira_search text ~ "RateLimited" AND updated >= -14d` returned PLAT-104 with its dates, then followed the scripted
+shape: logz `service:notifier AND RateLimited` in an 8h-18h day window, a trace-id search, metrics
+(`error_rate{service="notifier"}`, a metric name it invented; the sim tolerates it), a Slack search
+`notifier in:#incidents after:2026-08-29 before:2026-09-01` (the exact shape the scripted agent uses), git_log on the
+service path, jira comments, `title ~ "notifier runbook"`, read_file, thread replies, git_show, get_page. It never
+called `conversations_history` on the DM channel. It finished with two "is it still happening" checks (`now-48h`
+metrics; logs after the incident) that the scripted agent does not do. Lessons taken into the flow: resolve the
+service through the catalog gazetteer (aliases) instead of guessing a name, anchor the window on the DM's `time`, and
+put the key/class/service search of #incidents before anything time-bound.
+
+**Inducer effect of the real sessions.** Adding one real session per trigger left `unresolved` empty but added 7
+(thread) and 12 (DM) optional steps seen in 1/16 or 1/19 sessions (comments, git_show, second pagerduty, recurrence
+searches, "still happening" checks) and hardcoded-date ladders (`end: 2026-08-24T00:00:00Z`) because whole-day
+bounds are not 15-minute multiples of any anchor. The promoted YAML ignores those; they are visible in the
+`induced-*.yaml` drafts. The hook also stores real responses as content blocks (`[{type: text, text: …}]`) rather
+than parsed JSON, so extracts induced from real sessions use `from: '[*].text'`; the scripted traces store parsed
+JSON. Normalising that in the recorder is a small follow-up.
+
 ## Later milestones
 
 - **M2.** Agent-assisted authoring: `crystal author` runs the agent with the flow catalog exposed as
   tools, so it tries flows before exploring; repair command consumes the complaint queue.
-- **M3.** The other two typical flows (Slack thread, Slack DM); span synthesis from traces;
-  local SQLite FTS5 index over results for cross-run search.
+- **M3.** The other two typical flows (Slack thread, Slack DM) — done above as candidates; span synthesis from
+  traces; local SQLite FTS5 index over results for cross-run search.
 - **M4.** Point at real servers: swap sim servers for the public Atlassian, Slack, Grafana,
   Chronosphere, PagerDuty servers; schema-drift check on startup; nightly live regression.
 
