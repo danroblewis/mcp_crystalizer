@@ -161,3 +161,12 @@ markdown summary reads, not a log of tool calls.
 - A flow diagram of the research: steps, what flowed where, fan-outs; the same view for agent traces, subagents and
   workflows, with fan-out summaries (which items hit, union of what they found).
 - Tool call details (queries, ladder attempts) collapsed into a "how" panel, off by default.
+
+## Flow cards (owner request, 2026-09-09)
+
+When `crystal author` (or `repair`) runs the agent, ask it to finish with a structured **flow card** rather than prose,
+and store it in the flow YAML: `use_case` (when a person reaches for this flow), `inputs_explained`, `expected_outputs`
+(a named list, one per step group), `not_covered`, `example`. The inducer drafts the skeleton deterministically from the
+tools and extract types; the agent writes the prose and the judgment. The UI shows the card in the catalog and at the top
+of the dossier, and `expected_outputs` doubles as acceptance criteria: the run page opens with "found N of M expected
+things" and names the gaps, which makes "This didn't help" specific. Cards regenerate on repair so they never drift.
