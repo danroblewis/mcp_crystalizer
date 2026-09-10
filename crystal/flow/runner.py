@@ -105,6 +105,8 @@ class FlowRunner:
         t0 = time.perf_counter()
         try:
             out, raw, is_err = await self.pool.call_raw(server, tool, args)
+            if not is_err and isinstance(out, str) and out.lstrip().lower().startswith(("error:", "fatal:")):
+                is_err = True   # servers that report failures as plain text (e.g. git_show on a bad sha)
             err = str(out) if is_err else None
         except Exception as e:  # noqa: BLE001
             out, raw, err = None, "", str(e)
@@ -205,8 +207,11 @@ class FlowRunner:
                             merged[k].append(v)
                 ctx[sid] = {"items": entry["items"], "results": [s["result"] for s in entry["items"]], **merged}
                 entry["hits"] = sum(s["hits"] for s in entry["items"])
-                if any(s["error"] for s in entry["items"]):
-                    entry["error"] = "; ".join(s["error"] for s in entry["items"] if s["error"])
+                failed = [s for s in entry["items"] if s["error"]]
+                if failed and len(failed) == len(entry["items"]):
+                    entry["error"] = "; ".join(s["error"] for s in failed)          # every item failed: the step failed
+                elif failed:
+                    entry["partial_errors"] = len(failed)                            # some items failed (red herrings): step still stands
             else:
                 sub = await self._run_call(step, ctx)
                 entry.update(sub)

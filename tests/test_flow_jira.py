@@ -84,3 +84,11 @@ def test_other_service_ticket():
     assert ex["service"] == "checkout-web"
     assert _step(rec, "slack")["hits"] == 1
     assert _step(rec, "owners")["items"][0]["extracts"]["teams"] == ["@storefront"]
+
+
+def test_plain_text_error_results_count_as_errors_not_hits():
+    """A tool that answers 'error: ...' as text (git_show on a pod hash) must not score as a hit."""
+    rec = _run(ServerPool, key="PAY-101")
+    sc = _step(rec, "suspect_commit")
+    bad = [i for i in sc["items"] if str(i.get("result", "")).lower().startswith("error")]
+    assert all(i["hits"] == 0 and i["error"] for i in bad), bad
