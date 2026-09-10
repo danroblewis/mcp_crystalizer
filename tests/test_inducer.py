@@ -322,3 +322,19 @@ def test_topo_cuts_reference_cycles_cleanly():
     assert cuts == {"a": ["q: {{ b.x | first }}"], "b": ["forEach: c.items"]}
     assert out[0]["args"]["q"] == "{{ inputs.key }}" and out[1]["forEach"] == "a.items | unique | list" and out[1]["args"]["q"] == "{{ a.y }}"
     assert out[2]["args"]["q"] == {"ladder": ["{{ b.z }}", "{{ inputs.key }}"]}
+
+
+def test_collapse_survives_an_argument_only_one_call_passes():
+    """Consecutive calls to one tool where the second omits an argument the first passed: the differing key is not
+    in both, so it cannot become a ladder rung. This crashed the import of a real 423-session project."""
+    from crystal.induce.inducer import Binder
+    from crystal.trace.store import Session
+
+    sess = Session(session_id="s", source="transcript",
+                   meta={"trigger": "prompt", "inputs": {"prompt": "go"}},
+                   calls=[{"seq": 1, "server": "arena", "tool": "say", "input": {"text": "hi", "agent_id": "a1"},
+                           "output": {"ok": True}, "is_error": False},
+                          {"seq": 2, "server": "arena", "tool": "say", "input": {"text": "hi"},
+                           "output": {"ok": True}, "is_error": False}])
+    steps = Binder(sess, {}).bind_session()
+    assert [st["tool"] for st in steps] == ["arena.say", "arena.say"]   # kept apart, not collapsed into a ladder

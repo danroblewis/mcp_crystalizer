@@ -493,7 +493,10 @@ class Binder:
                         continue
                 if len(diff) == 1:
                     k = diff[0]
-                    if prev["hits"] == 0 and not prev.get("forEach"):
+                    # `diff` is over the union of both argument sets, so the differing key can be absent from one
+                    # call (an optional argument the agent passed only sometimes). That is not a ladder: a rung has
+                    # to be a value the step could send.
+                    if k in prev["args"] and k in st["args"] and prev["hits"] == 0 and not prev.get("forEach"):
                         rungs = prev.get("ladder", [(prev["args"][k], prev["hits"])])
                         rungs.append((st["args"][k], st["hits"]))
                         prev.update(ladder=rungs, ladder_key=k, hits=st["hits"])
