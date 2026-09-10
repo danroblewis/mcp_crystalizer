@@ -200,6 +200,7 @@ steps:
     since: '{{ issue.window_7d_r1d.start }}'
     until: '{{ issue.iso_ts }}'
   optional: true
+  empty_in_traces: true
   seen_in: 1/17 sessions
 - id: logs
   title: logs
@@ -211,13 +212,6 @@ steps:
     to_time: '{{ issue.window.end }}'
   forEach: ([issue.trace_id] + logs_2.trace_ids + thread.trace_ids) | unique | list
   max_items: 4
-- id: commit_2
-  title: commit 2
-  tool: git.git_show
-  args:
-    sha: '{{ jira_get_issue_comments.sha_shorts | first }}'
-  optional: true
-  seen_in: 2/17 sessions
 - id: commits
   title: commits
   tool: git.git_log
@@ -226,6 +220,14 @@ steps:
     path: '{{ catalog.service[issue.service].repo_path }}'
     since: '{{ issue.window_4d_1d.start }}'
     until: '{{ issue.window_4d_1d.end }}'
+- id: commit
+  title: commit
+  tool: git.git_show
+  args:
+    sha:
+      ladder:
+      - '{{ thread.sha_shorts | first }}'
+      - '{{ jira_get_issue_comments.sha_shorts | first }}'
 - id: pagerduty
   title: pagerduty
   tool: pagerduty.list_incidents
@@ -238,13 +240,6 @@ steps:
     pd_incident_ids:
       from: incidents[*].id
       all: true
-- id: commit
-  title: commit
-  tool: git.git_show
-  args:
-    sha: '{{ thread.sha_shorts | first }}'
-  optional: true
-  seen_in: 16/17 sessions
 - id: logs_3
   title: logs 3
   tool: logz.search_logs
@@ -291,6 +286,8 @@ tests:
       min_hits: 1
     commits:
       min_hits: 1
+    commit:
+      min_hits: 1
     pagerduty:
       min_hits: 1
 - inputs:
@@ -317,6 +314,8 @@ tests:
     logs:
       min_hits: 1
     commits:
+      min_hits: 1
+    commit:
       min_hits: 1
     pagerduty:
       min_hits: 1
@@ -345,6 +344,8 @@ tests:
       min_hits: 1
     commits:
       min_hits: 1
+    commit:
+      min_hits: 1
     pagerduty:
       min_hits: 1
 - inputs:
@@ -371,6 +372,8 @@ tests:
     logs:
       min_hits: 1
     commits:
+      min_hits: 1
+    commit:
       min_hits: 1
     pagerduty:
       min_hits: 1
@@ -399,6 +402,8 @@ tests:
       min_hits: 1
     commits:
       min_hits: 1
+    commit:
+      min_hits: 1
     pagerduty:
       min_hits: 1
 - inputs:
@@ -426,6 +431,8 @@ tests:
       min_hits: 1
     commits:
       min_hits: 1
+    commit:
+      min_hits: 1
     pagerduty:
       min_hits: 1
 - inputs:
@@ -452,6 +459,8 @@ tests:
     logs:
       min_hits: 1
     commits:
+      min_hits: 1
+    commit:
       min_hits: 1
     pagerduty:
       min_hits: 1
@@ -527,10 +536,9 @@ card:
     required: true
   - name: suspect commit
     steps:
-    - commit_2
     - commit
-    description: the diff of a commit named in the evidence (git.git_show); the diff of a commit named in the evidence (git.git_show)
-    required: false
+    description: the diff of a commit named in the evidence (git.git_show, 2-rung ladder on sha)
+    required: true
   - name: pagerduty incident
     steps:
     - pagerduty
@@ -543,5 +551,6 @@ card:
   example:
     inputs:
       key: SUP-105
-    found: 'Every traced run had hits on: code, commits, confluence, issue, logs, logs_2, metrics, owners, pagerduty, runbook, slack, thread.'
+    found: 'Every traced run had hits on: code, commit, commits, confluence, issue, logs, logs_2, metrics, owners, pagerduty, runbook, slack,
+      thread.'
   authored_by: skeleton

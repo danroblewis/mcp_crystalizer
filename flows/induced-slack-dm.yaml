@@ -135,6 +135,7 @@ steps:
     query: service:notification-service AND {{ slack_2_2.error_class_list | first }}
     size: 50
   optional: true
+  empty_in_traces: true
   seen_in: 1/19 sessions
 - id: pagerduty
   title: pagerduty
@@ -143,6 +144,7 @@ steps:
     limit: 25
     since: '{{ slack_2_2.window.end }}'
   optional: true
+  empty_in_traces: true
   seen_in: 1/19 sessions
 - id: slack_2
   title: slack 2
@@ -186,6 +188,7 @@ steps:
     start: now-8h
     step_seconds: 300
   optional: true
+  empty_in_traces: true
   seen_in: 1/19 sessions
 - id: thread
   title: thread
@@ -241,6 +244,7 @@ steps:
     max_count: 20
     since: '{{ slack_2_2.window_8d_r1d.end }}'
   optional: true
+  empty_in_traces: true
   seen_in: 1/19 sessions
 - id: runbook
   title: runbook
@@ -416,6 +420,7 @@ steps:
     size: 5
     to_time: '{{ slack_2_2.window_237h_r1h.end_date }}T23:59:00Z'
   optional: true
+  empty_in_traces: true
   seen_in: 1/19 sessions
 tests:
 - inputs:

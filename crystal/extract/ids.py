@@ -31,10 +31,15 @@ _COMPILED = {k: re.compile(v[0]) for k, v in ID_PATTERNS.items()}
 
 
 def find_all(text: str, kind: str) -> list[str]:
-    """All matches of one typed pattern, in order, deduplicated."""
+    """All matches of one typed pattern, in order, deduplicated. A match that sits inside a span of a
+    different, more specific type is skipped (a replica-set hash inside a pod name is not a commit SHA)."""
     seen, out = set(), []
+    others = [(k, rx) for k, rx in _COMPILED.items() if k != kind and list(_COMPILED).index(k) < list(_COMPILED).index(kind) or k == "k8s_pod"]
+    covering = [(m.start(), m.end()) for k, rx in others if k != kind for m in rx.finditer(text or "")]
     for m in _COMPILED[kind].finditer(text or ""):
         v = m.group(0)
+        if any(a <= m.start() and m.end() <= b and (b - a) > (m.end() - m.start()) for a, b in covering):
+            continue
         if v not in seen:
             seen.add(v)
             out.append(v)

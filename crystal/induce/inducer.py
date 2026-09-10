@@ -52,6 +52,11 @@ TEXTY_TYPES = {"error_class", "slack_channel", "email", "url"}
 ROUNDINGS: tuple[tuple[str | None, int], ...] = ((None, 900), ("1d", 86400), ("1h", 1800))
 
 
+def _error_text(out: Any) -> bool:
+    """Servers that report failures as plain text ('error: ...', 'fatal: ...'), the same rule the runner applies."""
+    return isinstance(out, str) and out.lstrip().lower().startswith(("error:", "fatal:"))
+
+
 def leaves(obj: Any, path: str = "") -> list[tuple[str, Any]]:
     out = []
     if isinstance(obj, dict):
@@ -459,7 +464,7 @@ class Binder:
                         and b["parts"][0][0].split(":")[0] in ("ids", "copy"):
                     refs[k] = b["part_refs"][0]
                     kinds[k] = "composite-elem"
-            hits = 0 if c.get("is_error") else count_hits(c.get("output"), None)
+            hits = 0 if (c.get("is_error") or _error_text(c.get("output"))) else count_hits(c.get("output"), None)
             steps.append({"idx": i, "id": self.step_ids[i], "tool": f"{c['server']}.{c['tool']}", "args": args_t,
                           "kinds": kinds, "list_refs": list_refs, "refs": refs, "hits": hits, "raw_args": c.get("input") or {},
                           "classes": classes, "pos_cands": pos_cands})
@@ -922,6 +927,11 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
             step["forEach"] = f"{expr} | unique | list" if refs else "[]"
             step["max_items"] = count + 2
             step["args"][fk] = shape
+        members = [m[-1] for m in g["members"]]
+        if members and all(int(st.get("hits") or 0) == 0 for st in members):
+            step["optional"] = True
+            step["empty_in_traces"] = True   # the agent's call errored or returned nothing every time it was traced
+            step.setdefault("seen_in", f"{n_sess}/{n} sessions")
         if n_sess < n:
             step["optional"] = True
             step["seen_in"] = f"{n_sess}/{n} sessions"

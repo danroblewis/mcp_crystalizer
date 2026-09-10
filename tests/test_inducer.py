@@ -133,7 +133,9 @@ def test_induced_flow_runs_on_unseen_ticket(induced):
     assert s["slack"]["hits"] == 1 and s["thread"]["hits"] == 5
     assert sum(i["hits"] for i in s["logs"]["items"]) >= 8
     assert s["pagerduty"]["hits"] == 1 and s["metrics"]["hits"] == 1
-    assert not any(st.get("error") for st in rec["steps"]), [st.get("error") for st in rec["steps"]]
+    optional = {st["id"] for st in flow["steps"] if st.get("optional")}
+    errors = [(st["id"], st.get("error")) for st in rec["steps"] if st.get("error") and st["id"] not in optional]
+    assert not errors, errors   # optional steps (e.g. git_show on a sha the agent mis-picked) may fail; required ones may not
 
 
 # ---------------------------------------------------------------- (a) alignment by signature
@@ -238,7 +240,9 @@ def test_all_sessions_no_unresolved_and_runs_on_unseen_ticket(induced_all):
     assert sum(i["hits"] for i in s["logs"]["items"]) >= 8
     assert s["pagerduty"]["hits"] == 1 and s["metrics"]["hits"] == 1
     assert s["pagerduty_incident"]["hits"] == 1 and s["commits"]["hits"] >= 1
-    assert not any(st.get("error") for st in rec["steps"]), [st.get("error") for st in rec["steps"]]
+    optional = {st["id"] for st in flow["steps"] if st.get("optional")}
+    errors = [(st["id"], st.get("error")) for st in rec["steps"] if st.get("error") and st["id"] not in optional]
+    assert not errors, errors   # optional steps (e.g. git_show on a sha the agent mis-picked) may fail; required ones may not
 
 
 # ---------------------------------------------------------------- review fixes
@@ -290,7 +294,7 @@ def test_committed_drafts_and_versions_match_the_inducer():
     flow, report = induce(sessions, "induced-jira-ticket-all")
     committed = (TRACES.parent / "flows" / "induced-jira-ticket-all.yaml").read_text()
     assert dump_flow(flow) == committed
-    assert report["dropped_rungs"] == {"commit_2": {"sha": ["99988c8b3"]}} and report["unresolved"] == {}
+    assert report["dropped_rungs"] == {"commit": {"sha": ["99988c8b3"]}} and report["unresolved"] == {}
     for p in sorted((TRACES.parent / "flows").glob("*.yaml")):
         text = p.read_text()
         assert "&id" not in text, p.name
