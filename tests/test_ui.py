@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from starlette.testclient import TestClient
 
-from crystal.app import diagram, dossier
+from crystal.app import diagram, dossier, provenance
 from crystal.app import main as ui
 from crystal.flow.runner import load_flow
 
@@ -68,11 +68,25 @@ def test_run_dossier_headline_evidence_diagram_highlights(client):
     # the research diagram: an inline SVG DAG with one node per step, edges from the YAML, fan-outs stacked
     assert '<svg class="dag"' in body
     assert 'data-step="logs"' in body and 'href="#s-logs"' in body
-    assert body.count('class="edge"') >= 14
+    assert body.count('class="edge') >= 14
     assert "3 items, 2 hit" in body                         # logs fan-out summary on the node
-    # extracted values highlighted inside content, with the extracting step in the title
-    assert '<mark title="extracted by issue as trace_ids; extracted by slack as trace_ids; extracted by thread as trace_ids">1589cbb8cf4f9818fe9aaf2485aad023</mark>' in body
-    assert '<mark title="input key">AUTH-122</mark>' in body
+    # an edge is a VALUE moving, and says which value -- not how many results came back
+    assert body.count('class="edge carries"') >= 14         # every edge carries a labelled value
+    for value_type in (">trace_id</text>", ">error_class</text>", ">service</text>", ">window</text>"):
+        assert value_type in body, value_type
+    assert 'aria-label="research flow: 15 steps; values moving: ' in body
+    assert '<a href="#s-logs" class="edge-link" data-step="logs">' in body        # the label jumps to the consumer
+    assert "trace_id 1589cbb8cf4f9818fe9…" in body and "→ query" in body          # the tip names the value and the argument
+    # extracted values highlighted with their PROVENANCE: what it is, who found it, WHO USED IT and as what
+    carried = ('<mark class="v used" title="trace_id, extracted by \u201cJira ticket\u201d, \u201cSlack discussion\u201d, '
+               '\u201cSlack thread replies\u201d as trace_ids, used by \u201cLogs per trace id\u201d as query">'
+               '1589cbb8cf4f9818fe9aaf2485aad023'
+               '<a class="hop" href="#s-logs" title="used by \u201cLogs per trace id\u201d as query">9</a></mark>')
+    assert carried in body
+    assert '<mark class="v used" title="jira_key, run input key, used by \u201cJira ticket\u201d as issue_key' in body
+    # a value nothing ever used is marked differently, and says so
+    assert '<mark class="v det" title="team, extracted by \u201cOwning team (CODEOWNERS)\u201d as teams, detected, never used in a later call">@identity</mark>' in body
+    assert '"v det"' in body and '"v used"' in body and body.count('class="hop"') >= 5
     # large text folds to excerpts with expanders
     assert '<details class="more"><summary>show ' in body
     # sparkline with the incident-start rule
@@ -116,8 +130,13 @@ def test_trace_list_and_trace_dossier(client):
     assert '<p class="lede">' in body and "PAY-101" in body
     assert '<svg class="dag"' in body and 'data-step="c1"' in body
     assert "calls</span>" in body and "returned results" in body
-    # values carried forward are highlighted with their source call
-    assert '<mark title="carried c1 → c2' in body or 'carried inputs → c1' in body
+    # values carried forward are highlighted with where they came from AND where they went
+    assert ('<mark class="v used" title="trace_id, extracted by \u201cslack: conversations replies\u201d as trace_id, '
+            'used by \u201clogz: search logs\u201d as query">') in body
+    assert 'class="hop" href="#s-c' in body
+    # the trace diagram labels its edges with those values too, not with result counts
+    assert body.count('class="edge carries"') >= 6 and 'class="edge-link"' in body
+    assert ">trace_id</text>" in body and ">error_class</text>" in body
     assert 'id="g-log"' in body and 'id="g-issue"' in body
     assert '<details class="how">' in body
     assert client.get("/traces/nope").status_code == 404
@@ -138,10 +157,68 @@ def test_marker_excerpt_folds_unmatched_lines():
     m = dossier.Marker({"abc123def456": ["extracted by t as id"]})
     text = "\n".join(["line %d" % i for i in range(20)] + ["hit abc123def456 here"] + ["tail %d" % i for i in range(20)])
     out = str(m.excerpt(text))
-    assert '<mark title="extracted by t as id">abc123def456</mark>' in out
+    assert '<mark class="v det" title="extracted by t as id">abc123def456</mark>' in out
     assert out.count("show 18 more lines") == 2     # 20 lines before, 20 after; 2 lines of context are kept on each side
     assert out.count("<details") == 2
     assert out.count('<div class="ln">') == 41
+
+
+def test_the_toggle_dims_the_values_nothing_used(client):
+    """The noisy majority of marks are detections. Hiding them is a per-run toggle with no JavaScript: a checkbox
+    and two CSS rules, so it works in a page with scripting off."""
+    body = client.get(f"/runs/{RUN_ID}").text
+    assert '<input type="checkbox" id="dimdet" class="vtog">' in body
+    assert 'for="dimdet"' in body and "values nothing used" in body
+    css = body.split("<style>", 1)[1].split("</style>", 1)[0]
+    dim = css.split(".vtog:checked~* mark.det,", 1)[1]
+    assert dim.startswith("main:has(.vtog:checked) mark.det{")
+    rule = dim.split("{", 1)[1].split("}", 1)[0]
+    assert "background:transparent" in rule and "border-bottom-color:transparent" in rule
+    assert "mark.used" not in rule                       # only the detections are dimmed
+    assert "dimdet" not in body.split("<script>", 1)[1]  # no JavaScript involved
+    # and the two states are legended, with a live sample of each mark
+    key = body.split('<div class="vkey">', 1)[1].split("</div>", 1)[0]
+    assert 'class="v used"' in key and 'class="v det"' in key and "superscript" in key
+
+
+def test_provenance_finds_the_call_that_used_a_value(client):
+    """The deterministic half: a value is CARRIED when it turns up in a later call's rendered args, and the
+    argument it lands in names the edge. Anything else was merely detected."""
+    record = {"inputs": {"key": "PAY-101"},
+              "steps": [{"id": "a", "title": "Ticket", "tool": "jira.jira_get_issue", "args": {"issue_key": "PAY-101"},
+                         "extracts": {"trace_ids": ["9f2b1c0a4e5d6f708192a3b4c5d6e7f8"], "pods": ["pay-api-77c9-xyzab"]}},
+                        {"id": "b", "title": "Logs", "tool": "logz.search_logs",
+                         "items": [{"item": "9f2b1c0a4e5d6f708192a3b4c5d6e7f8",
+                                    "args": {"query": "trace_id:9f2b1c0a4e5d6f708192a3b4c5d6e7f8"}}]}]}
+    prov = provenance.analyse(record, None)
+    trace = prov.values["9f2b1c0a4e5d6f708192a3b4c5d6e7f8"]
+    assert trace.used and trace.kind == "trace_id"
+    assert [(u.step, u.arg) for u in trace.uses] == [("b", "query")]
+    assert "used by “Logs” as query" in trace.title()
+    pod = prov.values["pay-api-77c9-xyzab"]
+    assert not pod.used and "never used" in pod.title()
+    # the input reached the first call; a value never carried produces no edge
+    assert prov.edges()[("inputs", "a")][0]["label"] == "jira_key"
+    assert prov.edges()[("a", "b")] == [{"label": "trace_id", "name": "trace_ids", "value_type": "ids:trace_id",
+                                         "values": ["9f2b1c0a4e5d6f708192a3b4c5d6e7f8"], "args": ["query"]}]
+    assert ("a", "b") in prov.edges() and len(prov.edges()) == 2
+    # reported in the dataflow miner's own vocabulary, so the page and the miner agree about the run
+    edge = [e for e in prov.call_edges if e.target == "logz.search_logs"][0]
+    assert (edge.source, edge.value_type, edge.arg, edge.src_call, edge.tgt_call) == \
+        ("jira.jira_get_issue", "ids:trace_id", "query", 0, 1)
+
+
+def test_value_labels_come_from_the_flow_yaml_too():
+    """An edge whose value this run never produced is still named: the YAML says what was meant to travel."""
+    flow = load_flow("investigate-jira-ticket")
+    refs = set(diagram.template_value_refs(flow))
+    assert ("issue", "slack", "error_sig") in refs and ("issue", "logs", "window") in refs
+    assert ("slack", "thread", "channel_id") in refs and ("slack", "thread", "thread_ts") in refs
+    assert ("code", "owners", "files") in refs                       # a forEach expression
+    assert ("inputs", "issue", "key") in refs
+    assert not any(a == "catalog" for a, _, _ in refs)
+    assert provenance.display_type(provenance.value_type_of(flow, "issue", "trace_ids", ""), "trace_ids") == "trace_id"
+    assert provenance.display_type(provenance.value_type_of(flow, "inputs", "key", ""), "key") == "jira_key"
 
 
 def test_a_versioned_flow_opens_from_the_catalog_and_by_its_own_name(tmp_path):

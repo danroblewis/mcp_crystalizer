@@ -1,6 +1,12 @@
 """Build the dossier view model from a run record (or a recorded agent trace): headline, coverage, evidence grouped by
 information type, highlighted extracted values, diff-style excerpts, the research diagram and the "how" panel.
 
+A highlight says PROVENANCE, not just detection: `crystal.app.provenance` works out, for every extracted value,
+which step produced it and which later call consumed it as which argument, so a mark can be read as "this is the
+trace id the log search ran on" rather than "the extractor saw something here". Values that were carried onward
+are marked strongly and carry a superscript link to the step that used them; values that were only detected get a
+quiet underline and can be dimmed away with the toggle above the evidence.
+
 No LLM: the headline is derived from extracts and typed results. `crystal.flow.cards` (coverage, headline) is used
 when present; the fallbacks here compute the same shapes from the run record alone, so the page works either way.
 """
@@ -15,7 +21,7 @@ from typing import Any
 
 from markupsafe import Markup
 
-from crystal.app import diagram
+from crystal.app import diagram, provenance
 from crystal.app.render import cards as render_cards
 from crystal.extract.ids import ID_PATTERNS, typed_mentions
 from crystal.flow.runner import count_hits
@@ -92,25 +98,59 @@ def collect_highlights(record: dict) -> "OrderedDict[str, list[str]]":
 
 
 class Marker:
-    """Wrap occurrences of highlighted values in <mark title="..."> inside escaped text."""
+    """Wrap occurrences of highlighted values in <mark> inside escaped text, saying where each value went.
 
-    def __init__(self, highlights: dict[str, list[str]]):
+    A value the run CARRIED into a later call gets `class="v used"`, a title naming the extractor and the consuming
+    step's argument, and a superscript link to that step's evidence. A value that was only ever detected gets
+    `class="v det"` and a quieter mark. Without a provenance map (the standalone unit tests, an old caller) the
+    labels passed in are used as the title, and everything is a detection."""
+
+    def __init__(self, highlights: dict[str, list[str]], values: dict | None = None,
+                 anchors: set[str] | None = None, step_no: dict[str, int] | None = None):
         self.highlights = highlights
+        self.values = values or {}
+        self.anchors = anchors or set()
+        self.step_no = step_no or {}
         vals = sorted(highlights, key=len, reverse=True)
         self.rx = re.compile("|".join(re.escape(v) for v in vals)) if vals else None
 
     def has_match(self, text: str) -> bool:
         return bool(self.rx and text and self.rx.search(text))
 
-    def mark(self, text: Any) -> Markup:
+    @property
+    def used_count(self) -> int:
+        return sum(1 for v in self.values.values() if v.used)
+
+    @property
+    def detected_count(self) -> int:
+        return sum(1 for v in self.values.values() if not v.used)
+
+    def one(self, value: str, hop: bool = True) -> str:
+        """The markup for a single occurrence: the mark, its provenance title, and where it went."""
+        vf = self.values.get(value)
+        if vf is None:
+            who = "; ".join(self.highlights.get(value, []))
+            return f'<mark class="v det" title="{html.escape(who)}">{html.escape(value)}</mark>'
+        inner = html.escape(value)
+        if hop and vf.used:
+            # one superscript, not one per consumer: the same value is marked dozens of times in a long page, and
+            # the title carries the rest of the story. The first consumer whose evidence has an anchor to jump to.
+            u = next((x for x in vf.uses if x.step in self.anchors), None)
+            if u is not None:
+                tip = f"used by “{u.title}” as {u.arg}"
+                inner += (f'<a class="hop" href="#s-{html.escape(u.step)}" title="{html.escape(tip)}">'
+                          f'{self.step_no.get(u.step, "→")}</a>')
+        cls = "v used" if vf.used else "v det"
+        return f'<mark class="{cls}" title="{html.escape(vf.title())}">{inner}</mark>'
+
+    def mark(self, text: Any, hop: bool = True) -> Markup:
         text = "" if text is None else str(text)
         if not self.rx:
             return Markup(html.escape(text))
         parts, pos = [], 0
         for m in self.rx.finditer(text):
             parts.append(html.escape(text[pos:m.start()]))
-            who = "; ".join(self.highlights.get(m.group(0), []))
-            parts.append(f'<mark title="{html.escape(who)}">{html.escape(m.group(0))}</mark>')
+            parts.append(self.one(m.group(0), hop))
             pos = m.end()
         parts.append(html.escape(text[pos:]))
         return Markup("".join(parts))
@@ -573,8 +613,26 @@ def diagram_nodes(record: dict) -> list[dict]:
     return nodes
 
 
-def flow_diagram(flow: dict | None, record: dict) -> str:
+def value_edge_labels(flow: dict | None, record: dict, prov: "provenance.Provenance") -> dict:
+    """(source step, target step) -> the values that moved along it.
+
+    What the RUN carried comes first, with the concrete values behind it; the flow YAML then fills in values it
+    meant to move but this run never produced, so an edge is never nameless. A trace has no YAML and needs none:
+    every one of its edges is an observed value."""
+    labels: "OrderedDict[tuple[str, str], list[dict]]" = OrderedDict(
+        (k, [dict(r) for r in rows]) for k, rows in prov.edges().items())
+    for src, tgt, name in diagram.template_value_refs(flow or {}):
+        vt = provenance.value_type_of(flow, src, name, "")
+        label = provenance.display_type(vt, name)
+        rows = labels.setdefault((src, tgt), [])
+        if not any(r["label"] == label for r in rows):
+            rows.append({"label": label, "name": name, "value_type": vt, "values": [], "args": []})
+    return labels
+
+
+def flow_diagram(flow: dict | None, record: dict, prov: "provenance.Provenance") -> str:
     nodes = diagram_nodes(record)
+    labels = value_edge_labels(flow, record, prov)
     if flow and flow.get("steps"):
         edges = diagram.flow_edges(flow)
     else:  # no YAML (trace): edges from carried values
@@ -582,19 +640,15 @@ def flow_diagram(flow: dict | None, record: dict) -> str:
         for s in record.get("steps", []):
             for src in dict.fromkeys((s.get("carried") or {}).values()):
                 edges.append((src, s["id"]))
-    return diagram.svg(nodes, edges)
+    for e in labels:            # a value that moved is an edge, whether or not the YAML declared it
+        if e not in edges:
+            edges.append(e)
+    return diagram.svg(nodes, edges, edge_labels=labels)
 
 
 # ---------------------------------------------------------------- traces
 
-def _leaf_strings(v: Any) -> list[str]:
-    if isinstance(v, str):
-        return [v]
-    if isinstance(v, list):
-        return [s for x in v for s in _leaf_strings(x)]
-    if isinstance(v, dict):
-        return [s for x in v.values() for s in _leaf_strings(x)]
-    return []
+_leaf_strings = provenance.leaf_strings
 
 
 def _humanize(tool: str) -> str:
@@ -647,11 +701,14 @@ def session_record(session) -> dict:
 
 def build(record: dict, flow: dict | None) -> dict:
     highlights = collect_highlights(record)
-    marker = Marker(highlights)
     groups = evidence_groups(record)
+    prov = provenance.analyse(record, flow, skip=SKIP_EXTRACTS)
+    anchors = {b["step"] for g in groups for b in g["sources"] if b.get("anchor")}
+    step_no = {s["id"]: i + 1 for i, s in enumerate(record.get("steps", [])) if s.get("id")}
+    marker = Marker(highlights, values=prov.values, anchors=anchors, step_no=step_no)
     h = headline_for(flow, record)
     calls = sum(1 + len(s.get("attempts") or []) if "items" not in s else len(s["items"]) for s in record.get("steps", []) if not s.get("skipped"))
     return {"headline": h, "lede": lede(h), "coverage": coverage_for(flow, record), "groups": groups, "marker": marker,
-            "highlights": highlights, "svg": Markup(flow_diagram(flow, record)),
+            "highlights": highlights, "provenance": prov, "svg": Markup(flow_diagram(flow, record, prov)),
             "types": [(t, diagram.TYPE_COLORS[t], diagram.TYPE_LABELS[t]) for t in GROUP_ORDER if any(g["type"] == t for g in groups)],
             "calls": calls, "card": (flow or {}).get("card") or {}}
