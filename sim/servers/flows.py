@@ -17,7 +17,7 @@ from mcp.server.mcpserver import MCPServer
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from app.render import cards  # noqa: E402
+from crystal.app.render import cards  # noqa: E402
 from crystal.flow.lifecycle import describe, get_lifecycle  # noqa: E402
 from crystal.flow.runner import FlowRunner, list_flows, load_flow  # noqa: E402
 from crystal.mcp_client import ServerPool, load_registry  # noqa: E402

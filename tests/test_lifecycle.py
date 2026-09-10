@@ -176,7 +176,7 @@ def test_regression_offline_records_pass_and_fail(lc, tmp_path):
 
 def test_ui_feedback_demotes_and_queues(tmp_path, monkeypatch):
     """The 'This didn't help' endpoint appends to feedback.jsonl and trips the breaker for the run's flow."""
-    import app.main as web
+    import crystal.app.main as web
     from crystal.flow import lifecycle as lc_mod
     monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lc.sqlite"))
     monkeypatch.setattr(lc_mod, "_default", None)
@@ -264,7 +264,7 @@ def test_flows_server_run_flow_is_not_a_live_run(tmp_path, monkeypatch):
 
 def test_ui_feedback_keeps_author_status_when_yaml_is_unreadable(tmp_path, monkeypatch):
     """A complaint filed while the flow YAML is mid-edit must not re-declare the flow a draft."""
-    import app.main as web
+    import crystal.app.main as web
     from crystal.flow import lifecycle as lc_mod
     monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lc.sqlite"))
     monkeypatch.setattr(lc_mod, "_default", None)

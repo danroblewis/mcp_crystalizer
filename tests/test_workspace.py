@@ -94,7 +94,7 @@ def test_runs_and_traces_are_namespaced_by_workspace(tmp_path, monkeypatch):
 
 
 def test_ui_reads_the_workspace_namespace(tmp_path, monkeypatch):
-    import app.main as web
+    import crystal.app.main as web
     monkeypatch.setattr(web, "RUN_DIR", tmp_path / "runs")
     monkeypatch.setattr(web, "TRACE_DIR", tmp_path / "traces")
     monkeypatch.setenv("CRYSTAL_WORKSPACE", str(tmp_path))

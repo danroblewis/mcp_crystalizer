@@ -28,6 +28,21 @@ from crystal import workspace as ws_mod
 from crystal.mcp_client import ServerPool, load_registry
 
 
+def cmd_serve(args):
+    """serve [--port N] [--host H] [--open]: launch the web UI for the workspace and print its URL."""
+    import uvicorn
+    port = int(args[args.index("--port") + 1]) if "--port" in args and len(args) > args.index("--port") + 1 else 8765
+    host = args[args.index("--host") + 1] if "--host" in args and len(args) > args.index("--host") + 1 else "127.0.0.1"
+    ws = ws_mod.current()
+    url = f"http://{host}:{port}"
+    print(f"mcp-explorer: workspace {ws.name} ({ws.root})\n{url}", flush=True)
+    if "--open" in args:
+        import webbrowser
+        webbrowser.open(url)
+    uvicorn.run("crystal.app.main:app", host=host, port=port, log_level="warning")
+    return 0
+
+
 def cmd_flows(_args):
     from crystal.flow.runner import list_flows
     for f in list_flows():
@@ -242,7 +257,7 @@ def cmd_card(args):
     return 0
 
 
-COMMANDS = {"flows": cmd_flows, "induce": cmd_induce, "run": cmd_run, "mcp-config": cmd_mcp_config, "tools": cmd_tools,
+COMMANDS = {"serve": cmd_serve, "flows": cmd_flows, "induce": cmd_induce, "run": cmd_run, "mcp-config": cmd_mcp_config, "tools": cmd_tools,
             "servers": cmd_servers, "status": cmd_status, "test": cmd_test, "author": cmd_author, "repair": cmd_repair,
             "card": cmd_card}
 
@@ -256,8 +271,13 @@ def main(argv=None):
         except FileNotFoundError as e:
             print(e)
             return 1
-    if not argv or argv[0] not in COMMANDS:
+    if argv and argv[0] in ("-h", "--help", "help"):
         print(__doc__)
+        return 0
+    if not argv or argv[0].startswith("--"):
+        argv = ["serve", *argv]          # `mcp-explorer` alone serves the current directory
+    if argv[0] not in COMMANDS:
+        print(f"unknown command {argv[0]!r}\n" + __doc__)
         return 1
     return COMMANDS[argv[0]](argv[1:]) or 0
 

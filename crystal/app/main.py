@@ -1,6 +1,6 @@
 """mcp_explorer web UI: pick a crystallized flow, enter starting parameters, get a dossier. No AI at runtime.
 
-  uv run uvicorn app.main:app --reload --port 8765
+  mcp-explorer serve --port 8765   (crystal/cli.py)
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from app import dossier
+from crystal.app import dossier
 from crystal import PROJECT_ROOT
 from crystal import workspace as ws_mod
 from crystal.flow.lifecycle import describe, get_lifecycle

@@ -10,8 +10,8 @@ from pathlib import Path
 import pytest
 from starlette.testclient import TestClient
 
-from app import diagram, dossier
-from app import main as ui
+from crystal.app import diagram, dossier
+from crystal.app import main as ui
 from crystal.flow.runner import load_flow
 
 FIXTURE = Path(__file__).parent / "fixtures" / "run_auth122.json"
