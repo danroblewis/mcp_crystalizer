@@ -1,9 +1,10 @@
-.venv/
 __pycache__/
+!traces/runs/
+.claude/worktrees/
+.pytest_cache/
+.venv/
 *.pyc
 runs/
-!traces/runs/
-traces/cassettes/
 sim/repo/
-.pytest_cache/
 state/
+traces/cassettes/
