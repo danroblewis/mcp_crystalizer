@@ -216,13 +216,14 @@ def test_candidates_induce_writes_a_runnable_draft_flow(fresh_home, capsys):
     for sid in flow["tests"][0]["expect"]:                      # every step that always hit in the traces hits again
         assert (steps[sid].get("hits") or 0) >= 1, sid
 
-    # the CLI path: list, then induce by rank
-    assert cli_main(["candidates", "--top", "3"]) == 0
+    # the CLI path: list, then induce by rank (--sequences: this is the sequence miner's candidate list;
+    # `candidates` alone mines dataflow now -- tests/test_dataflow.py)
+    assert cli_main(["candidates", "--top", "3", "--sequences"]) == 0
     listing = capsys.readouterr().out
     assert listing.splitlines()[1].strip().startswith("1") and "jira.jira_get_issue -> slack.conversations_search_messages" in listing
-    assert cli_main(["candidates", "induce", "1", "--name", "mined-cli"]) == 0
+    assert cli_main(["candidates", "induce", "1", "--name", "mined-cli", "--sequences"]) == 0
     assert "induced mined-cli from candidate #1" in capsys.readouterr().out and (fresh_home.flows / "mined-cli.yaml").exists()
-    assert cli_main(["candidates", "induce", "999"]) == 1
+    assert cli_main(["candidates", "induce", "999", "--sequences"]) == 1
 
 
 def test_induce_candidate_slices_each_episode_to_the_span(sim_candidates):

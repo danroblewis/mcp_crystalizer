@@ -37,7 +37,7 @@ Commands (`mcp-explorer [--workspace <dir>] <command>`):
 | `servers`, `tools`, `mcp-config [--write]` | the effective MCP servers, their tools, the merged mcp.json |
 | `seed --from <dir>`, `workspaces` | copy starting data into a workspace's state; list known workspaces |
 | `import [--all] [--dry-run]` | import past Claude Code sessions (their transcripts) as traces, for free |
-| `candidates [induce <n> --name f]` | recurring tool sequences across the workspace's episodes; compile one into a flow |
+| `candidates [induce <n> --name f]` | recurring dataflow across the workspace's episodes (`--sequences`: tool chains); compile one into a flow |
 | `hook` | the hook entry point Claude Code calls (reads JSON on stdin) |
 
 Only `record`, `author`, `repair` and `refine` launch Claude Code; they ask for confirmation (or `--yes`), are capped
@@ -165,20 +165,39 @@ twice: hook records are joined to the transcript on `tool_use_id`, each call get
 files are written from the hook's records (`--reattribute` redoes the join).
 
 **Candidates.** Across all episodes of a workspace, hook-recorded, `record`ed or imported, `candidates` mines the
-recurring tool-call sequences: each episode becomes its sequence of `server.tool` names (consecutive calls to one
-tool collapse into a fan-out step, shown as `tool*`), and the contiguous subsequences of length >= 2 shared by >= 2
-episodes are ranked by support x length, with the prompts that produced them and the calls a flow would save:
+recurring **dataflow**: not which tools were called, but what information passed between them. For every argument
+of every call the inducer's binder answers "where could this value have come from" -- the request, an earlier
+result (an exact copy, a typed id inside it, a catalog entity, a `Label: value` line), the entity catalog, or
+timestamp arithmetic -- and each answer is an edge `source --value_type--> target`:
 
-```bash
-mcp-explorer candidates                       # ranked list; --top N, --min-support N, --json
-mcp-explorer candidates induce 1 --name triage-ticket
+```
+prompt --ids:jira_key--> jira.jira_get_issue --ids:error_class--> logz.search_logs --copy:paths--> code.read_file
 ```
 
-`candidates induce <n>` slices every supporting episode to the span that matches the sequence and runs the same
-inducer over those partial sessions, so the draft flow (status `draft`, in the workspace's flows dir) contains
-exactly the shared behaviour with its arguments bound the usual way. The UI has the same two pages: `/import` lists
-the importable transcripts of the workspace with an Import button, `/candidates` the mined behaviours with an
-"Induce as flow" button. No LLM is involved anywhere in import, mining or induction.
+An argument nothing explains produces no edge. An episode is the *set* of its edges, and the candidates are the
+frequent connected closed edge sets (support >= 2 episodes), ranked by support x edges, preferring graphs rooted
+at a `prompt` edge -- a rooted graph names the flow's real input. Mining the dataflow rather than the sequence
+fixes three things at once: a candidate is **bindable by construction** (every edge is a binding that really
+happened, so a chain whose arguments the agent invented cannot form at all), an unrelated call in the middle no
+longer breaks a pattern (it is simply not on the graph), and the same task with its steps in a different order is
+**one** candidate instead of three:
+
+```bash
+mcp-explorer candidates                       # ranked list; --top N, --min-support N, --json (edges included)
+mcp-explorer candidates induce 1 --name triage-ticket
+mcp-explorer candidates --sequences           # the fallback miner: frequent contiguous chains of tool names,
+                                              # for episodes whose arguments carry no dataflow at all
+```
+
+`candidates induce <n>` slices every supporting episode to the calls that carry the pattern's edges, in their
+recorded order (with the calls they bind to pulled in, so the slice is self-contained), and runs the same inducer
+over those partial sessions, so the draft flow (status `draft`, in the workspace's flows dir) contains exactly the
+shared behaviour with its arguments bound the usual way. Each episode's edges are cached under the state dir
+(`dataflow/<trace-stem>.json`, keyed by the trace's size and mtime), because the binder runs over every episode --
+a working machine has thousands -- not just the ones that get induced. The UI has the same two pages: `/import`
+lists the importable transcripts of the workspace with an Import button, `/candidates` the mined behaviours (the
+sequence miner's, for now) with an "Induce as flow" button. No LLM is involved anywhere in import, mining or
+induction.
 
 ## Replaying Claude Code's own tools
 

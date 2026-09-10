@@ -16,7 +16,7 @@ the shared behaviour and binds its arguments the usual way (inputs, extracts, la
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Iterable
 
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
@@ -86,6 +86,19 @@ class Candidate:
         return {"rank": self.rank, "support": self.support, "length": self.length, "score": self.score, "saving": self.saving,
                 "bound": self.bound,
                 "sequence": self.display, "servers": self.servers, "episodes": self.episode_ids, "prompts": self.prompts}
+
+    # -- the three things induce_candidate()/bindability() need of a candidate, whichever miner made it
+    # (crystal.induce.dataflow.DataflowCandidate answers the same three).
+    def summary(self) -> str:
+        return " -> ".join(self.display)
+
+    def sample(self, n: int) -> "Candidate":
+        """A cheaper copy for scoring: a few episodes answer "is this derivable" as well as all of them."""
+        return self if len(self.occurrences) <= n else replace(self, occurrences=self.occurrences[:n], support=n)
+
+    def slice_sessions(self) -> list[Session]:
+        """Each supporting episode restricted to the span that matches the pattern."""
+        return [slice_episode(ep, s, e) for ep, s, e in self.occurrences]
 
 
 # ---------------------------------------------------------------- episodes
@@ -182,10 +195,11 @@ def candidates(trace_dir: Path | None = None, **kw) -> list[Candidate]:
 
 
 # ---------------------------------------------------------------- inducing a candidate
-def slice_episode(ep: Episode, start: int, end: int) -> Session:
-    """The episode restricted to the calls under tokens [start, end): a partial session the inducer can take."""
-    lo, hi = ep.spans[start][0], ep.spans[end - 1][1]
-    calls = [dict(c) for c in ep.calls[lo:hi]]
+def slice_calls(ep: Episode, indices: Iterable[int]) -> Session:
+    """The episode restricted to some of its calls, in their recorded order: a partial session the inducer can
+    take. The sequence miner slices a contiguous span; the dataflow miner (crystal.induce.dataflow) slices the
+    calls that carry the pattern's edges, which need not be contiguous."""
+    calls = [dict(ep.calls[i]) for i in sorted(set(indices))]
     for i, c in enumerate(calls, 1):
         c["seq"] = i
     meta = dict(ep.session.meta)
@@ -194,15 +208,22 @@ def slice_episode(ep: Episode, start: int, end: int) -> Session:
                    result=ep.session.result, path=ep.session.path)
 
 
+def slice_episode(ep: Episode, start: int, end: int) -> Session:
+    """The episode restricted to the calls under tokens [start, end)."""
+    lo, hi = ep.spans[start][0], ep.spans[end - 1][1]
+    return slice_calls(ep, range(lo, hi))
+
+
 def induce_candidate(cand: Candidate, name: str, catalog: dict | None = None, workspace_meta: dict | None = None) -> tuple[dict, dict]:
     from crystal.induce.inducer import induce
-    sessions = [slice_episode(ep, s, e) for ep, s, e in cand.occurrences]
+    sessions = cand.slice_sessions()      # the candidate slices its own episodes (sequence: a span; dataflow: a set)
     if workspace_meta:
         for s in sessions:
             s.meta.setdefault("workspace_meta", workspace_meta)
     flow, report = induce(sessions, name, catalog)
     flow["title"] = name.replace("-", " ")
-    flow["description"] = ("Common behaviour mined from %d episodes: %s." % (cand.support, " -> ".join(cand.display)))
+    summary = cand.summary()
+    flow["description"] = ("Common behaviour mined from %d episodes: %s." % (cand.support, summary))
     flow["mined"] = {"sequence": cand.display, "support": cand.support, "saving": cand.saving,
                      "episodes": cand.episode_ids, "prompts": cand.prompts}
     report["candidate"] = cand.view()
@@ -218,7 +239,7 @@ def bindability(cand: Candidate, catalog: dict | None = None, workspace_meta: di
     if len(cand.occurrences) > SCORE_SAMPLE:
         # A candidate can be shared by thousands of episodes; a sample answers "is this derivable" just as well and
         # keeps `candidates` responsive on a machine with 9k episodes.
-        probe = replace(cand, occurrences=cand.occurrences[:SCORE_SAMPLE], support=SCORE_SAMPLE)
+        probe = cand.sample(SCORE_SAMPLE)
     try:
         flow, report = induce_candidate(probe, "probe", catalog=catalog, workspace_meta=workspace_meta)
     except Exception:  # noqa: BLE001 - a candidate that will not induce is simply unscored
