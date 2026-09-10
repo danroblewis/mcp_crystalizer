@@ -1,13 +1,15 @@
 # MCP server registry used by the flow runner and the recorder.
-# Each entry: command + args (+ optional cwd/env). Swap these for the real corporate servers later.
+# Each entry: command + args (+ optional cwd/env), plus an optional `module` (+ `attr`, default "mcp") naming the
+# importable MCPServer instance for the in-process transport (CRYSTAL_INPROCESS=1; see crystal/mcp_client.py). The
+# module/attr fields are only used in that mode and are stripped out by `crystal mcp-config` / real stdio use.
 servers:
-  jira:         { command: .venv/bin/python, args: [ sim/servers/jira.py] }
-  slack:        { command: .venv/bin/python, args: [ sim/servers/slack.py] }
-  confluence:   { command: .venv/bin/python, args: [ sim/servers/confluence.py] }
-  logz:         { command: .venv/bin/python, args: [ sim/servers/logz.py] }
-  chronosphere: { command: .venv/bin/python, args: [ sim/servers/chronosphere.py] }
-  pagerduty:    { command: .venv/bin/python, args: [ sim/servers/pagerduty.py] }
-  git:          { command: .venv/bin/python, args: [ sim/servers/git.py] }
-  code:         { command: .venv/bin/python, args: [ sim/servers/code.py] }
+  jira:         { command: .venv/bin/python, args: [ sim/servers/jira.py],         module: sim.servers.jira }
+  slack:        { command: .venv/bin/python, args: [ sim/servers/slack.py],        module: sim.servers.slack }
+  confluence:   { command: .venv/bin/python, args: [ sim/servers/confluence.py],   module: sim.servers.confluence }
+  logz:         { command: .venv/bin/python, args: [ sim/servers/logz.py],         module: sim.servers.logz }
+  chronosphere: { command: .venv/bin/python, args: [ sim/servers/chronosphere.py], module: sim.servers.chronosphere }
+  pagerduty:    { command: .venv/bin/python, args: [ sim/servers/pagerduty.py],    module: sim.servers.pagerduty }
+  git:          { command: .venv/bin/python, args: [ sim/servers/git.py],          module: sim.servers.git }
+  code:         { command: .venv/bin/python, args: [ sim/servers/code.py],         module: sim.servers.code }
   # not a sim: exposes the crystallized flows (list_flows / run_flow) so the authoring agent tries them before exploring
-  flows:        { command: .venv/bin/python, args: [ sim/servers/flows.py] }
+  flows:        { command: .venv/bin/python, args: [ sim/servers/flows.py],        module: sim.servers.flows }
