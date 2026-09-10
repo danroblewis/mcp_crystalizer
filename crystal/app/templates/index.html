@@ -20,7 +20,7 @@
 <div class="cards">
 {% for f in flows %}
 <div class="fcard">
-<div class="name"><a href="/flows/{{ f.name }}">{{ f.title or f.name }}</a></div>
+<div class="name"><a href="/flows/{{ f.slug or f.name }}">{{ f.title or f.name }}</a></div>
 <div><span class="pill {{ 'ok' if f.status == 'promoted' else 'draft' }}" title="author intent (flow YAML)">author: {{ f.status }}</span>
 {% if f.lifecycle %}<span class="pill {{ 'bad' if f.lifecycle.tripped else ('ok' if f.lifecycle.status == 'promoted' else 'draft') }}" title="effective runtime state">effective: {{ f.lifecycle.status }}{{ ' (tripped)' if f.lifecycle.tripped }}</span>{% endif %}
 {% if f.card and f.card.expected_outputs %}<span class="pill" title="expected outputs on the flow card">{{ f.card.expected_outputs | length }} expected outputs</span>{% endif %}</div>

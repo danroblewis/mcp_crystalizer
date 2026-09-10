@@ -5,9 +5,9 @@
 {% if msg %}<div class="notice">{{ msg }}</div>{% endif %}
 {% if card.use_case %}<p style="font-size:16px;max-width:70ch">{{ card.use_case }}</p>{% endif %}
 {% if flow.refined_from %}<p class="small muted">refined from <a href="/flows/{{ flow.refined_from }}">{{ flow.refined_from }}</a>{% if flow.refined %} on {{ flow.refined.at[:19] }}{% if flow.refined.cost_usd %} (${{ '%.4f' % flow.refined.cost_usd }}){% endif %}{% endif %}</p>{% endif %}
-<p class="muted">{{ flow.description or '' }} <a href="/flows/{{ flow.name }}/yaml" class="small">view yaml</a></p>
+<p class="muted">{{ flow.description or '' }} <a href="/flows/{{ flow.slug or flow.name }}/yaml" class="small">view yaml</a></p>
 
-<form method="post" action="/flows/{{ flow.name }}/run" class="flowcard">
+<form method="post" action="/flows/{{ flow.slug or flow.name }}/run" class="flowcard">
 {% for k, v in (flow.inputs or {}).items() %}
 <label><div class="small muted">{{ v.label or k }} <span class="mono">({{ v.type }})</span>{% if card.inputs_explained and card.inputs_explained[k] %} — {{ card.inputs_explained[k] }}{% endif %}</div>
 <input type="text" name="{{ k }}" placeholder="{{ v.example or '' }}" value="{{ prefill.get(k) or v.default or '' }}" {% if v.required %}required{% endif %}></label>
@@ -48,7 +48,7 @@ sent. The result is written as a new version; this flow is not touched.</p>
 {% if not refine.claude %}<p class="small" style="color:var(--bad)">{{ refine.install_hint }}</p>
 {% elif refine.running %}<p class="small">A run is already in progress in this workspace (<a href="/record/{{ refine.running.job }}" class="mono">{{ refine.running.job }}</a>). One at a time.</p>
 {% else %}
-<form method="post" action="/flows/{{ flow.name }}/refine">
+<form method="post" action="/flows/{{ flow.slug or flow.name }}/refine">
 <label class="small muted">budget (USD) <input type="text" name="budget" value="{{ refine.default_budget }}" size="5"></label>
 <label class="small muted" style="margin-left:10px">model (optional) <input type="text" name="model" placeholder="default" size="10"></label>
 <label class="small muted" style="margin-left:10px">name it yourself (optional) <input type="text" name="new_name" placeholder="kebab-case-name" size="22"></label>

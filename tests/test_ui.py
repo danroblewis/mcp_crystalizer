@@ -142,3 +142,22 @@ def test_marker_excerpt_folds_unmatched_lines():
     assert out.count("show 18 more lines") == 2     # 20 lines before, 20 after; 2 lines of context are kept on each side
     assert out.count("<details") == 2
     assert out.count('<div class="ln">') == 41
+
+
+def test_a_versioned_flow_opens_from_the_catalog_and_by_its_own_name(tmp_path):
+    """`refine`/`author` write `<name>.v<N>.yaml` while the flow's `name:` stays unversioned. The catalog must link
+    to something that opens, and a link built from the bare name (a run record, `refined_from`) must resolve to the
+    newest version instead of 500ing, which is what happened on a real machine."""
+    import yaml as _yaml
+    from crystal.flow.runner import flow_path, list_flows, load_flow
+
+    d = tmp_path / "flows"
+    d.mkdir()
+    for v in (1, 2):
+        (d / f"probe.v{v}.yaml").write_text(_yaml.safe_dump(
+            {"name": "probe", "title": f"Probe v{v}", "status": "draft", "inputs": {}, "steps": []}))
+    assert flow_path("probe", d).name == "probe.v2.yaml"          # newest version wins
+    assert load_flow("probe", d)["title"] == "Probe v2"
+    slugs = sorted(f["slug"] for f in list_flows(d))
+    assert slugs == ["probe.v1", "probe.v2"]                       # each version addressable on its own
+    assert load_flow("probe.v1", d)["title"] == "Probe v1"

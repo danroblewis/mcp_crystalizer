@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -33,13 +34,33 @@ def current_run_dir() -> Path:
     return state.run_dir()
 
 
+_VERSION_SUFFIX = re.compile(r"\.v(\d+)$")
+
+
+def flow_path(name: str, flow_dir: Path | None = None) -> Path:
+    """The file for a flow name. `author`, `repair` and `refine` write `<name>.v<N>.yaml`, while the flow's own
+    `name:` field stays unversioned, so a link built from that name has no `<name>.yaml` to open: fall back to the
+    newest version of it."""
+    d = flow_dir or state.flow_dir()
+    exact = d / f"{name}.yaml"
+    if exact.exists():
+        return exact
+    versions = []
+    for p in d.glob(f"{name}.v*.yaml"):
+        m = _VERSION_SUFFIX.search(p.stem)
+        if m:
+            versions.append((int(m.group(1)), p))
+    return max(versions)[1] if versions else exact
+
+
 def load_flow(name_or_path: str | Path, flow_dir: Path | None = None) -> dict:
-    """A flow by name (from the workspace's flow dir) or by path."""
+    """A flow by name (from the workspace's flow dir, newest version when only versions exist) or by path."""
     p = Path(name_or_path)
     if not p.exists():
-        p = (flow_dir or state.flow_dir()) / f"{name_or_path}.yaml"
+        p = flow_path(str(name_or_path), flow_dir)
     flow = yaml.safe_load(p.read_text())
     flow["_path"] = str(p)
+    flow["slug"] = p.stem                       # how the flow is addressed in URLs and on the CLI
     return flow
 
 
@@ -53,9 +74,10 @@ def list_flows(flow_dir: Path | None = None) -> list[dict]:
         try:
             f = yaml.safe_load(p.read_text())
             f["_path"] = str(p)
+            f["slug"] = p.stem
             out.append(f)
         except Exception as e:  # noqa: BLE001
-            out.append({"name": p.stem, "status": "broken", "error": str(e), "_path": str(p)})
+            out.append({"name": p.stem, "slug": p.stem, "status": "broken", "error": str(e), "_path": str(p)})
     return out
 
 
