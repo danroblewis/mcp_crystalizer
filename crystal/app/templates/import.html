@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block title %}Import past sessions{% endblock %}{% block body %}
+{% set ws = workspace() %}
+<h1>Import past sessions <span class="muted small" style="font-weight:400">for {{ ws.name }}</span></h1>
+<p class="muted" style="max-width:76ch">Claude Code keeps a transcript of every session under <span class="mono">{{ base }}</span>. The ones that were run in <span class="mono">{{ ws.root }}</span> and made MCP calls can become traces here, for free: same record format as the hook, one episode per prompt, ready for <a href="/candidates">candidates</a> and <code>induce</code>. Nothing under <span class="mono">~/.claude</span> is modified.</p>
+{% if msg %}<div class="notice">{{ msg }}</div>{% endif %}
+{% if not base_exists %}<p class="muted">No transcripts directory at <span class="mono">{{ base }}</span>. Set <code>MCP_EXPLORER_TRANSCRIPTS</code> or run <code>mcp-explorer import --transcripts &lt;dir&gt;</code>.</p>
+{% else %}
+<p class="small"><b>{{ totals.found }}</b> session{{ '' if totals.found == 1 else 's' }} of this workspace made MCP calls ({{ totals.mcp }} calls): <b>{{ totals.importable }}</b> importable, <b>{{ totals.imported }}</b> already imported.</p>
+<form method="post" action="/import" style="margin:10px 0 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+<button type="submit"{% if not totals.importable and not totals.imported %} disabled{% endif %}>Import{% if totals.importable %} {{ totals.importable }} session{{ '' if totals.importable == 1 else 's' }}{% endif %}</button>
+<label class="small muted"><input type="checkbox" name="force" value="yes"> re-import sessions already present</label>
+<span class="small muted">every project at once: <code>mcp-explorer import --all</code></span>
+</form>
+<table><tr><th>session</th><th>first prompt</th><th class="n">prompts</th><th class="n">MCP calls</th><th class="n">episodes</th><th>servers</th><th>status</th></tr>
+{% for r in rows %}<tr>
+<td class="mono small">{% if r.status == 'already imported' %}<a href="/traces/{{ r.session_id }}">{{ r.session_id[:12] }}</a>{% else %}{{ r.session_id[:12] }}{% endif %}</td>
+<td class="small">{{ (r.first_prompt or '') | truncate(140) }}</td>
+<td>{{ r.prompts }}</td><td>{{ r.mcp_calls }}</td><td>{{ r.episodes }}</td>
+<td class="small">{% for s, n in r.servers.items() %}<span class="pill">{{ s }} {{ n }}</span> {% endfor %}</td>
+<td><span class="pill {{ 'ok' if r.status == 'already imported' else 'draft' }}">{{ 'importable' if r.status == 'would import' else r.status }}</span>{% if not r.cwd_exists %} <span class="pill bad" title="{{ r.cwd }}">directory missing</span>{% endif %}</td>
+</tr>{% endfor %}</table>
+{% if not rows %}<p class="muted">No transcript of a session in this directory made MCP calls yet.</p>{% endif %}
+{% endif %}
+{% endblock %}
