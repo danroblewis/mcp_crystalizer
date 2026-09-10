@@ -1,31 +1,32 @@
 """Trace recorder.
 
-Two entry points write the same JSONL record shape:
-  * `python -m crystal.trace.record` as a Claude Code PostToolUse hook (reads the hook JSON on stdin)
-  * `Recorder.record(...)` from the scripted agent / runner
+Two entry points write the same JSONL record shape into the workspace's trace dir (crystal/state.py):
+  * `mcp-explorer hook` as a Claude Code hook (reads the hook JSON on stdin; PostToolUse, UserPromptSubmit, Stop)
+  * `Recorder.record(...)` from the scripted agent / runner / driver
 
-Record: {ts, session_id, source, seq, server, tool, input, output, output_text, is_error, duration_ms}
+Records, one per line, all with {ts, session_id, source, kind}:
+  meta    {trigger, inputs, cwd, transcript_path, workspace, ...}   written once, first
+  prompt  {text}                                                    what the user asked (UserPromptSubmit)
+  call    {seq, server, tool, input, output, output_text, is_error, duration_ms}
+  note    {text}
+  result  {text}                                                    the agent's final message (Stop)
 Raw outputs double as cassettes for replay tests.
 """
 from __future__ import annotations
 
 import json
-import os
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from crystal import PROJECT_ROOT
-from crystal.workspace import namespaced
-
-TRACE_DIR = PROJECT_ROOT / "traces"
+from crystal import state
+from crystal import workspace as ws_mod
 
 
 def current_trace_dir() -> Path:
-    """traces/ for the sim, traces/<workspace-slug>/ for any other workspace ($CRYSTAL_WORKSPACE)."""
-    return namespaced(TRACE_DIR)
+    """The current workspace's traces/ under $MCP_EXPLORER_HOME."""
+    return state.trace_dir()
 
 
 def _now() -> str:
@@ -59,6 +60,15 @@ class Recorder:
     def note(self, text: str, **kw) -> None:
         self._write({"ts": _now(), "session_id": self.session_id, "source": self.source, "kind": "note", "text": text, **kw})
 
+    def prompt(self, text: str, **kw) -> None:
+        self._write({"ts": _now(), "session_id": self.session_id, "source": self.source, "kind": "prompt", "text": text, **kw})
+
+    def result(self, text: str, **kw) -> None:
+        self._write({"ts": _now(), "session_id": self.session_id, "source": self.source, "kind": "result", "text": text, **kw})
+
+    def count_calls(self) -> int:
+        return sum(1 for line in self.path.open() if '"kind": "call"' in line) if self.path.exists() else 0
+
 
 def split_tool_name(name: str) -> tuple[str, str]:
     """Claude Code names MCP tools mcp__<server>__<tool>."""
@@ -84,21 +94,67 @@ def _preview(v: Any, limit: int = PREVIEW_CHARS) -> Any:
     return v
 
 
+def trace_dir_for(payload: dict) -> Path:
+    """The hook's `cwd` is the directory Claude Code runs in: that is the workspace, and its state dir holds the
+    trace. (Created on first use, workspace.json written, seed data copied.)"""
+    ws = ws_mod.workspace(payload.get("cwd") or None)
+    return ws.state.ensure().traces
+
+
+def _session_active(path: Path) -> bool:
+    """A session is an investigation once it has made an MCP call, or was launched by `mcp-explorer record` (its
+    meta names a trigger). A prompt alone does not make one: a session that only edits code leaves its prompt and
+    nothing else, and Claude Code's own Read/Grep/Glob/Bash are never recorded in it."""
+    if not path.exists():
+        return False
+    for line in path.open():
+        if '"kind": "call"' in line or ('"kind": "meta"' in line and '"trigger"' in line):
+            return True
+    return False
+
+
 def hook_main(payload: dict | None = None, trace_dir: Path | None = None) -> int:
-    """PostToolUse hook: stdin carries {session_id, tool_name, tool_input, tool_response, transcript_path, cwd, ...}.
-    Records every MCP call. Claude Code's own Read/Grep/Glob/Bash are recorded only into a session that already
-    has a trace (one launched by the driver, or one that has made an MCP call): a review or dev session in this
-    checkout that never touches an MCP server leaves no trace behind."""
+    """Claude Code hook entry. stdin carries the hook JSON; `hook_event_name` says which hook fired:
+      PostToolUse       {session_id, tool_name, tool_input, tool_response, transcript_path, cwd, ...}: every MCP call
+                        is recorded; Claude Code's own Read/Grep/Glob/Bash only inside an active session (above)
+      UserPromptSubmit  {session_id, prompt, cwd, ...}: the prompt is recorded (the input a later flow will take)
+      Stop              {session_id, transcript_path, cwd, ...}: the agent's final message, read from the transcript
+    The trace goes to the workspace the hook's `cwd` maps to. Never raises: a broken hook must not break the agent."""
     if payload is None:
         try:
             payload = json.load(sys.stdin)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, ValueError):
             return 0
+    try:
+        return _hook(payload, trace_dir)
+    except Exception as e:  # noqa: BLE001
+        print(f"mcp-explorer hook: {type(e).__name__}: {e}", file=sys.stderr)
+        return 0
+
+
+def _hook(payload: dict, trace_dir: Path | None) -> int:
+    event = payload.get("hook_event_name") or ("PostToolUse" if "tool_name" in payload else "")
+    sid = payload.get("session_id", "unknown")
+    tdir = trace_dir or trace_dir_for(payload)
+    meta = {"transcript_path": payload.get("transcript_path"), "cwd": payload.get("cwd")}
+    if event == "UserPromptSubmit":
+        text = payload.get("prompt")
+        if text:
+            Recorder(sid, "claude-code", trace_dir=tdir, meta=meta).prompt(str(text))
+        return 0
+    if event == "Stop":
+        if not (tdir / f"{sid}.jsonl").exists():
+            return 0
+        text = final_message(payload.get("transcript_path"))
+        if text:
+            Recorder(sid, "claude-code", trace_dir=tdir).result(text)
+        return 0
+    if event != "PostToolUse":
+        return 0
     name = payload.get("tool_name", "")
     server, tool = split_tool_name(name)
-    sid = payload.get("session_id", "unknown")
     if server == "claude-code":
-        if tool not in CLAUDE_CODE_TOOLS or not ((trace_dir or current_trace_dir()) / f"{sid}.jsonl").exists():
+        if tool not in CLAUDE_CODE_TOOLS or not _session_active(tdir / f"{sid}.jsonl"):
             return 0  # only MCP calls and, inside an investigation, codebase reads are steps
     resp = payload.get("tool_response")
     output_text = ""
@@ -115,14 +171,45 @@ def hook_main(payload: dict | None = None, trace_dir: Path | None = None) -> int
             output = output_text
     if server == "claude-code":
         output, output_text = _preview(output), _preview(output_text)
-    rec = Recorder(sid, "claude-code", trace_dir=trace_dir,
-                   meta={"transcript_path": payload.get("transcript_path"), "cwd": payload.get("cwd")})
-    # seq continues across hook invocations: count existing call lines
-    rec.seq = sum(1 for line in rec.path.open() if '"kind": "call"' in line) if rec.path.exists() else 0
+    rec = Recorder(sid, "claude-code", trace_dir=tdir, meta=meta)
+    rec.seq = rec.count_calls()   # seq continues across hook invocations
     rec.record(server, tool, payload.get("tool_input") or {}, output, output_text,
                is_error=bool(isinstance(resp, dict) and resp.get("isError")),
                extra={"tool_use_id": payload.get("tool_use_id")})
     return 0
+
+
+def final_message(transcript_path: str | None, limit: int = 20000) -> str | None:
+    """The last assistant text in a Claude Code transcript (JSONL of {type: assistant, message: {content: [...]}})."""
+    if not transcript_path:
+        return None
+    p = Path(transcript_path)
+    if not p.is_file():
+        return None
+    last = None
+    try:
+        for line in p.read_text().splitlines():
+            if not line.strip():
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if rec.get("type") != "assistant":
+                continue
+            msg = rec.get("message") or {}
+            content = msg.get("content") if isinstance(msg, dict) else None
+            texts = []
+            if isinstance(content, str):
+                texts = [content]
+            elif isinstance(content, list):
+                texts = [c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"]
+            text = "\n".join(t for t in texts if t).strip()
+            if text:
+                last = text
+    except OSError:
+        return None
+    return last[:limit] if last else None
 
 
 if __name__ == "__main__":

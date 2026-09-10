@@ -13,27 +13,28 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from crystal.app import dossier
-from crystal import PROJECT_ROOT
+from crystal import hooks
+from crystal import state as state_mod
 from crystal import workspace as ws_mod
+from crystal.app import dossier
 from crystal.flow.lifecycle import describe, get_lifecycle
-from crystal.flow.runner import FlowRunner, RUN_DIR, list_flows, load_flow
+from crystal.flow.runner import FlowRunner, list_flows, load_flow
 from crystal.mcp_client import ServerPool
-from crystal.trace.record import TRACE_DIR
 from crystal.trace.store import load_session
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 TEMPLATES.env.globals["sparkline"] = dossier.sparkline
-FEEDBACK = PROJECT_ROOT / "traces" / "feedback.jsonl"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # one workspace per server process: $CRYSTAL_WORKSPACE (else the project = the sim) picks the servers the pool
-    # connects to (servers.yaml < ~/.mcp.json < <workspace>/.mcp.json) and the runs/ + traces/ namespace
+    # one workspace per server process, the one the CLI was launched for ($CRYSTAL_WORKSPACE, else the cwd): it
+    # picks the servers the pool connects to (built-ins < ~/.claude.json < ~/.mcp.json < <workspace>/.mcp.json) and
+    # the state dir every page reads. Nothing here ever looks at another workspace's state.
     app.state.workspace = ws_mod.current()
+    app.state.workspace.state.ensure()
     app.state.pool = ServerPool()
-    print(f"workspace {app.state.workspace}; servers: {', '.join(app.state.pool.registry)}", flush=True)
+    print(f"workspace {app.state.workspace}; state {app.state.workspace.state}; servers: {', '.join(app.state.pool.registry)}", flush=True)
     await app.state.pool.__aenter__()
     try:
         yield
@@ -44,12 +45,36 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="mcp_explorer", lifespan=lifespan)
 
 
+def _workspace() -> ws_mod.Workspace:
+    return app.state.workspace if hasattr(app.state, "workspace") else ws_mod.current()
+
+
+def _state() -> state_mod.StateDir:
+    return _workspace().state
+
+
 def _run_dir() -> Path:
-    return app.state.run_dir if hasattr(app.state, "run_dir") else ws_mod.namespaced(RUN_DIR)
+    return _state().runs
 
 
 def _trace_dir() -> Path:
-    return app.state.trace_dir if hasattr(app.state, "trace_dir") else ws_mod.namespaced(TRACE_DIR)
+    return _state().traces
+
+
+def _feedback() -> Path:
+    return _state().feedback
+
+
+def _workspace_view() -> dict:
+    """What the top of every page shows: name, root, remote, state dir."""
+    ws = _workspace()
+    st = ws.state
+    info = st.info()
+    return {"name": ws.name, "root": str(ws.root), "remote": info.get("remote") or "", "state_dir": str(st),
+            "slug": ws.slug, "hook": hooks.installed()}
+
+
+TEMPLATES.env.globals["workspace"] = _workspace_view
 
 
 def _runs(limit: int = 50) -> list[dict]:
@@ -79,7 +104,7 @@ def _load_flow_quiet(name: str | None, path: str | None = None) -> dict | None:
         if not cand:
             continue
         try:
-            return load_flow(cand)
+            return load_flow(cand, _state().flows)
         except Exception:  # noqa: BLE001
             continue
     return None
@@ -87,15 +112,21 @@ def _load_flow_quiet(name: str | None, path: str | None = None) -> dict | None:
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    flows = [f for f in list_flows() if f.get("status") != "broken"]
+    flows = [f for f in list_flows(_state().flows) if f.get("status") != "broken"]
     for f in flows:
         f["lifecycle"] = _lifecycle(f)
-    return TEMPLATES.TemplateResponse(request, "index.html", {"flows": flows, "runs": _runs(15)})
+    traces = _trace_count()
+    return TEMPLATES.TemplateResponse(request, "index.html", {"flows": flows, "runs": _runs(15), "trace_count": traces})
+
+
+def _trace_count() -> int:
+    d = _trace_dir()
+    return len(list(d.glob("*.jsonl"))) if d.is_dir() else 0
 
 
 @app.get("/flows/{name}", response_class=HTMLResponse)
 async def flow_form(request: Request, name: str):
-    flow = load_flow(name)
+    flow = load_flow(name, _state().flows)
     flow["lifecycle"] = _lifecycle(flow)
     events = get_lifecycle().events(name, limit=12)
     prefill = {k: v for k, v in request.query_params.items() if k in (flow.get("inputs") or {})}
@@ -105,13 +136,13 @@ async def flow_form(request: Request, name: str):
 
 @app.get("/flows/{name}/yaml", response_class=PlainTextResponse)
 async def flow_yaml(name: str):
-    return Path(load_flow(name)["_path"]).read_text()
+    return Path(load_flow(name, _state().flows)["_path"]).read_text()
 
 
 @app.post("/flows/{name}/run")
 async def flow_run(request: Request, name: str):
     form = await request.form()
-    flow = load_flow(name)
+    flow = load_flow(name, _state().flows)
     inputs = {k: v for k, v in form.items() if k in (flow.get("inputs") or {})}
     record = await FlowRunner(request.app.state.pool).run(flow, inputs)
     return RedirectResponse(f"/runs/{record['run_id']}", status_code=303)
@@ -151,7 +182,7 @@ async def traces(request: Request):
             continue
         if not s.calls:
             continue
-        out.append({"session_id": s.session_id, "source": s.source, "trigger": s.meta.get("trigger"), "inputs": s.meta.get("inputs") or {},
+        out.append({"session_id": s.session_id, "source": s.source, "trigger": s.meta.get("trigger"), "inputs": s.meta.get("inputs") or {}, "prompt": s.prompt or "",
                     "calls": len(s.calls), "ts": s.calls[0].get("ts")})
     out.sort(key=lambda t: t["ts"] or "", reverse=True)
     return TEMPLATES.TemplateResponse(request, "traces.html", {"traces": out})
@@ -179,15 +210,16 @@ async def trace_json(session: str):
 async def feedback(run_id: str, text: str = Form(""), helpful: str = Form("no")):
     p = _run_dir() / f"{run_id}.json"
     record = json.loads(p.read_text()) if p.exists() else {}
-    FEEDBACK.parent.mkdir(exist_ok=True)
-    with FEEDBACK.open("a") as fh:
+    fb = _feedback()
+    fb.parent.mkdir(parents=True, exist_ok=True)
+    with fb.open("a") as fh:
         fh.write(json.dumps({"ts": datetime.now(timezone.utc).isoformat(), "kind": "feedback", "run_id": run_id, "flow": record.get("flow"),
                              "inputs": record.get("inputs"), "helpful": helpful == "yes", "text": text}) + "\n")
     if helpful != "yes" and record.get("flow"):
         # a complaint is a failure signal: the circuit breaker demotes the flow one level
         lc = get_lifecycle()
         try:
-            flow = load_flow(record["flow"])
+            flow = load_flow(record["flow"], _state().flows)
         except Exception:  # noqa: BLE001
             # YAML unreadable right now (mid-edit): keep the author status the store already knows rather than
             # declaring the flow a draft, which would reset its effective state

@@ -18,34 +18,36 @@ from crystal.author import (author as author_cmd, author_prompt, base_name, expa
 from crystal.trace.record import Recorder
 from crystal.trace.store import load_session
 
-ROOT = Path(__file__).resolve().parent.parent
-TRACES = ROOT / "traces"
-sys.path.insert(0, str(ROOT / "sim" / "servers"))
+from tests.conftest import SIM
+
+TRACES = SIM / "traces"
 
 
 @pytest.fixture
 def world(tmp_path, monkeypatch):
-    """tmp copies of: three scripted traces, the two flows, an empty runs dir, a feedback queue."""
-    tdir, fdir, rdir = tmp_path / "traces", tmp_path / "flows", tmp_path / "runs"
-    tdir.mkdir(), fdir.mkdir(), rdir.mkdir()
+    """A private state dir for the sim workspace holding: three scripted traces, the base flows, an empty runs dir,
+    a feedback queue. The defaults (state.flow_dir() etc.) resolve to it, so the CLI paths are exercised too."""
+    from crystal import state as state_mod
+    from crystal.flow import lifecycle as lc_mod
+    monkeypatch.setenv("MCP_EXPLORER_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("CRYSTAL_WORKSPACE", str(SIM))
+    monkeypatch.delenv("CRYSTAL_LIFECYCLE_DB", raising=False)
+    monkeypatch.setattr(lc_mod, "_default", None)
+    st = state_mod.StateDir(root=SIM, dir=tmp_path / "home" / "workspaces" / state_mod.slug_of(SIM))   # not ensure(): no seeding
+    tdir, fdir, rdir = st.traces, st.flows, st.runs
+    st.dir.mkdir(parents=True), tdir.mkdir(), fdir.mkdir(), rdir.mkdir()
+    st.workspace_json.write_text("{}")
+    (st.dir / state_mod.SEED_MARKER).write_text("")
+    shutil.copy(SIM / "catalog.yaml", st.catalog)
     src = sorted(TRACES.glob("scripted-PAY-101-v*.jsonl")) + sorted(TRACES.glob("scripted-STF-109-v*.jsonl"))[:1]
     if len(src) < 3:
         pytest.skip("scripted traces missing")
     for p in src:
         shutil.copy(p, tdir / p.name)
-    for p in (ROOT / "flows").glob("*.yaml"):
-        if not author.VERSION_RX.match(p.stem):      # base flows only; induced versions in the repo must not shift N
+    for p in (SIM / "flows").glob("*.yaml"):
+        if not author.VERSION_RX.match(p.stem):      # base flows only; induced versions in the example must not shift N
             shutil.copy(p, fdir / p.name)
-    monkeypatch.setattr(author, "FLOW_DIR", fdir)
-    monkeypatch.setattr(author, "RUN_DIR", rdir)
-    monkeypatch.setattr(author, "TRACE_DIR", tdir)
-    monkeypatch.setattr(author, "FEEDBACK", tdir / "feedback.jsonl")
-    import crystal.flow.runner as runner_mod
-    monkeypatch.setattr(runner_mod, "FLOW_DIR", fdir)
-    from crystal.flow import lifecycle as lc_mod
-    monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lc.sqlite"))   # never the real state/lifecycle.sqlite
-    monkeypatch.setattr(lc_mod, "_default", None)
-    return {"traces": tdir, "flows": fdir, "runs": rdir, "feedback": tdir / "feedback.jsonl"}
+    return {"traces": tdir, "flows": fdir, "runs": rdir, "feedback": st.feedback, "state": st}
 
 
 def run_record_from_trace(path: Path, flow_name: str, run_id: str) -> dict:
@@ -211,7 +213,7 @@ def test_confirmation_required(monkeypatch, capsys):
 
 
 def test_flows_server_summary_is_compact():
-    flows_srv = __import__("flows")
+    from crystal.servers import flows as flows_srv
     big = {"run_id": "r", "flow": "f", "status": "ok", "inputs": {"key": "PAY-101"}, "steps": [
         {"id": f"s{i}", "tool": "logz.search_logs", "args": {"query": "x" * 500}, "hits": 50, "error": None, "attempts": [],
          "extracts": {"lines": ["line " * 40] * 50}, "result": {"hits": [{"_source": {"message": "m" * 400, "level": "ERROR"}}] * 50}} for i in range(12)]}
@@ -311,18 +313,8 @@ def test_ran_flow_first_ignores_claude_code_reads():
     assert _ran_flow_first(Session("s", "claude-code", calls=[read])) is False
 
 
-def test_hook_records_reads_only_inside_an_investigation(tmp_path):
-    """A session that never calls an MCP server (a code review in this checkout) leaves no trace; inside a
-    recorded session, Read results are kept as short previews, never whole files."""
-    from crystal.trace.record import hook_main
-    big = "x" * 5000
-    read = {"session_id": "sess", "tool_name": "Read", "tool_input": {"file_path": "a.py"}, "tool_response": {"type": "text", "file": {"filePath": "a.py", "content": big}}}
-    assert hook_main(read, trace_dir=tmp_path) == 0 and not (tmp_path / "sess.jsonl").exists()
-    mcp = {"session_id": "sess", "tool_name": "mcp__jira__jira_get_issue", "tool_input": {"issue_key": "PAY-101"},
-           "tool_response": {"content": [{"type": "text", "text": json.dumps({"key": "PAY-101"})}]}}
-    hook_main(mcp, trace_dir=tmp_path)
-    hook_main(read, trace_dir=tmp_path)
-    s = load_session(tmp_path / "sess.jsonl")
-    assert s.tool_sequence == ["jira.jira_get_issue", "claude-code.Read"] and s.calls[0]["output"] == {"key": "PAY-101"}
-    content = s.calls[1]["output"]["file"]["content"]
-    assert len(content) < 400 and content.endswith("(5000 chars)")
+def test_author_defaults_resolve_to_the_workspace_state_dir(world):
+    """Without explicit dirs, author() reads traces and flows from, and writes the new version into, the state dir."""
+    res = author_cmd("jira_issue", {"key": "PAY-101"}, driver_fn=fake_driver_factory(world, extra_comments), test=False)
+    assert res["path"] == world["flows"] / "investigate-jira-ticket.v2.yaml" and res["path"].exists()
+    assert (world["traces"] / "fake-session.jsonl").exists() and sorted((world["traces"] / "runs").glob("*.json"))

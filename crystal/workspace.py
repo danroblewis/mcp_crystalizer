@@ -1,29 +1,22 @@
-"""The workspace: the codebase this tool is pointed at, the way any AI agent is pointed at a directory.
+"""The workspace: the directory this tool is pointed at, exactly the way Claude Code is pointed at a directory.
 
-A workspace is a directory. It supplies
-  * the root the generic `code` and `git` servers search (`{{workspace}}` in servers.yaml args),
-  * the `.mcp.json` that adds to / overrides the project's server registry (crystal/registry.py),
-  * the namespace under which runs and traces are stored: runs/<slug>/, traces/<slug>/ (flows, cassettes,
-    feedback and the lifecycle store stay in the project, keyed by flow name).
+A workspace is the current directory unless `--workspace <dir>` or $CRYSTAL_WORKSPACE says otherwise. It supplies
+  * the root the built-in `code` and `git` servers search,
+  * its `.mcp.json`, the top layer of the server registry (crystal/registry.py),
+  * its state dir under $MCP_EXPLORER_HOME (crystal/state.py): flows, runs, traces, cassettes, catalog, lifecycle.
 
-Resolution: an explicit path > $CRYSTAL_WORKSPACE > the project itself. A relative path is taken from the project
-root, so `export CRYSTAL_WORKSPACE=workspaces/agentarena` means the same thing in every process (CLI, the flows MCP
-server, the stdio servers the pool spawns, the hook Claude Code runs). The project as its own workspace is the
-simulated world: slug `sim`, whose runs and traces are the top-level runs/ and traces/ directories, exactly where
-they were before workspaces existed.
+Nothing here is special about this package's own source checkout: run in any directory, that directory is the
+workspace. `activate()` puts the absolute path into $CRYSTAL_WORKSPACE so every child process (stdio servers, Claude
+Code, the recording hook, the `flows` server) resolves the same workspace lazily.
 """
 from __future__ import annotations
 
-import hashlib
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from crystal import PROJECT_ROOT
-
 ENV = "CRYSTAL_WORKSPACE"
-SIM_SLUG = "sim"
 
 
 @dataclass(frozen=True)
@@ -32,22 +25,19 @@ class Workspace:
     slug: str
 
     @property
-    def is_project(self) -> bool:
-        return self.root == PROJECT_ROOT
-
-    @property
     def name(self) -> str:
         return self.root.name
+
+    @property
+    def state(self):
+        from crystal.state import state_for
+        return state_for(self.root)
 
     def mcp_json(self) -> Path:
         return self.root / ".mcp.json"
 
-    def namespaced(self, base: Path) -> Path:
-        """runs/ and traces/ for this workspace: the base itself for the sim, base/<slug> for anything else."""
-        return base if self.is_project else base / self.slug
-
     def __str__(self) -> str:
-        return f"{self.slug} ({self.root})"
+        return f"{self.name} ({self.root})"
 
     def meta(self) -> dict:
         """Facts about the workspace an agent gets for free (Claude Code shows it the git remote): name, root,
@@ -77,22 +67,15 @@ class Workspace:
 
 
 def resolve_root(path: str | os.PathLike | None = None) -> Path:
+    """An explicit path > $CRYSTAL_WORKSPACE > the current directory. Relative paths are taken from the cwd."""
     raw = str(path) if path not in (None, "") else os.environ.get(ENV, "").strip()
-    if not raw:
-        return PROJECT_ROOT
-    p = Path(raw).expanduser()
-    if not p.is_absolute():
-        p = PROJECT_ROOT / p
+    p = Path(raw).expanduser() if raw else Path.cwd()
     return p.resolve()
 
 
 def slug_of(root: Path) -> str:
-    if root == PROJECT_ROOT:
-        return SIM_SLUG
-    slug = re.sub(r"[^a-z0-9]+", "-", root.name.lower()).strip("-") or "workspace"
-    if slug == SIM_SLUG:   # a real directory that happens to be called sim must not share the sim's namespace
-        slug = f"{slug}-{hashlib.sha1(str(root).encode()).hexdigest()[:6]}"
-    return slug
+    from crystal.state import slug_of as _slug
+    return _slug(root)
 
 
 def workspace(path: str | os.PathLike | None = None) -> Workspace:
@@ -101,22 +84,17 @@ def workspace(path: str | os.PathLike | None = None) -> Workspace:
 
 
 def current() -> Workspace:
-    """The workspace of this process ($CRYSTAL_WORKSPACE or the project)."""
+    """The workspace of this process ($CRYSTAL_WORKSPACE, else the current directory)."""
     return workspace(None)
 
 
 def activate(path: str | os.PathLike | None) -> Workspace:
-    """Make `path` the workspace of this process and of every child (stdio servers, Claude Code, its hook):
-    the absolute path goes into $CRYSTAL_WORKSPACE, which everything else reads lazily."""
+    """Make `path` the workspace of this process and of every child (stdio servers, Claude Code, its hook)."""
     ws = workspace(path)
     if not ws.root.is_dir():
         raise FileNotFoundError(f"workspace {ws.root} is not a directory")
     os.environ[ENV] = str(ws.root)
     return ws
-
-
-def namespaced(base: Path, ws: Workspace | None = None) -> Path:
-    return (ws or current()).namespaced(base)
 
 
 def split_argv(argv: list[str]) -> tuple[str | None, list[str]]:

@@ -1,23 +1,22 @@
 """Thin MCP client pool: one session per registered server, results parsed from JSON-in-text.
 
-The registry is the effective one for the current workspace (crystal/registry.py: servers.yaml < ~/.mcp.json <
-<workspace>/.mcp.json). Transports, chosen per entry:
+The registry is the effective one for the current workspace (crystal/registry.py: built-ins < ~/.claude.json <
+~/.mcp.json < <workspace>/.mcp.json). Transports, chosen per entry:
 - stdio (default): spawns `command args...` as a subprocess with the entry's cwd and env, same as Claude Code does
   from .mcp.json. Always available; what real local MCP servers use (npx ..., uvx ..., python ...).
 - http (`type: http`, streamable HTTP) and sse (`type: sse`): remote servers by URL, optional `headers` (sent on
   every request through a custom httpx client).
-- in-process (CRYSTAL_INPROCESS=1, or `ServerPool(inprocess=True)`): for a stdio entry whose script is a python
-  module inside this project (`module`, explicit in servers.yaml or inferred from the path), imports the module and
-  connects to its MCPServer instance directly over `mcp.client._memory.InMemoryTransport` (no subprocess, no
-  per-server mcp/pydantic import). A module that defines `configure(args)` gets the entry's args (the generic
-  code/git servers read `--root` from them). Used by the test suite (see tests/conftest.py) to avoid spawning 8
-  subprocesses per pool. Entries without a module (npx/uvx servers, remote servers) use their real transport
-  regardless of the flag.
+- in-process (CRYSTAL_INPROCESS=1, or `ServerPool(inprocess=True)`): for a stdio entry that is a python module
+  (`module`: the built-ins, or `python -m pkg.mod`) or a python script file (loaded by path, its directory on
+  sys.path as if run), imports it and connects to its MCPServer instance directly over
+  `mcp.client._memory.InMemoryTransport` (no subprocess, no per-server mcp/pydantic import). A module that defines
+  `configure(args)` gets the entry's args (the built-in code/git servers read `--root` from them). Used by the test
+  suite (see tests/conftest.py) to avoid spawning 9 subprocesses per pool. Entries that are neither (npx/uvx
+  servers, remote servers) use their real transport regardless of the flag.
 """
 from __future__ import annotations
 
 import asyncio
-import importlib
 import json
 import os
 from contextlib import AsyncExitStack
@@ -28,13 +27,12 @@ from mcp.client._memory import InMemoryTransport
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-from crystal import PROJECT_ROOT
 
 
-def load_registry(path: Path | None = None, workspace=None) -> dict[str, dict]:
-    """The effective registry for the current workspace (or `workspace`); `path` overrides servers.yaml."""
+def load_registry(workspace=None) -> dict[str, dict]:
+    """The effective registry for the current workspace (or `workspace`)."""
     from crystal.registry import effective_registry
-    return effective_registry(workspace, servers_yaml=path)
+    return effective_registry(workspace)
 
 
 def _inprocess_default() -> bool:
@@ -56,9 +54,9 @@ def parse_result(result) -> Any:
 
 def transport_for(spec: dict, inprocess: bool) -> str:
     """Which transport `ServerPool.session` will use for an entry: inprocess | stdio | http | sse."""
-    from crystal.registry import transport_of
+    from crystal.registry import inprocess_target, transport_of
     kind = spec.get("transport") or transport_of(spec)
-    if kind == "stdio" and inprocess and spec.get("module"):
+    if kind == "stdio" and inprocess and inprocess_target(spec) is not None:
         return "inprocess"
     return kind
 
@@ -89,14 +87,15 @@ class ServerPool:
     async def _connect(self, server: str, spec: dict):
         kind = transport_for(spec, self.inprocess)
         if kind == "inprocess":
-            module = importlib.import_module(spec["module"])
+            from crystal.registry import import_target, inprocess_target
+            module = import_target(inprocess_target(spec))
             if hasattr(module, "configure"):
                 module.configure(list(spec.get("args") or []))
             mcp_server = getattr(module, spec.get("attr", "mcp"))
             return await self._stack.enter_async_context(InMemoryTransport(mcp_server))
         if kind == "stdio":
             params = StdioServerParameters(command=spec["command"], args=list(spec.get("args") or []),
-                                           cwd=spec.get("cwd", str(PROJECT_ROOT)),
+                                           cwd=spec.get("cwd") or os.getcwd(),
                                            env={**os.environ, **spec.get("env", {})})
             return await self._stack.enter_async_context(stdio_client(params))
         if kind == "http":

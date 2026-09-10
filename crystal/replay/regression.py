@@ -10,7 +10,7 @@ returned zero hits is not evidence that the flow works. The inducer emits `tests
 that had hits in every traced session, one case per traced input.
 A flow with no cases at all is reported as an error and leaves the lifecycle untouched (nothing failed).
 
-Cassette: traces/cassettes/<flow>.json, seeded from the sessions the flow was induced from. Modes:
+Cassette: <state dir>/cassettes/<flow>.json, seeded from the sessions the flow was induced from. Modes:
   auto (default)  replay recorded calls, go live for misses and record them
   live            re-record everything against the servers
   offline         replay only; a miss fails the case (no servers started)
@@ -23,7 +23,7 @@ from pathlib import Path
 from crystal.flow.lifecycle import Lifecycle, classify_run, get_lifecycle
 from crystal.flow.runner import FlowRunner, load_flow
 from crystal.mcp_client import ServerPool
-from crystal.replay.cassette import CASSETTE_DIR, Cassette, CassettePool
+from crystal.replay.cassette import Cassette, CassettePool, current_cassette_dir
 from crystal.trace.record import current_trace_dir
 from crystal.trace.store import load_session
 
@@ -78,7 +78,7 @@ def regression(flow_or_name, mode: str = "auto", cassette_dir: Path | None = Non
     """Run every test case; record one pass/fail in the lifecycle (unless lifecycle=False). Returns the report."""
     flow = flow_or_name if isinstance(flow_or_name, dict) else load_flow(flow_or_name)
     cases = test_cases(flow)
-    cdir = cassette_dir or CASSETTE_DIR
+    cdir = cassette_dir or current_cassette_dir()
     cpath = cdir / f"{flow['name']}.json"
     cassette = seed_cassette(flow, cpath)
     report = {"flow": flow["name"], "mode": mode, "cassette": str(cpath), "cases": [], "passed": bool(cases), "misses": 0}

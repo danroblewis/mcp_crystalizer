@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from crystal.trace.record import TRACE_DIR, current_trace_dir  # noqa: F401  (TRACE_DIR re-exported for callers)
+from crystal.trace.record import current_trace_dir
 
 
 def normalize_output(output):
@@ -38,7 +38,14 @@ class Session:
     meta: dict = field(default_factory=dict)
     calls: list[dict] = field(default_factory=list)
     notes: list[dict] = field(default_factory=list)
+    prompts: list[dict] = field(default_factory=list)     # the user's prompts (UserPromptSubmit hook), in order
+    result: str | None = None                             # the agent's final message (Stop hook), if recorded
     path: Path | None = None
+
+    @property
+    def prompt(self) -> str | None:
+        """The first prompt of the session: the input a flow induced from it will take."""
+        return self.prompts[0]["text"] if self.prompts else self.meta.get("prompt")
 
     @property
     def tool_sequence(self) -> list[str]:
@@ -57,7 +64,11 @@ def load_session(path: Path) -> Session:
             sess.meta = {k: v for k, v in rec.items() if k not in ("ts", "session_id", "source", "kind")}
         elif kind == "note":
             sess.notes.append(rec)
-        else:
+        elif kind == "prompt":
+            sess.prompts.append(rec)
+        elif kind == "result":
+            sess.result = rec.get("text")
+        elif kind == "call":
             sess.calls.append(_normalize_output(rec))
     return sess
 
@@ -66,6 +77,8 @@ def load_session(path: Path) -> Session:
 def load_sessions(trace_dir: Path | None = None, trigger: str | None = None) -> list[Session]:
     d = trace_dir or current_trace_dir()
     out = []
+    if not d.is_dir():
+        return out
     for p in sorted(d.glob("*.jsonl")):
         s = load_session(p)
         if trigger and s.meta.get("trigger") != trigger:

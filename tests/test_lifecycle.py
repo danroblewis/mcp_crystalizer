@@ -137,8 +137,8 @@ OK_ANSWERS = {("jira", "jira_get_issue"): {"key": "PAY-101", "fields": {"summary
               ("slack", "conversations_search_messages"): {"messages": {"matches": [{"text": "hi"}]}}}
 
 
-def test_runner_records_saved_runs_only(lc, tmp_path, monkeypatch):
-    monkeypatch.setattr(runner_mod, "RUN_DIR", tmp_path / "runs")
+def test_runner_records_saved_runs_only(lc, fresh_home):
+    run_dir = fresh_home.runs
 
     async def go(pool, save):
         return await FlowRunner(pool, catalog={}, lifecycle=lc).run(FLOW, {"key": "PAY-101"}, save=save)
@@ -147,7 +147,7 @@ def test_runner_records_saved_runs_only(lc, tmp_path, monkeypatch):
     r = asyncio.run(go(FakePool(OK_ANSWERS), save=True))
     assert r["lifecycle"] == {"outcome": "clean", "reason": None, "status": "promoted", "author_status": "promoted", "transition": None}
     assert lc.get("f")["clean_runs"] == 1
-    saved = json.loads((tmp_path / "runs" / f"{r['run_id']}.json").read_text())
+    saved = json.loads((run_dir / f"{r['run_id']}.json").read_text())
     assert saved["lifecycle"]["outcome"] == "clean"
     r = asyncio.run(go(FakePool({**OK_ANSWERS, ("slack", "conversations_search_messages"): RuntimeError("slack down")}), save=True))
     assert r["lifecycle"]["outcome"] == "failure" and r["lifecycle"]["transition"] == ("promoted", "candidate")
@@ -174,22 +174,19 @@ def test_regression_offline_records_pass_and_fail(lc, tmp_path):
     assert lc.get("f")["status"] == "draft" and lc.get("f")["tests_failed"] == 2
 
 
-def test_ui_feedback_demotes_and_queues(tmp_path, monkeypatch):
-    """The 'This didn't help' endpoint appends to feedback.jsonl and trips the breaker for the run's flow."""
+def test_ui_feedback_demotes_and_queues(fresh_home, monkeypatch):
+    """The 'This didn't help' endpoint appends to the workspace's feedback.jsonl and trips the breaker for the run's flow."""
     import crystal.app.main as web
     from crystal.flow import lifecycle as lc_mod
-    monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lc.sqlite"))
-    monkeypatch.setattr(lc_mod, "_default", None)
-    monkeypatch.setattr(web, "RUN_DIR", tmp_path / "runs")
-    monkeypatch.setattr(web, "FEEDBACK", tmp_path / "feedback.jsonl")
-    (tmp_path / "runs").mkdir()
-    (tmp_path / "runs" / "r1.json").write_text(json.dumps({"run_id": "r1", "flow": "investigate-jira-ticket", "inputs": {"key": "PAY-101"}, "steps": []}))
+    if hasattr(web.app.state, "workspace"):
+        monkeypatch.delattr(web.app.state, "workspace")
+    (fresh_home.runs / "r1.json").write_text(json.dumps({"run_id": "r1", "flow": "investigate-jira-ticket", "inputs": {"key": "PAY-101"}, "steps": []}))
     resp = asyncio.run(web.feedback("r1", text="missing the deploy diff", helpful="no"))
     assert resp.status_code == 303 and "demoted+candidate" in resp.headers["location"]
     st = lc_mod.get_lifecycle().get("investigate-jira-ticket")
     assert st["status"] == "draft" and st["author_status"] == "candidate" and st["complaints"] == 1
     assert st["last_failure"] == "user: missing the deploy diff" and st["last_failure_run"] == "r1"
-    line = json.loads((tmp_path / "feedback.jsonl").read_text().splitlines()[-1])
+    line = json.loads(fresh_home.feedback.read_text().splitlines()[-1])
     assert line["kind"] == "feedback" and line["helpful"] is False and line["flow"] == "investigate-jira-ticket"
     resp = asyncio.run(web.feedback("r1", text="", helpful="yes"))
     assert "Thanks" in resp.headers["location"] and lc_mod.get_lifecycle().get("investigate-jira-ticket")["complaints"] == 1
@@ -230,49 +227,40 @@ def test_regression_fails_when_every_step_returns_nothing(lc, tmp_path):
     assert rep["passed"]
 
 
-def test_runner_saves_the_run_when_the_lifecycle_store_fails(tmp_path, monkeypatch):
-    monkeypatch.setattr(runner_mod, "RUN_DIR", tmp_path / "runs")
+def test_runner_saves_the_run_when_the_lifecycle_store_fails(fresh_home):
 
     class Locked:
         def record_run(self, record, flow):
             raise RuntimeError("database is locked")
     r = asyncio.run(FlowRunner(FakePool(OK_ANSWERS), catalog={}, lifecycle=Locked()).run(FLOW, {"key": "PAY-101"}, save=True))
     assert r["lifecycle"] == {"error": "RuntimeError: database is locked"} and r["status"] == "ok"
-    saved = json.loads((tmp_path / "runs" / f"{r['run_id']}.json").read_text())
+    saved = json.loads((fresh_home.runs / f"{r['run_id']}.json").read_text())
     assert saved["steps"][0]["hits"] == 1
 
 
-def test_flows_server_run_flow_is_not_a_live_run(tmp_path, monkeypatch):
+def test_flows_server_run_flow_is_not_a_live_run(fresh_home, monkeypatch):
     """The authoring agent's run_flow saves a run record (the expansion needs it) but never feeds the breaker:
     an exploratory run with made-up inputs is neither evidence for nor against the flow."""
-    import sys
     from crystal.flow import lifecycle as lc_mod
-    sys.path.insert(0, str(runner_mod.PROJECT_ROOT / "sim" / "servers"))
-    flows_srv = __import__("flows")
-    monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lc.sqlite"))
-    monkeypatch.setattr(lc_mod, "_default", None)
-    monkeypatch.setattr(runner_mod, "RUN_DIR", tmp_path / "runs")
+    from crystal.servers import flows as flows_srv
     monkeypatch.setattr(flows_srv, "load_flow", lambda name: dict(FLOW))
     monkeypatch.setattr(flows_srv, "load_registry", lambda: {"jira": {}, "slack": {}, "flows": {}})
     bad = {**OK_ANSWERS, ("slack", "conversations_search_messages"): RuntimeError("slack down")}
     monkeypatch.setattr(flows_srv, "ServerPool", lambda registry: FakePool(bad))
     out = json.loads(asyncio.run(flows_srv.run_flow_tool("f", '{"key": "PAY-101"}')))
     assert out["flow"] == "f" and out["steps"][1]["error"].startswith("slack down") and out["lifecycle"] is None
-    assert (tmp_path / "runs" / f"{out['run_id']}.json").exists()
+    assert (fresh_home.runs / f"{out['run_id']}.json").exists()
     assert lc_mod.get_lifecycle().get("f") is None
 
 
-def test_ui_feedback_keeps_author_status_when_yaml_is_unreadable(tmp_path, monkeypatch):
+def test_ui_feedback_keeps_author_status_when_yaml_is_unreadable(fresh_home, monkeypatch):
     """A complaint filed while the flow YAML is mid-edit must not re-declare the flow a draft."""
     import crystal.app.main as web
     from crystal.flow import lifecycle as lc_mod
-    monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lc.sqlite"))
-    monkeypatch.setattr(lc_mod, "_default", None)
-    monkeypatch.setattr(web, "RUN_DIR", tmp_path / "runs")
-    monkeypatch.setattr(web, "FEEDBACK", tmp_path / "feedback.jsonl")
+    if hasattr(web.app.state, "workspace"):
+        monkeypatch.delattr(web.app.state, "workspace")
     lc_mod.get_lifecycle().sync({"name": "no-such-flow", "status": "promoted"})
-    (tmp_path / "runs").mkdir()
-    (tmp_path / "runs" / "r1.json").write_text(json.dumps({"run_id": "r1", "flow": "no-such-flow", "inputs": {}, "steps": []}))
+    (fresh_home.runs / "r1.json").write_text(json.dumps({"run_id": "r1", "flow": "no-such-flow", "inputs": {}, "steps": []}))
     asyncio.run(web.feedback("r1", text="nope", helpful="no"))
     st = lc_mod.get_lifecycle().get("no-such-flow")
     assert st["author_status"] == "promoted" and st["status"] == "candidate" and st["complaints"] == 1

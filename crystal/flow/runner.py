@@ -21,34 +21,35 @@ from typing import Any
 
 import yaml
 
-from crystal import PROJECT_ROOT
+from crystal import state
 from crystal.extract.catalog import load_catalog
 from crystal.extract.extractors import run_extractor, select
 from crystal.flow.templating import ENV, render
 from crystal.mcp_client import ServerPool
-from crystal.workspace import namespaced
-
-FLOW_DIR = PROJECT_ROOT / "flows"
-RUN_DIR = PROJECT_ROOT / "runs"
 
 
 def current_run_dir() -> Path:
-    """runs/ for the sim, runs/<workspace-slug>/ for any other workspace ($CRYSTAL_WORKSPACE)."""
-    return namespaced(RUN_DIR)
+    """The current workspace's runs/ under $MCP_EXPLORER_HOME."""
+    return state.run_dir()
 
 
-def load_flow(name_or_path: str | Path) -> dict:
+def load_flow(name_or_path: str | Path, flow_dir: Path | None = None) -> dict:
+    """A flow by name (from the workspace's flow dir) or by path."""
     p = Path(name_or_path)
     if not p.exists():
-        p = FLOW_DIR / f"{name_or_path}.yaml"
+        p = (flow_dir or state.flow_dir()) / f"{name_or_path}.yaml"
     flow = yaml.safe_load(p.read_text())
     flow["_path"] = str(p)
     return flow
 
 
-def list_flows() -> list[dict]:
+def list_flows(flow_dir: Path | None = None) -> list[dict]:
+    """Every flow in the workspace's flow dir (an empty list when the workspace has none yet)."""
     out = []
-    for p in sorted(FLOW_DIR.glob("*.yaml")):
+    d = flow_dir or state.flow_dir()
+    if not d.is_dir():
+        return out
+    for p in sorted(d.glob("*.yaml")):
         try:
             f = yaml.safe_load(p.read_text())
             f["_path"] = str(p)

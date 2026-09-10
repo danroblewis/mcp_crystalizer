@@ -1,17 +1,15 @@
 """Generic codebase server: grep / glob / read_file / codeowners over a workspace (what an agent's Read/Grep/Glob do).
 
-  .venv/bin/python crystal/servers/code.py --root /path/to/workspace
+  python -m crystal.servers.code --root /path/to/workspace
 """
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from crystal.servers import RootFn, RootHolder, root_from, text  # noqa: E402
+from crystal.servers import RootFn, RootHolder, root_from, text
 
 SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", ".pytest_cache", "dist", "build", ".next", ".cache"}
 DEFAULT_GLOB = "**/*"

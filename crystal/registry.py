@@ -1,43 +1,63 @@
-"""The effective MCP server registry for a workspace: servers.yaml plus the mcp.json files, merged.
+"""The effective MCP server registry for a workspace: built-in defaults plus the mcp.json files, merged.
 
 Layers, later wins per server name:
-  1. servers.yaml               the project's defaults (the sim servers, the generic code/git servers, `flows`)
-  2. ~/.mcp.json                the user's servers ($CRYSTAL_USER_MCP overrides the path; tests point it at nothing)
-  3. <workspace>/.mcp.json      the workspace's servers; when the workspace is the project this is the project's
-                                own .mcp.json, which pins `code` and `git` to the simulated repo
+  1. built-ins                  `code` and `git` (crystal/servers, over the workspace root) and `flows` (the
+                                workspace's crystallized flows as tools), from code, never from a file
+  2. ~/.claude.json             Claude Code's user config, its top-level `mcpServers` ($CRYSTAL_CLAUDE_CONFIG
+                                overrides the path): servers a user already configured for Claude Code just work
+  3. ~/.mcp.json                the user's servers ($CRYSTAL_USER_MCP overrides the path; tests point it at nothing)
+  4. <workspace>/.mcp.json      the workspace's servers, the same file Claude Code reads in that directory
 
 mcp.json is the common `mcpServers` format Claude Code, Claude Desktop and Cursor read:
   {"mcpServers": {"name": {"command": ..., "args": [...], "env": {...}}
                 | {"type": "http" | "sse", "url": ..., "headers": {...}}}}
 Values may use `${VAR}` and `${VAR:-default}` (expanded from the environment; an env entry that resolves to nothing
-is dropped rather than exported empty) and the placeholders `{{workspace}}` / `{{project}}` (the workspace root and
-the project root), so one file can be copied between workspaces. An entry of `null` or `{"disabled": true}` removes
-a server an earlier layer defined (a real codebase's .mcp.json drops the simulated jira/slack/... this way).
+is dropped rather than exported empty) and the placeholder `{{workspace}}` (the workspace root; also
+`{{workspace_slug}}`). `${MCP_EXPLORER_PYTHON}` is always defined: the interpreter this tool runs under, so a
+workspace can declare a python server as `"command": "${MCP_EXPLORER_PYTHON:-python}"` and it runs with this tool's
+dependencies under `uv run` and `uvx` alike (the sim example does). An entry of `null` or `{"disabled": true}`
+removes a server an earlier layer defined.
 
 Every entry is materialized on load: placeholders and variables expanded, relative commands and paths made absolute
-against the file's base directory (the project for servers.yaml, the workspace for an mcp.json), `cwd` set to that
-base, `transport` derived (stdio | http | sse) and, for a python script inside the project, `module` inferred so
-the in-process transport can import it. `_source` names the file the entry came from. `to_mcp_json` turns the
-registry back into a plain mcpServers document for Claude Code (private keys stripped).
+against the file's base directory (the workspace for an mcp.json), `cwd` set to that base, `transport` derived
+(stdio | http | sse) and, for a python server, `module` set (`python -m pkg.mod`, or a script inside this package)
+so the in-process transport can import it; any other python script can still be loaded in-process by path
+(`inprocess_target`). `_source` names where the entry came from. `to_mcp_json` turns the registry back into a plain
+mcpServers document for Claude Code (private keys stripped).
 """
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import json
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
-
-from crystal import PROJECT_ROOT
+from crystal import PACKAGE_DIR
 from crystal.workspace import Workspace, current
 
-SERVERS_YAML = PROJECT_ROOT / "servers.yaml"
 USER_MCP_ENV = "CRYSTAL_USER_MCP"
+CLAUDE_CONFIG_ENV = "CRYSTAL_CLAUDE_CONFIG"
+PYTHON_ENV = "MCP_EXPLORER_PYTHON"
+BUILTIN_SOURCE = "built-in"
 PRIVATE_KEYS = ("module", "attr", "cwd", "transport", "_source")
 _VAR = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 _PYTHON = re.compile(r"^python[0-9.]*$")
+
+
+# ---------------------------------------------------------------- built-ins
+def builtin_servers(ws: Workspace) -> dict[str, dict]:
+    """The servers every workspace has: generic code/git over the workspace root, and the flows server. Run as
+    `<this python> -m crystal.servers.<name>` so they work wherever the package is installed (uv run, uvx)."""
+    py = sys.executable
+    return {
+        "code": {"command": py, "args": ["-m", "crystal.servers.code", "--root", str(ws.root)], "module": "crystal.servers.code"},
+        "git": {"command": py, "args": ["-m", "crystal.servers.git", "--root", str(ws.root)], "module": "crystal.servers.git"},
+        "flows": {"command": py, "args": ["-m", "crystal.servers.flows"], "module": "crystal.servers.flows"},
+    }
 
 
 # ---------------------------------------------------------------- expansion
@@ -55,7 +75,7 @@ def expand_env(value: Any, env: dict[str, str] | None = None) -> Any:
 
 
 def substitute(value: Any, ws: Workspace) -> Any:
-    subs = {"workspace": str(ws.root), "project": str(PROJECT_ROOT), "workspace_slug": ws.slug}
+    subs = {"workspace": str(ws.root), "workspace_slug": ws.slug}
     if isinstance(value, str):
         return re.sub(r"\{\{\s*(\w+)\s*\}\}", lambda m: subs.get(m.group(1), m.group(0)), value)
     if isinstance(value, list):
@@ -88,18 +108,62 @@ def _relativize(arg: str, base: Path) -> str:
     return arg
 
 
+def is_python(command: str) -> bool:
+    return bool(_PYTHON.match(Path(command).name))
+
+
 def infer_module(command: str, args: list[str]) -> str | None:
-    """`.venv/bin/python <project>/pkg/mod.py ...` -> `pkg.mod`, for the in-process transport."""
-    if not args or not _PYTHON.match(Path(command).name):
+    """`python -m pkg.mod ...` -> `pkg.mod`; `python <this package>/servers/x.py` -> `crystal.servers.x`."""
+    if not args or not is_python(command):
         return None
+    if args[0] == "-m" and len(args) > 1:
+        return args[1]
     script = Path(args[0])
     if script.suffix != ".py" or not script.is_absolute():
         return None
     try:
-        rel = script.resolve().relative_to(PROJECT_ROOT)
+        rel = script.resolve().relative_to(PACKAGE_DIR)
     except ValueError:
         return None
-    return ".".join(rel.with_suffix("").parts)
+    return "crystal." + ".".join(rel.with_suffix("").parts)
+
+
+def inprocess_target(spec: dict) -> str | Path | None:
+    """What the in-process transport would import for a stdio entry: a module name, the path of a python script,
+    or None (npx/uvx servers, remote servers)."""
+    if spec.get("transport", "stdio") != "stdio":
+        return None
+    if spec.get("module"):
+        return spec["module"]
+    args = list(spec.get("args") or [])
+    if args and is_python(spec.get("command", "")) and args[0].endswith(".py") and Path(args[0]).is_file():
+        return Path(args[0])
+    return None
+
+
+_loaded_scripts: dict[str, Any] = {}
+
+
+def load_script(path: Path):
+    """Import a python server script by path, the way running it would (its directory first on sys.path so bare
+    sibling imports resolve), once per process."""
+    key = str(Path(path).resolve())
+    if key in _loaded_scripts:
+        return _loaded_scripts[key]
+    p = Path(key)
+    if str(p.parent) not in sys.path:
+        sys.path.insert(0, str(p.parent))
+    name = "_mcp_explorer_script_" + re.sub(r"[^0-9A-Za-z_]", "_", key)
+    spec = importlib.util.spec_from_file_location(name, p)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    _loaded_scripts[key] = module
+    return module
+
+
+def import_target(target: str | Path):
+    return load_script(target) if isinstance(target, Path) else importlib.import_module(target)
 
 
 def transport_of(spec: dict) -> str:
@@ -113,11 +177,17 @@ def transport_of(spec: dict) -> str:
     raise ValueError(f"unknown MCP transport type {spec.get('type') or spec.get('transport')!r}")
 
 
-def normalize(name: str, raw: dict, source: Path, base: Path, ws: Workspace, env: dict[str, str] | None = None) -> dict:
+def _env_with_python(env: dict[str, str] | None) -> dict[str, str]:
+    base = dict(os.environ if env is None else env)
+    base.setdefault(PYTHON_ENV, sys.executable)
+    return base
+
+
+def normalize(name: str, raw: dict, source: Path | str, base: Path, ws: Workspace, env: dict[str, str] | None = None) -> dict:
     """One materialized registry entry (see the module docstring)."""
     if not isinstance(raw, dict):
         raise ValueError(f"server {name!r} in {source}: expected an object, got {type(raw).__name__}")
-    spec = expand_env(substitute(dict(raw), ws), env)
+    spec = expand_env(substitute(dict(raw), ws), _env_with_python(env))
     transport = transport_of(spec)
     out: dict[str, Any] = {"transport": transport, "_source": str(source)}
     if transport == "stdio":
@@ -153,6 +223,11 @@ def user_mcp_json() -> Path:
     return Path(override).expanduser() if override else Path.home() / ".mcp.json"
 
 
+def claude_user_config() -> Path:
+    override = os.environ.get(CLAUDE_CONFIG_ENV)
+    return Path(override).expanduser() if override else Path.home() / ".claude.json"
+
+
 def read_mcp_json(path: Path) -> dict[str, dict]:
     doc = json.loads(path.read_text())
     servers = doc.get("mcpServers") if isinstance(doc, dict) else None
@@ -163,22 +238,28 @@ def read_mcp_json(path: Path) -> dict[str, dict]:
     return servers
 
 
-def read_servers_yaml(path: Path | None = None) -> dict[str, dict]:
-    path = path or SERVERS_YAML
-    return yaml.safe_load(path.read_text())["servers"]
+def read_claude_config(path: Path) -> dict[str, dict]:
+    """Claude Code's ~/.claude.json: only its top-level `mcpServers` (user scope). Anything else in the file, and a
+    file that is not what we expect, is ignored rather than an error: it is not ours."""
+    try:
+        doc = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {}
+    servers = doc.get("mcpServers") if isinstance(doc, dict) else None
+    return servers if isinstance(servers, dict) else {}
 
 
-def layers(ws: Workspace | None = None, servers_yaml: Path | None = None) -> list[tuple[Path, Path, dict[str, dict]]]:
-    """(source file, base dir, raw entries) in load order. Missing files are skipped."""
+def layers(ws: Workspace | None = None) -> list[tuple[Path | str, Path, dict[str, dict]]]:
+    """(source, base dir, raw entries) in load order. Missing files are skipped."""
     ws = ws or current()
-    out = []
-    y = servers_yaml or SERVERS_YAML
-    if y.exists():
-        out.append((y, y.parent, read_servers_yaml(y)))
-    home = user_mcp_json()
-    files = [home, ws.mcp_json()]
+    out: list[tuple[Path | str, Path, dict[str, dict]]] = [(BUILTIN_SOURCE, ws.root, builtin_servers(ws))]
+    claude = claude_user_config()
+    if claude.is_file():
+        servers = read_claude_config(claude)
+        if servers:
+            out.append((claude, ws.root, servers))
     seen = set()
-    for f in files:
+    for f in (user_mcp_json(), ws.mcp_json()):
         try:
             key = f.resolve()
         except OSError:
@@ -190,14 +271,13 @@ def layers(ws: Workspace | None = None, servers_yaml: Path | None = None) -> lis
     return out
 
 
-def effective_registry(ws: Workspace | None = None, servers_yaml: Path | None = None,
-                       env: dict[str, str] | None = None) -> dict[str, dict]:
+def effective_registry(ws: Workspace | None = None, env: dict[str, str] | None = None) -> dict[str, dict]:
     """The merged, materialized registry for a workspace: later layers win per server name; an override with the
     same command and args as the entry it replaces keeps that entry's `module` (an mcp.json written by
-    `crystal mcp-config` never carries one)."""
+    `mcp-explorer mcp-config` never carries one)."""
     ws = ws or current()
     reg: dict[str, dict] = {}
-    for source, base, raw in layers(ws, servers_yaml):
+    for source, base, raw in layers(ws):
         for name, raw_spec in raw.items():
             if raw_spec is None or (isinstance(raw_spec, dict) and raw_spec.get("disabled")):
                 reg.pop(name, None)   # `"jira": null` or `{"disabled": true}` in a later file drops a default
@@ -236,15 +316,17 @@ def to_mcp_json(registry: dict[str, dict], only: list[str] | None = None, relati
     return {"mcpServers": servers}
 
 
-def describe(name: str, spec: dict) -> str:
-    """One line for `crystal servers`."""
-    src = spec.get("_source", "?")
-    try:
-        src = str(Path(src).relative_to(PROJECT_ROOT))
-    except ValueError:
-        src = src.replace(str(Path.home()), "~")
+def describe(name: str, spec: dict, ws: Workspace | None = None) -> str:
+    """One line for `mcp-explorer servers`."""
+    ws = ws or current()
+    src = str(spec.get("_source", "?"))
+    if src != BUILTIN_SOURCE:
+        try:
+            src = str(Path(src).relative_to(ws.root))
+        except ValueError:
+            src = src.replace(str(Path.home()), "~")
     if spec.get("transport", "stdio") == "stdio":
-        what = " ".join([spec["command"], *spec.get("args", [])]).replace(str(PROJECT_ROOT) + "/", "")
+        what = " ".join([spec["command"], *spec.get("args", [])]).replace(str(ws.root) + "/", "").replace(sys.executable, "python")
         if spec.get("module"):
             what += f"  [in-process: {spec['module']}]"
     else:

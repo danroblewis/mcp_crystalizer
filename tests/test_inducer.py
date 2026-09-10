@@ -16,7 +16,8 @@ from crystal.extract.catalog import load_catalog
 from crystal.mcp_client import ServerPool
 from crystal.trace.store import Session, load_sessions
 
-TRACES = Path(__file__).resolve().parent.parent / "traces"
+SIM = Path(__file__).resolve().parent.parent / "examples" / "sim"
+TRACES = SIM / "traces"
 REAL_SESSION = "1b8cd469-e5eb-4e86-a59b-f9af774b604f"
 TS_ARGS = {"start", "end", "from_time", "to_time", "since", "until"}
 
@@ -283,19 +284,19 @@ def test_position_program_needs_held_out_agreement():
 
 
 def test_committed_drafts_and_versions_match_the_inducer():
-    """`crystal induce jira_issue` over the tracked corpus (author sessions expanded from traces/runs/) must reproduce
-    flows/induced-jira-ticket-all.yaml byte for byte, and no draft or version may carry the shapes the inducer no
-    longer emits: timestamp ladders, literal rungs, YAML anchors."""
+    """`mcp-explorer induce jira_issue` over the sim corpus (author sessions expanded from traces/runs/) must reproduce
+    examples/sim/flows/induced-jira-ticket-all.yaml byte for byte, and no draft or version may carry the shapes the
+    inducer no longer emits: timestamp ladders, literal rungs, YAML anchors."""
     import yaml
     from crystal.author import expand_flow_calls
     from crystal.induce.inducer import dump_flow
-    sessions = [e for e in (expand_flow_calls(s, TRACES.parent / "runs", TRACES)[0] for s in load_sessions(TRACES, trigger="jira_issue")) if e.calls]
+    sessions = [e for e in (expand_flow_calls(s, SIM / "runs", TRACES)[0] for s in load_sessions(TRACES, trigger="jira_issue")) if e.calls]
     assert len(sessions) == 17
     flow, report = induce(sessions, "induced-jira-ticket-all")
-    committed = (TRACES.parent / "flows" / "induced-jira-ticket-all.yaml").read_text()
+    committed = (SIM / "flows" / "induced-jira-ticket-all.yaml").read_text()
     assert dump_flow(flow) == committed
     assert report["dropped_rungs"] == {"commit": {"sha": ["99988c8b3"]}} and report["unresolved"] == {}
-    for p in sorted((TRACES.parent / "flows").glob("*.yaml")):
+    for p in sorted((SIM / "flows").glob("*.yaml")):
         text = p.read_text()
         assert "&id" not in text, p.name
         f = yaml.safe_load(text)

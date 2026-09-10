@@ -6,13 +6,12 @@ from pathlib import Path
 
 import yaml
 
-from crystal import PROJECT_ROOT
-
-CATALOG_PATH = PROJECT_ROOT / "catalog" / "entities.yaml"
+from crystal import state
 
 
 def load_catalog(path: Path | None = None) -> dict:
-    path = path or CATALOG_PATH
+    """The workspace's catalog.yaml (state dir); an empty catalog when the workspace has none."""
+    path = path or state.catalog_path()
     if not path.exists():
         return {}
     return yaml.safe_load(path.read_text()) or {}

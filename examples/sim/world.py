@@ -1,7 +1,7 @@
 """Deterministic synthetic 'corporate world' generator.
 
-Produces sim/data/world.json (services, people, channels, incidents with cross-linked artefacts)
-and a small real git repo at sim/repo whose source contains the error strings and logger calls.
+Produces examples/sim/data/world.json (services, people, channels, incidents with cross-linked artefacts)
+and a small real git repo at examples/sim/repo whose source contains the error strings and logger calls.
 Everything is seeded so the world is identical on every run.
 """
 from __future__ import annotations

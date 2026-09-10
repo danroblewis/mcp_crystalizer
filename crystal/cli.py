@@ -1,20 +1,28 @@
-"""crystal CLI:  uv run python -m crystal.cli [--workspace <dir>] <command> ...
+"""mcp-explorer: open the current directory as a workspace, serve the web UI, run and crystallize flows.
 
-  --workspace <dir>             the codebase to work in (default: $CRYSTAL_WORKSPACE, else this project = the sim).
-                                Supplies the code/git servers' root, the <dir>/.mcp.json layer of the server registry,
-                                and the runs/<slug>/ + traces/<slug>/ namespace (the sim is the top level).
-  flows                         list flows and status
-  run <flow> k=v ...            run a flow with inputs; prints an evidence summary; saves runs/<id>.json
-  servers                       the effective MCP servers for the workspace: transport, source file, command/url
-  mcp-config [--write]          the effective mcp.json (servers.yaml < ~/.mcp.json < <workspace>/.mcp.json) for
-                                Claude Code; --write stores it as <workspace>/.mcp.json
-  tools [server ...]            list tools of the effective servers (a smoke test of every transport)
-  induce <trigger> [--name n] [--out p] [--source s]   compile recorded traces into a draft flow
-  status [--events N]           promotion lifecycle: effective state, counters, last failure per flow
+  mcp-explorer [--workspace <dir>] [<command> ...]        no command = serve
+
+  --workspace <dir>             the directory to work in (default: $CRYSTAL_WORKSPACE, else the current directory).
+                                Supplies the code/git servers' root, its .mcp.json, and its state dir under
+                                $MCP_EXPLORER_HOME (default ~/.mcp-explorer/workspaces/<slug>/).
+  serve [--port N] [--open]     launch the web UI for the workspace and print its URL (the default command)
+  flows                         list the workspace's flows and their status
+  run <flow> k=v ...            run a flow with inputs; prints an evidence summary; saves the run
   test <flow> [--live|--offline]  run the flow's regression (cassette + live fallback); records the result
+  status [--events N]           promotion lifecycle: effective state, counters, last failure per flow
+  card <flow> [--write]         print the flow card (a skeleton if the YAML has none); --write appends the skeleton
+  servers                       the effective MCP servers for the workspace: transport, source, command/url
+  tools [server ...]            connect to the effective servers and list their tools (a smoke test)
+  mcp-config [--write]          the effective mcp.json (built-ins < ~/.claude.json < ~/.mcp.json < <workspace>/.mcp.json);
+                                --write stores it as <workspace>/.mcp.json so a plain `claude` here sees the same servers
+  induce <trigger> [--name n] [--out p] [--source s]   compile recorded traces into a draft flow (no AI)
+  record <trigger> k=v ... --yes  run Claude Code headless here with recording (COSTS MONEY; --budget caps it)
   author <trigger> k=v ... --yes  run the agent (costs money): tries existing flows first, explores, induces a new version
-  repair [--all | <run_id>] --yes  hand queued "this didn't help" complaints to the agent (costs money); induces new versions
-  card <flow> [--write]         print the flow card (a skeleton if the YAML has none); --write appends the skeleton to the YAML
+  repair [--all | <run_id>] --yes  hand queued "this didn't help" complaints to the agent (costs money)
+  hook                          the Claude Code hook entry (reads the hook JSON on stdin); not for humans
+  install-hook [--uninstall] [--settings p] [--status]   add the recording hooks to ~/.claude/settings.json
+  seed --from <dir> [--overwrite]  copy <dir>/flows, traces, catalog.yaml into the workspace's state dir
+  workspaces                    list the workspaces this tool has state for
 """
 from __future__ import annotations
 
@@ -23,7 +31,7 @@ import json
 import sys
 from pathlib import Path
 
-from crystal import PROJECT_ROOT
+from crystal import state as state_mod
 from crystal import workspace as ws_mod
 from crystal.mcp_client import ServerPool, load_registry
 
@@ -34,8 +42,9 @@ def cmd_serve(args):
     port = int(args[args.index("--port") + 1]) if "--port" in args and len(args) > args.index("--port") + 1 else 8765
     host = args[args.index("--host") + 1] if "--host" in args and len(args) > args.index("--host") + 1 else "127.0.0.1"
     ws = ws_mod.current()
+    st = ws.state.ensure()
     url = f"http://{host}:{port}"
-    print(f"mcp-explorer: workspace {ws.name} ({ws.root})\n{url}", flush=True)
+    print(f"mcp-explorer: workspace {ws.name} ({ws.root})\nstate: {st}\n{url}", flush=True)
     if "--open" in args:
         import webbrowser
         webbrowser.open(url)
@@ -45,13 +54,20 @@ def cmd_serve(args):
 
 def cmd_flows(_args):
     from crystal.flow.runner import list_flows
-    for f in list_flows():
+    flows = list_flows()
+    if not flows:
+        print(f"no flows yet in {state_mod.current().flows}\n(install the hook, run Claude Code here or `mcp-explorer record`, then `mcp-explorer induce <trigger>`)")
+        return 0
+    for f in flows:
         print(f"{f.get('name'):32} {f.get('status', '?'):10} inputs={list((f.get('inputs') or {}).keys())}  {f.get('title', '')}")
 
 
 def cmd_run(args):
     from crystal.flow.runner import run_flow_sync
     from crystal.trace.record import Recorder
+    if not args:
+        print("usage: run <flow> k=v ...")
+        return 1
     name, kv = args[0], args[1:]
     inputs = dict(a.split("=", 1) for a in kv if "=" in a)
     rec = None
@@ -82,11 +98,11 @@ def print_summary(record: dict) -> None:
             print(f"  - {s['id']:16} {s['tool']:40} hits={s.get('hits')}{rung}" + (f"  ERROR {s['error']}" if s.get("error") else ""))
             if ex:
                 print(f"      {json.dumps(ex, default=str)[:160]}")
-    print(f"saved runs/{record['run_id']}.json")
+    print(f"saved {state_mod.current().runs / (record['run_id'] + '.json')}")
 
 
 def cmd_mcp_config(args):
-    """mcp-config [--write]: the effective merged config for the current workspace (what the driver hands Claude
+    """mcp-config [--write]: the effective merged config for the current workspace (what `record` hands Claude
     Code); --write stores it as <workspace>/.mcp.json, so a plain `claude` in that directory sees the same servers."""
     from crystal.registry import to_mcp_json
     ws = ws_mod.current()
@@ -100,15 +116,14 @@ def cmd_mcp_config(args):
 
 
 def cmd_servers(_args):
-    """servers: one line per effective server -- name, transport, the file it came from, the command or url."""
+    """servers: one line per effective server -- name, transport, where it came from, the command or url."""
     from crystal.registry import describe
     ws = ws_mod.current()
     reg = load_registry()
-    print(f"workspace {ws.slug}: {ws.root}")
+    print(f"workspace {ws.name}: {ws.root}")
     for name, spec in reg.items():
-        print(describe(name, spec))
-    print(f"{len(reg)} servers; runs and traces under {ws.namespaced(PROJECT_ROOT / 'runs').relative_to(PROJECT_ROOT)}/ "
-          f"and {ws.namespaced(PROJECT_ROOT / 'traces').relative_to(PROJECT_ROOT)}/")
+        print(describe(name, spec, ws))
+    print(f"{len(reg)} servers; state in {ws.state}")
 
 
 def cmd_tools(args):
@@ -148,22 +163,25 @@ def cmd_induce(args):
     from crystal.author import expand_flow_calls
     from crystal.induce.inducer import induce, dump_flow
     from crystal.trace.store import load_sessions
+    if not args or args[0].startswith("--"):
+        print("usage: induce <trigger> [--name flow-name] [--out path] [--source scripted|claude-code|runner]")
+        return 1
     trigger = args[0]
     name = args[args.index("--name") + 1] if "--name" in args else f"induced-{trigger.replace('_', '-')}"
-    out = Path(args[args.index("--out") + 1]) if "--out" in args else PROJECT_ROOT / "flows" / f"{name}.yaml"
+    out = Path(args[args.index("--out") + 1]) if "--out" in args else state_mod.current().flows / f"{name}.yaml"
     source = args[args.index("--source") + 1] if "--source" in args else None
     sessions = [s for s in load_sessions(trigger=trigger) if not source or s.source == source]
-    # agent sessions recorded by `crystal author`/`repair` ran existing flows through the `flows` MCP server:
+    # agent sessions recorded by `author`/`repair` ran existing flows through the `flows` MCP server:
     # replace each run_flow call by the calls that flow made (from its archived run record)
     sessions = [e for e in (expand_flow_calls(s)[0] for s in sessions) if e.calls]
     if not sessions:
-        print("no sessions for trigger", trigger)
+        print(f"no sessions for trigger {trigger} in {state_mod.current().traces}")
         return 1
-    from crystal.workspace import current as _ws
-    wmeta = _ws().meta()
+    wmeta = ws_mod.current().meta()
     for sess in sessions:
         sess.meta.setdefault("workspace_meta", wmeta)   # older traces predate the workspace record
     flow, report = induce(sessions, name)
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(dump_flow(flow))
     print(f"induced {name} from {report['sessions']} sessions -> {out}")
     print(json.dumps(report, indent=1, default=str))
@@ -227,6 +245,47 @@ def cmd_repair(args):
     return repair_main(args)
 
 
+def cmd_record(args):
+    from crystal.trace.driver import main as driver_main
+    return driver_main(args)
+
+
+def cmd_hook(_args):
+    """The Claude Code hook: reads the hook JSON on stdin (crystal/trace/record.py)."""
+    from crystal.trace.record import hook_main
+    return hook_main()
+
+
+def cmd_install_hook(args):
+    from crystal.hooks import main as hooks_main
+    return hooks_main(args)
+
+
+def cmd_seed(args):
+    """seed --from <dir> [--overwrite]: copy <dir>/flows/*.yaml, <dir>/traces/**, <dir>/catalog.yaml into the
+    workspace's state dir (existing files kept unless --overwrite)."""
+    if "--from" not in args or len(args) <= args.index("--from") + 1:
+        print("usage: seed --from <dir> [--overwrite]")
+        return 1
+    src = Path(args[args.index("--from") + 1]).expanduser().resolve()
+    st = ws_mod.current().state.ensure()
+    counts = state_mod.seed(st, src, overwrite="--overwrite" in args)
+    print(f"seeded {st} from {src}: {counts['flows']} flows, {counts['traces']} trace files, catalog={'yes' if counts['catalog'] else 'kept/none'}")
+    return 0
+
+
+def cmd_workspaces(_args):
+    rows = state_mod.list_workspaces()
+    if not rows:
+        print(f"no workspaces yet under {state_mod.home()}")
+        return 0
+    print(f"{'workspace':24} {'flows':>5} {'runs':>5} {'traces':>6}  root  (state under {state_mod.home()})")
+    for r in rows:
+        gone = "" if r.get("exists", True) else "  (directory missing)"
+        print(f"{r.get('name', '?'):24} {r['flows']:>5} {r['runs']:>5} {r['traces']:>6}  {r.get('root', '?')}{gone}")
+    return 0
+
+
 def cmd_card(args):
     """card <flow> [--write]: the flow's card, or a deterministic skeleton when the YAML has none; --write appends
     that skeleton to the YAML (as a trailing `card:` block, so hand-written comments stay) unless a card exists."""
@@ -257,20 +316,16 @@ def cmd_card(args):
     return 0
 
 
-COMMANDS = {"serve": cmd_serve, "flows": cmd_flows, "induce": cmd_induce, "run": cmd_run, "mcp-config": cmd_mcp_config, "tools": cmd_tools,
-            "servers": cmd_servers, "status": cmd_status, "test": cmd_test, "author": cmd_author, "repair": cmd_repair,
-            "card": cmd_card}
+COMMANDS = {"serve": cmd_serve, "flows": cmd_flows, "run": cmd_run, "test": cmd_test, "status": cmd_status, "card": cmd_card,
+            "servers": cmd_servers, "tools": cmd_tools, "mcp-config": cmd_mcp_config, "induce": cmd_induce,
+            "record": cmd_record, "author": cmd_author, "repair": cmd_repair, "hook": cmd_hook,
+            "install-hook": cmd_install_hook, "seed": cmd_seed, "workspaces": cmd_workspaces}
+NO_WORKSPACE = {"hook", "install-hook", "workspaces"}     # commands that do not act on the current workspace
 
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     ws, argv = ws_mod.split_argv(argv)
-    if ws is not None:
-        try:
-            ws_mod.activate(ws)   # $CRYSTAL_WORKSPACE for this process and every child (servers, Claude Code, its hook)
-        except FileNotFoundError as e:
-            print(e)
-            return 1
     if argv and argv[0] in ("-h", "--help", "help"):
         print(__doc__)
         return 0
@@ -279,6 +334,13 @@ def main(argv=None):
     if argv[0] not in COMMANDS:
         print(f"unknown command {argv[0]!r}\n" + __doc__)
         return 1
+    if argv[0] not in NO_WORKSPACE:
+        try:
+            ws_mod.activate(ws)   # $CRYSTAL_WORKSPACE for this process and every child (servers, Claude Code, its hook)
+        except FileNotFoundError as e:
+            print(e)
+            return 1
+        ws_mod.current().state.ensure()   # first sight: workspace.json, seed data from <workspace>/.mcp-explorer/
     return COMMANDS[argv[0]](argv[1:]) or 0
 
 

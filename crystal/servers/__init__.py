@@ -1,7 +1,7 @@
 """Generic MCP servers over any workspace directory: `code` (grep / glob / read_file / codeowners) and `git`
 (git_log / git_show / git_grep / git_blame). Each takes `--root <dir>` (or $CRYSTAL_WORKSPACE, else the current
 directory) and keeps the tool names the sim servers introduced, so flows written against the sim keep running.
-Both expose `make_server(root)` so the sim wrappers (sim/servers/code.py, git.py) and tests can build an instance
+Both expose `make_server(root)` so the sim wrappers (examples/sim/servers/code.py, git.py) and tests can build an instance
 over a fixed directory without touching the module-level one."""
 from __future__ import annotations
 

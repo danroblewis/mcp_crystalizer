@@ -10,7 +10,8 @@ body{margin:0;background:var(--paper);color:var(--ink);font:13.5px/1.5 -apple-sy
 a{color:var(--acc)}a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .top{background:var(--card);border-bottom:1px solid var(--rule);padding:9px 24px;display:flex;gap:22px;align-items:baseline;flex-wrap:wrap}
 .top .brand{font-weight:650;color:var(--ink);text-decoration:none;letter-spacing:-.01em}.top nav{display:flex;gap:16px}.top nav a{color:var(--muted);text-decoration:none}.top nav a:hover{color:var(--ink)}
-.top .tag{margin-left:auto;color:var(--muted);font-size:12px}
+.top .tag{margin-left:auto;color:var(--muted);font-size:12px}.top .tag .wsname{color:var(--ink);font-weight:600}.top .tag .mono{font-size:11.5px}
+.start{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:16px 20px;max-width:760px;margin:0 0 20px}.start h2{margin:0 0 6px}.start ol{margin:6px 0 0;padding-left:22px}.start li{margin:4px 0}.start pre{font-family:var(--mono);font-size:12px;background:#f7f8f7;border:1px solid var(--rule2);border-radius:4px;padding:6px 9px;margin:4px 0;white-space:pre-wrap}
 main{max-width:1180px;margin:0 auto;padding:22px 24px 72px}
 h1{font-size:22px;font-weight:600;letter-spacing:-.015em;margin:4px 0 14px}h2{font-size:15px;font-weight:600;margin:26px 0 10px}h3{font-size:13.5px;font-weight:600;margin:0 0 4px}
 p{margin:0 0 8px}.muted{color:var(--muted)}.small{font-size:12px}.mono{font-family:var(--mono);font-size:12px}code{font-family:var(--mono);font-size:12px;background:var(--rule2);padding:0 4px;border-radius:3px}
@@ -69,6 +70,6 @@ svg.dag{display:block;font-family:inherit}svg.dag .node-link:hover rect:first-of
 @media (max-width:640px){main{padding:14px}.lede{font-size:19px}.facts>div{grid-template-columns:100px 1fr}.logline{grid-template-columns:1fr}.commit{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
-<header class="top"><a class="brand" href="/">mcp_explorer</a><nav><a href="/">Flows</a><a href="/runs">Runs</a><a href="/traces">Agent traces</a></nav><span class="tag">crystallized investigation flows, no AI at runtime</span></header>
+{% set ws = workspace() %}<header class="top"><a class="brand" href="/">mcp-explorer</a><nav><a href="/">Flows</a><a href="/runs">Runs</a><a href="/traces">Agent traces</a></nav><span class="tag" title="state: {{ ws.state_dir }}"><b class="wsname">{{ ws.name }}</b> <span class="mono">{{ ws.root }}</span>{% if ws.remote %} · <span class="mono">{{ ws.remote }}</span>{% endif %}</span></header>
 <main>{% block body %}{% endblock %}</main>
 </body></html>

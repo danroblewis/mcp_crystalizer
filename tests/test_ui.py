@@ -20,14 +20,14 @@ TRACE = "scripted-PAY-101-v0"
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lifecycle.sqlite"))
-    run_dir = tmp_path / "runs"
-    run_dir.mkdir()
-    shutil.copy(FIXTURE, run_dir / f"{RUN_ID}.json")
-    monkeypatch.setattr(ui.app.state, "run_dir", run_dir, raising=False)
-    monkeypatch.setattr(ui, "FEEDBACK", tmp_path / "feedback.jsonl")
-    return TestClient(ui.app)
+def client(fresh_home, monkeypatch):
+    """The UI over a private state dir: the sim's flows and traces seeded, the fixture run copied into runs/."""
+    shutil.copy(FIXTURE, fresh_home.runs / f"{RUN_ID}.json")
+    if hasattr(ui.app.state, "workspace"):
+        monkeypatch.delattr(ui.app.state, "workspace")
+    c = TestClient(ui.app)
+    c.state = fresh_home
+    return c
 
 
 def test_index_lists_flows_with_badges_and_counters(client):
@@ -40,6 +40,8 @@ def test_index_lists_flows_with_badges_and_counters(client):
     assert "clean runs" in body and "complaints" in body    # counters
     assert 'class="cards"' in body                          # card grid
     assert "Agent traces" in body                           # nav to /traces
+    assert 'class="wsname">sim<' in body and "examples/sim" in body    # the workspace name and root at the top
+    assert 'id="getting-started"' not in body
 
 
 def test_run_dossier_headline_evidence_diagram_highlights(client):
@@ -96,10 +98,10 @@ def test_run_json_and_missing_run(client):
     assert client.get("/runs").status_code == 200 and RUN_ID in client.get("/runs").text
 
 
-def test_feedback_queues_complaint_and_demotes(client, tmp_path):
+def test_feedback_queues_complaint_and_demotes(client):
     r = client.post(f"/runs/{RUN_ID}/feedback", data={"text": "no deploy diff", "helpful": "no"}, follow_redirects=False)
     assert r.status_code == 303 and "Recorded" in r.headers["location"]
-    lines = [json.loads(l) for l in (tmp_path / "feedback.jsonl").read_text().splitlines()]
+    lines = [json.loads(l) for l in client.state.feedback.read_text().splitlines()]
     assert lines[-1]["run_id"] == RUN_ID and lines[-1]["helpful"] is False
     assert "effective: draft" in client.get("/").text or "tripped" in client.get("/").text
 

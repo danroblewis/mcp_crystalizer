@@ -7,9 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from crystal import PROJECT_ROOT
+import sys
+
 from crystal.mcp_client import ServerPool
 from crystal.servers import root_from
+from tests.conftest import SIM
 
 
 @pytest.fixture(scope="module")
@@ -31,9 +33,9 @@ def repo(tmp_path_factory) -> Path:
 
 
 def _registry(repo: Path) -> dict:
-    py = str(PROJECT_ROOT / ".venv" / "bin" / "python")
-    return {"code": {"command": py, "args": [str(PROJECT_ROOT / "crystal/servers/code.py"), "--root", str(repo)], "module": "crystal.servers.code", "cwd": str(PROJECT_ROOT)},
-            "git": {"command": py, "args": [str(PROJECT_ROOT / "crystal/servers/git.py"), "--root", str(repo)], "module": "crystal.servers.git", "cwd": str(PROJECT_ROOT)}}
+    py = sys.executable
+    return {"code": {"command": py, "args": ["-m", "crystal.servers.code", "--root", str(repo)], "module": "crystal.servers.code", "cwd": str(repo)},
+            "git": {"command": py, "args": ["-m", "crystal.servers.git", "--root", str(repo)], "module": "crystal.servers.git", "cwd": str(repo)}}
 
 
 def _exercise(repo: Path, inprocess: bool) -> dict:
@@ -88,17 +90,18 @@ def test_generic_servers_inprocess(repo):
 
 
 def test_sim_wrappers_are_pinned_to_the_sim_repo(repo):
-    """The sim's code/git servers are separate instances over sim/repo: exercising the generic servers over
-    another root (above, in this process) must not move them."""
-    import sim.servers.code as sim_code
-    import sim.servers.git as sim_git
+    """The sim's code/git servers are separate instances over examples/sim/repo: exercising the generic servers
+    over another root (above, in this process) must not move them."""
+    from crystal.registry import load_script
     from crystal.servers import code as generic_code
-    assert sim_code.REPO == PROJECT_ROOT / "sim" / "repo" and sim_code.mcp is not generic_code.mcp
+    sim_code = load_script(SIM / "servers" / "code.py")
+    sim_git = load_script(SIM / "servers" / "git.py")
+    assert sim_code.REPO == SIM / "repo" and sim_code.mcp is not generic_code.mcp
     assert sim_code.mcp.name == "sim-code" and sim_git.mcp.name == "sim-git"
     assert generic_code.ROOT() == repo   # configure(args) from the in-process run above
 
     async def go():
-        async with ServerPool(inprocess=True) as pool:   # the sim registry (workspace = project)
+        async with ServerPool(inprocess=True) as pool:   # the sim registry (workspace = examples/sim)
             return await pool.call("code", "glob", {"pattern": "src/**/*"}), await pool.call("code", "grep", {"pattern": "def "})
     files, grep = asyncio.run(go())
     assert files["files"] == [] and grep["matches"] and all(m["file"].endswith(".py") for m in grep["matches"])   # sim default glob **/*.py
