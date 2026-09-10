@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from crystal.trace.record import TRACE_DIR
+from crystal.trace.record import TRACE_DIR, current_trace_dir  # noqa: F401  (TRACE_DIR re-exported for callers)
 
 
 def normalize_output(output):
@@ -64,7 +64,7 @@ def load_session(path: Path) -> Session:
 
 
 def load_sessions(trace_dir: Path | None = None, trigger: str | None = None) -> list[Session]:
-    d = trace_dir or TRACE_DIR
+    d = trace_dir or current_trace_dir()
     out = []
     for p in sorted(d.glob("*.jsonl")):
         s = load_session(p)

@@ -4,7 +4,7 @@
       {
         "matcher": "mcp__.*|Read|Grep|Glob",
         "hooks": [
-          { "type": "command", "command": "cd \"$CLAUDE_PROJECT_DIR\" && uv run python -m crystal.trace.record" }
+          { "type": "command", "command": "cd \"${CRYSTAL_PROJECT_DIR:-$CLAUDE_PROJECT_DIR}\" && uv run python -m crystal.trace.record" }
         ]
       }
     ]

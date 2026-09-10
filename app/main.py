@@ -15,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from app import dossier
 from crystal import PROJECT_ROOT
+from crystal import workspace as ws_mod
 from crystal.flow.lifecycle import describe, get_lifecycle
 from crystal.flow.runner import FlowRunner, RUN_DIR, list_flows, load_flow
 from crystal.mcp_client import ServerPool
@@ -28,7 +29,11 @@ FEEDBACK = PROJECT_ROOT / "traces" / "feedback.jsonl"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # one workspace per server process: $CRYSTAL_WORKSPACE (else the project = the sim) picks the servers the pool
+    # connects to (servers.yaml < ~/.mcp.json < <workspace>/.mcp.json) and the runs/ + traces/ namespace
+    app.state.workspace = ws_mod.current()
     app.state.pool = ServerPool()
+    print(f"workspace {app.state.workspace}; servers: {', '.join(app.state.pool.registry)}", flush=True)
     await app.state.pool.__aenter__()
     try:
         yield
@@ -40,11 +45,11 @@ app = FastAPI(title="mcp_explorer", lifespan=lifespan)
 
 
 def _run_dir() -> Path:
-    return app.state.run_dir if hasattr(app.state, "run_dir") else RUN_DIR
+    return app.state.run_dir if hasattr(app.state, "run_dir") else ws_mod.namespaced(RUN_DIR)
 
 
 def _trace_dir() -> Path:
-    return app.state.trace_dir if hasattr(app.state, "trace_dir") else TRACE_DIR
+    return app.state.trace_dir if hasattr(app.state, "trace_dir") else ws_mod.namespaced(TRACE_DIR)
 
 
 def _runs(limit: int = 50) -> list[dict]:

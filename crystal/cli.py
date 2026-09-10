@@ -1,9 +1,14 @@
-"""crystal CLI:  uv run python -m crystal.cli <command> ...
+"""crystal CLI:  uv run python -m crystal.cli [--workspace <dir>] <command> ...
 
+  --workspace <dir>             the codebase to work in (default: $CRYSTAL_WORKSPACE, else this project = the sim).
+                                Supplies the code/git servers' root, the <dir>/.mcp.json layer of the server registry,
+                                and the runs/<slug>/ + traces/<slug>/ namespace (the sim is the top level).
   flows                         list flows and status
   run <flow> k=v ...            run a flow with inputs; prints an evidence summary; saves runs/<id>.json
-  mcp-config                    write .mcp.json for Claude Code from servers.yaml
-  tools [server]                list tools of registered servers
+  servers                       the effective MCP servers for the workspace: transport, source file, command/url
+  mcp-config [--write]          the effective mcp.json (servers.yaml < ~/.mcp.json < <workspace>/.mcp.json) for
+                                Claude Code; --write stores it as <workspace>/.mcp.json
+  tools [server ...]            list tools of the effective servers (a smoke test of every transport)
   induce <trigger> [--name n] [--out p] [--source s]   compile recorded traces into a draft flow
   status [--events N]           promotion lifecycle: effective state, counters, last failure per flow
   test <flow> [--live|--offline]  run the flow's regression (cassette + live fallback); records the result
@@ -19,6 +24,7 @@ import sys
 from pathlib import Path
 
 from crystal import PROJECT_ROOT
+from crystal import workspace as ws_mod
 from crystal.mcp_client import ServerPool, load_registry
 
 
@@ -64,22 +70,62 @@ def print_summary(record: dict) -> None:
     print(f"saved runs/{record['run_id']}.json")
 
 
-def cmd_mcp_config(_args):
+def cmd_mcp_config(args):
+    """mcp-config [--write]: the effective merged config for the current workspace (what the driver hands Claude
+    Code); --write stores it as <workspace>/.mcp.json, so a plain `claude` in that directory sees the same servers."""
+    from crystal.registry import to_mcp_json
+    ws = ws_mod.current()
+    cfg = to_mcp_json(load_registry(), relative_to=ws.root)
+    if "--write" in args:
+        dest = ws.mcp_json()
+        dest.write_text(json.dumps(cfg, indent=2) + "\n")
+        print(f"wrote {dest} with {len(cfg['mcpServers'])} servers (workspace {ws})")
+    else:
+        print(json.dumps(cfg, indent=2))
+
+
+def cmd_servers(_args):
+    """servers: one line per effective server -- name, transport, the file it came from, the command or url."""
+    from crystal.registry import describe
+    ws = ws_mod.current()
     reg = load_registry()
-    cfg = {"mcpServers": {name: {"command": spec["command"], "args": spec.get("args", []), **({"env": spec["env"]} if spec.get("env") else {})}
-                          for name, spec in reg.items()}}
-    (PROJECT_ROOT / ".mcp.json").write_text(json.dumps(cfg, indent=2))
-    print(f"wrote .mcp.json with {len(cfg['mcpServers'])} servers")
+    print(f"workspace {ws.slug}: {ws.root}")
+    for name, spec in reg.items():
+        print(describe(name, spec))
+    print(f"{len(reg)} servers; runs and traces under {ws.namespaced(PROJECT_ROOT / 'runs').relative_to(PROJECT_ROOT)}/ "
+          f"and {ws.namespaced(PROJECT_ROOT / 'traces').relative_to(PROJECT_ROOT)}/")
 
 
 def cmd_tools(args):
+    """tools [server ...]: connect to each server and list its tools; a server that fails to start is reported and
+    the others still print. Exit status 1 if any failed."""
+    failed = []
+
     async def go():
         async with ServerPool() as pool:
             for server in (args or list(pool.registry)):
-                for t in await pool.list_tools(server):
+                try:
+                    tools = await pool.list_tools(server)
+                except BaseException as e:  # noqa: BLE001  (anyio raises ExceptionGroup)
+                    if isinstance(e, (KeyboardInterrupt, SystemExit, asyncio.CancelledError)):
+                        raise
+                    failed.append(server)
+                    print(f"{server}: FAILED ({pool.transport(server)}): {_explain(e)}")
+                    continue
+                print(f"{server}: {len(tools)} tools ({pool.transport(server)})")
+                for t in tools:
                     props = (t["inputSchema"] or {}).get("properties", {})
-                    print(f"{server}.{t['name']}({', '.join(props)})\n    {t['description']}")
+                    desc = (t["description"] or "").strip().splitlines()
+                    print(f"  {server}.{t['name']}({', '.join(props)})\n      {desc[0] if desc else ''}")
     asyncio.run(go())
+    return 1 if failed else 0
+
+
+def _explain(e: BaseException) -> str:
+    subs = getattr(e, "exceptions", None)
+    if subs:
+        return "; ".join(_explain(s) for s in subs)
+    return f"{type(e).__name__}: {e}"
 
 
 def cmd_induce(args):
@@ -193,11 +239,19 @@ def cmd_card(args):
 
 
 COMMANDS = {"flows": cmd_flows, "induce": cmd_induce, "run": cmd_run, "mcp-config": cmd_mcp_config, "tools": cmd_tools,
-            "status": cmd_status, "test": cmd_test, "author": cmd_author, "repair": cmd_repair, "card": cmd_card}
+            "servers": cmd_servers, "status": cmd_status, "test": cmd_test, "author": cmd_author, "repair": cmd_repair,
+            "card": cmd_card}
 
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    ws, argv = ws_mod.split_argv(argv)
+    if ws is not None:
+        try:
+            ws_mod.activate(ws)   # $CRYSTAL_WORKSPACE for this process and every child (servers, Claude Code, its hook)
+        except FileNotFoundError as e:
+            print(e)
+            return 1
     if not argv or argv[0] not in COMMANDS:
         print(__doc__)
         return 1

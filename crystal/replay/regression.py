@@ -24,7 +24,7 @@ from crystal.flow.lifecycle import Lifecycle, classify_run, get_lifecycle
 from crystal.flow.runner import FlowRunner, load_flow
 from crystal.mcp_client import ServerPool
 from crystal.replay.cassette import CASSETTE_DIR, Cassette, CassettePool
-from crystal.trace.record import TRACE_DIR
+from crystal.trace.record import current_trace_dir
 from crystal.trace.store import load_session
 
 
@@ -66,7 +66,7 @@ def seed_cassette(flow: dict, path: Path, trace_dir: Path | None = None) -> Cass
     c = Cassette(path)
     if not path.exists():
         for sid in flow.get("induced_from") or []:
-            p = (trace_dir or TRACE_DIR) / f"{sid}.jsonl"
+            p = (trace_dir or current_trace_dir()) / f"{sid}.jsonl"
             if p.exists():
                 for call in load_session(p).calls:
                     c.put(call["server"], call["tool"], call.get("input") or {}, call.get("output"), call.get("output_text", ""), bool(call.get("is_error")))

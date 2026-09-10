@@ -1,12 +1,18 @@
 """Thin MCP client pool: one session per registered server, results parsed from JSON-in-text.
 
-Two transports:
-- stdio (default): spawns `.venv/bin/python sim/servers/<x>.py` as a subprocess, same as Claude Code (.mcp.json)
-  and the UI use. Always available; the only transport for real (non-sim) MCP servers.
-- in-process (CRYSTAL_INPROCESS=1, or `ServerPool(inprocess=True)`): imports the sim server's module and connects
-  to its MCPServer instance directly over `mcp.client._memory.InMemoryTransport` (in-memory streams, no subprocess,
-  no per-server mcp/pydantic import). Requires the registry entry to name a `module` (+ optional `attr`, default
-  "mcp"). Used by the test suite (see tests/conftest.py) to avoid spawning 8 subprocesses per pool.
+The registry is the effective one for the current workspace (crystal/registry.py: servers.yaml < ~/.mcp.json <
+<workspace>/.mcp.json). Transports, chosen per entry:
+- stdio (default): spawns `command args...` as a subprocess with the entry's cwd and env, same as Claude Code does
+  from .mcp.json. Always available; what real local MCP servers use (npx ..., uvx ..., python ...).
+- http (`type: http`, streamable HTTP) and sse (`type: sse`): remote servers by URL, optional `headers` (sent on
+  every request through a custom httpx client).
+- in-process (CRYSTAL_INPROCESS=1, or `ServerPool(inprocess=True)`): for a stdio entry whose script is a python
+  module inside this project (`module`, explicit in servers.yaml or inferred from the path), imports the module and
+  connects to its MCPServer instance directly over `mcp.client._memory.InMemoryTransport` (no subprocess, no
+  per-server mcp/pydantic import). A module that defines `configure(args)` gets the entry's args (the generic
+  code/git servers read `--root` from them). Used by the test suite (see tests/conftest.py) to avoid spawning 8
+  subprocesses per pool. Entries without a module (npx/uvx servers, remote servers) use their real transport
+  regardless of the flag.
 """
 from __future__ import annotations
 
@@ -18,7 +24,6 @@ from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any
 
-import yaml
 from mcp.client._memory import InMemoryTransport
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
@@ -26,9 +31,10 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from crystal import PROJECT_ROOT
 
 
-def load_registry(path: Path | None = None) -> dict[str, dict]:
-    path = path or PROJECT_ROOT / "servers.yaml"
-    return yaml.safe_load(path.read_text())["servers"]
+def load_registry(path: Path | None = None, workspace=None) -> dict[str, dict]:
+    """The effective registry for the current workspace (or `workspace`); `path` overrides servers.yaml."""
+    from crystal.registry import effective_registry
+    return effective_registry(workspace, servers_yaml=path)
 
 
 def _inprocess_default() -> bool:
@@ -46,6 +52,15 @@ def parse_result(result) -> Any:
         return json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         return raw
+
+
+def transport_for(spec: dict, inprocess: bool) -> str:
+    """Which transport `ServerPool.session` will use for an entry: inprocess | stdio | http | sse."""
+    from crystal.registry import transport_of
+    kind = spec.get("transport") or transport_of(spec)
+    if kind == "stdio" and inprocess and spec.get("module"):
+        return "inprocess"
+    return kind
 
 
 class ServerPool:
@@ -68,23 +83,43 @@ class ServerPool:
     async def __aexit__(self, *exc):
         await self._stack.__aexit__(*exc)
 
+    def transport(self, server: str) -> str:
+        return transport_for(self.registry[server], self.inprocess)
+
+    async def _connect(self, server: str, spec: dict):
+        kind = transport_for(spec, self.inprocess)
+        if kind == "inprocess":
+            module = importlib.import_module(spec["module"])
+            if hasattr(module, "configure"):
+                module.configure(list(spec.get("args") or []))
+            mcp_server = getattr(module, spec.get("attr", "mcp"))
+            return await self._stack.enter_async_context(InMemoryTransport(mcp_server))
+        if kind == "stdio":
+            params = StdioServerParameters(command=spec["command"], args=list(spec.get("args") or []),
+                                           cwd=spec.get("cwd", str(PROJECT_ROOT)),
+                                           env={**os.environ, **spec.get("env", {})})
+            return await self._stack.enter_async_context(stdio_client(params))
+        if kind == "http":
+            from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
+            client = await self._stack.enter_async_context(create_mcp_http_client(headers=spec.get("headers")))
+            streams = await self._stack.enter_async_context(streamable_http_client(spec["url"], http_client=client))
+            return streams[0], streams[1]
+        if kind == "sse":
+            from mcp.client.sse import sse_client
+            streams = await self._stack.enter_async_context(sse_client(spec["url"], headers=spec.get("headers")))
+            return streams[0], streams[1]
+        raise ValueError(f"{server}: unknown transport {kind!r}")
+
     async def session(self, server: str) -> ClientSession:
         if server in self._sessions:
             return self._sessions[server]
+        if server not in self.registry:
+            raise KeyError(f"no MCP server named {server!r} (registered: {', '.join(sorted(self.registry)) or 'none'})")
         lock = self._locks.setdefault(server, asyncio.Lock())
         async with lock:
             if server in self._sessions:
                 return self._sessions[server]
-            spec = self.registry[server]
-            if self.inprocess and spec.get("module"):
-                module = importlib.import_module(spec["module"])
-                mcp_server = getattr(module, spec.get("attr", "mcp"))
-                read, write = await self._stack.enter_async_context(InMemoryTransport(mcp_server))
-            else:
-                params = StdioServerParameters(command=spec["command"], args=spec.get("args", []),
-                                               cwd=spec.get("cwd", str(PROJECT_ROOT)),
-                                               env={**os.environ, **spec.get("env", {})})
-                read, write = await self._stack.enter_async_context(stdio_client(params))
+            read, write = await self._connect(server, self.registry[server])
             sess = await self._stack.enter_async_context(ClientSession(read, write))
             await sess.initialize()
             self._sessions[server] = sess
