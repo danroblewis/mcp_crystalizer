@@ -3,6 +3,7 @@ how-panel), the agent-trace dossier, the run JSON endpoint and the "what was mis
 
 Uses starlette's TestClient without the lifespan, so no MCP server is started."""
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -54,7 +55,8 @@ def test_run_dossier_headline_evidence_diagram_highlights(client):
     assert "repeat of AUTH-117" in lede
     assert "<dt>Runbook says</dt>" in body
     # coverage line
-    assert "Found 13 of 13" in body and "expected things" in body
+    m = re.search(r"Found (\d+) of (\d+)", body)   # 9 of 9 with the flow card, 13 of 13 with the per-step fallback
+    assert m and m.group(1) == m.group(2) and int(m.group(2)) >= 9 and "expected things" in body
     # evidence grouped by information type, not by step; fan-out logs in one group with a per-trace-id summary
     for g in ("g-issue", "g-incident", "g-message", "g-metric", "g-log", "g-commit", "g-code", "g-owners", "g-page"):
         assert f'id="{g}"' in body
