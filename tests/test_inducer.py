@@ -338,3 +338,16 @@ def test_collapse_survives_an_argument_only_one_call_passes():
                            "output": {"ok": True}, "is_error": False}])
     steps = Binder(sess, {}).bind_session()
     assert [st["tool"] for st in steps] == ["arena.say", "arena.say"]   # kept apart, not collapsed into a ladder
+
+
+def test_same_shaped_rungs_are_an_unresolved_argument_not_a_ladder():
+    """Twenty rungs that differ only in a constant are an argument nothing derives. A real project induced a
+    'ladder' of twenty file paths and scored 100% bound; it must read as unresolved instead."""
+    from crystal.induce.inducer import _rung_templates
+
+    enumeration = ["/w/{{ workspace.name }}/a.md", "/w/{{ workspace.name }}/b.md", "/w/{{ workspace.name }}/c.md"]
+    assert len({_rung_templates(r) for r in enumeration}) == 1      # same template, different constants
+    strategy = ['"{{ issue.error }}" in:#{{ chan }}', "{{ inputs.key }}", "{{ issue.error_class }}"]
+    assert len({_rung_templates(r) for r in strategy}) == 3         # genuinely different derivations
+    two_sources = ["{{ thread.sha_shorts | first }}", "{{ comments.sha_shorts | first }}"]
+    assert len({_rung_templates(r) for r in two_sources}) == 2      # a real fallback, not an enumeration

@@ -52,6 +52,18 @@ TEXTY_TYPES = {"error_class", "slack_channel", "email", "url"}
 ROUNDINGS: tuple[tuple[str | None, int], ...] = ((None, 900), ("1d", 86400), ("1h", 1800))
 
 
+MAX_LADDER = 6                 # rungs worth trying at runtime; beyond that a "ladder" is an enumeration
+MAX_UNRESOLVED_SHOWN = 20
+_RUNG_TEMPLATE = re.compile(r"\{\{[^}]*\}\}")
+
+
+def _rung_templates(value: Any) -> tuple[str, ...]:
+    """The templates a rung renders. Rungs that render the SAME templates and differ only in their literal text are
+    one query enumerated over constants (twenty file paths under a directory), not alternative ways to find a thing;
+    rungs that render different templates are genuine fallbacks (the error text, else the ticket key)."""
+    return tuple(_RUNG_TEMPLATE.findall(str(value)))
+
+
 def _error_text(out: Any) -> bool:
     """Servers that report failures as plain text ('error: ...', 'fatal: ...'), the same rule the runner applies."""
     return isinstance(out, str) and out.lstrip().lower().startswith(("error:", "fatal:"))
@@ -914,7 +926,17 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
                     dropped_rungs.setdefault(sid, {})[k] = sorted(str(t) for t in dropped)
                 ranked = sorted(((t, h) for t, h in variants.items() if t not in dropped),
                                 key=lambda kv: (-(sum(1 for h in kv[1] if h > 0) / len(kv[1])), -len(kv[1]), -str(kv[0]).count("{{")))
-                args[k] = {"ladder": [_coerce(t) for t, _ in ranked]} if len(ranked) > 1 else _coerce(ranked[0][0])
+                if len(ranked) > 1 and len({_rung_templates(t) for t, _ in ranked}) == 1:
+                    # Every rung is the same query with a different constant (twenty file paths under one directory):
+                    # that is an argument nothing derives, not a fallback strategy. Descending it would just try each
+                    # value the agent happened to use, so it is reported as unresolved and the commonest kept.
+                    unresolved[k] = sorted({str(t) for t, _ in ranked})[:MAX_UNRESOLVED_SHOWN]
+                    args[k] = _coerce(ranked[0][0])
+                elif len(ranked) > MAX_LADDER:
+                    dropped_rungs.setdefault(sid, {}).setdefault(k, []).extend(str(t) for t, _ in ranked[MAX_LADDER:])
+                    args[k] = {"ladder": [_coerce(t) for t, _ in ranked[:MAX_LADDER]]}
+                else:
+                    args[k] = {"ladder": [_coerce(t) for t, _ in ranked]} if len(ranked) > 1 else _coerce(ranked[0][0])
             if len(raw_vals) > 1:
                 unresolved[k] = sorted(raw_vals)
         step: dict[str, Any] = {"id": sid, "title": sid.replace("_", " "), "tool": g["tool"], "args": args}
