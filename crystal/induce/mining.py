@@ -15,6 +15,8 @@ the shared behaviour and binds its arguments the usual way (inputs, extracts, la
 """
 from __future__ import annotations
 
+import json
+
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -57,6 +59,7 @@ class Candidate:
     saving: int                                        # calls covered, summed over the supporting episodes
     prompts: list[str] = field(default_factory=list)
     rank: int = 0
+    bound: float | None = None        # share of step arguments a program can actually derive (see bindability())
 
     @property
     def length(self) -> int:
@@ -80,6 +83,7 @@ class Candidate:
 
     def view(self) -> dict:
         return {"rank": self.rank, "support": self.support, "length": self.length, "score": self.score, "saving": self.saving,
+                "bound": self.bound,
                 "sequence": self.display, "servers": self.servers, "episodes": self.episode_ids, "prompts": self.prompts}
 
 
@@ -204,6 +208,34 @@ def induce_candidate(cand: Candidate, name: str, catalog: dict | None = None, wo
     return flow, report
 
 
+def bindability(cand: Candidate, catalog: dict | None = None, workspace_meta: dict | None = None) -> float | None:
+    """The share of this candidate's step arguments the inducer can derive -- from an input, an earlier result, the
+    entity catalog or a time window. A low score means the agent supplied those values from its own knowledge (which
+    URL to read next, which file to open), and no program can reproduce that choice: the sequence recurs, but it is
+    not a flow. None when the candidate cannot be induced at all."""
+    try:
+        flow, report = induce_candidate(cand, "probe", catalog=catalog, workspace_meta=workspace_meta)
+    except Exception:  # noqa: BLE001 - a candidate that will not induce is simply unscored
+        return None
+    # Only arguments that VARY between the supporting episodes say anything: a constant (max_length: 8000) is
+    # bound trivially and would flatter the score. A varying argument is either derived (it renders a template)
+    # or unresolved (the flow has to hardcode one episode's value).
+    derived = sum(1 for st in flow.get("steps", []) for v in (st.get("args") or {}).values()
+                  if "{{" in json.dumps(v, default=str))
+    unresolved = sum(len(args) for args in (report.get("unresolved") or {}).values())
+    varying = derived + unresolved
+    if not varying:
+        return None if not flow.get("steps") else 1.0      # every argument is the same in every episode
+    return derived / varying
+
+
+def score_bindability(cands: list[Candidate], catalog: dict | None = None, workspace_meta: dict | None = None) -> list[Candidate]:
+    """Fill in `bound` for each candidate (an induce per candidate; no LLM, no network)."""
+    for c in cands:
+        c.bound = bindability(c, catalog, workspace_meta)
+    return cands
+
+
 def write_candidate_flow(cand: Candidate, name: str, flow_dir: Path, catalog: dict | None = None,
                          workspace_meta: dict | None = None) -> tuple[Path, dict]:
     from crystal.induce.inducer import dump_flow
@@ -217,11 +249,20 @@ def write_candidate_flow(cand: Candidate, name: str, flow_dir: Path, catalog: di
 def format_candidates(cands: list[Candidate], prompts: bool = True) -> str:
     if not cands:
         return "no recurring tool sequences yet (need >= 2 episodes sharing >= 2 consecutive calls)"
-    lines = [f"{'#':>3} {'support':>7} {'len':>4} {'score':>6} {'saving':>7}  sequence"]
+    scored = any(c.bound is not None for c in cands)
+    head = f"{'#':>3} {'support':>7} {'len':>4} {'score':>6} {'saving':>7}"
+    lines = [head + (f" {'bound':>6}" if scored else "") + "  sequence"]
     for c in cands:
-        lines.append(f"{c.rank:>3} {c.support:>7} {c.length:>4} {c.score:>6} {c.saving:>7}  {' -> '.join(c.display)}")
+        b = "" if not scored else (f" {'-':>6}" if c.bound is None else f" {round(c.bound * 100):>5}%")
+        lines.append(f"{c.rank:>3} {c.support:>7} {c.length:>4} {c.score:>6} {c.saving:>7}{b}  {' -> '.join(c.display)}")
         if prompts:
             for p in c.prompts[:3]:
                 lines.append(f"{'':32}  \"{p[:110].replace(chr(10), ' ')}{'…' if len(p) > 110 else ''}\"")
+    if scored and cands and all((c.bound or 0) < 0.5 for c in cands[:3]):
+        lines.append("")
+        lines.append("Note: `bound` is the share of arguments a program could derive. These are low, so the agent chose most")
+        lines.append("values itself (which page to read, which file to open) rather than deriving them from the request or an")
+        lines.append("earlier result. The sequence repeats, but a flow cannot reproduce the choices; expect a draft full of")
+        lines.append("hardcoded values. Sequences whose arguments come from the prompt or a previous result crystallize well.")
     return "\n".join(lines)
 

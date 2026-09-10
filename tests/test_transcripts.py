@@ -55,7 +55,9 @@ def test_parse_pairs_calls_with_results_and_prompts():
     assert tx.servers == {"pagerduty": 2, "jira": 1, "slack": 1}
     assert tx.episode_prompts() == [0, 1]
     assert tx.results_by_prompt[0].startswith("PAY-108 is a PaymentGatewayTimeout") and tx.result.startswith("PagerDuty incident Q1PAY")
-    assert prompt_inputs(tx.first_prompt) == {"prompt": tx.first_prompt, "jira_key": "PAY-108"}
+    # an id becomes an input only when the session actually passed it to a tool
+    assert prompt_inputs(tx.first_prompt, tx.calls) == {"prompt": tx.first_prompt, "jira_key": "PAY-108"}
+    assert prompt_inputs(tx.first_prompt) == {"prompt": tx.first_prompt}
 
 
 def test_preview_keeps_claude_code_results_short(tmp_path):
@@ -274,3 +276,19 @@ def test_empty_workspace_import_explains_itself(tmp_path, monkeypatch):
     assert "No Claude Code sessions to import" in out and str(ws) in out
     assert "cleanupPeriodDays" in out and "--all" in out
     assert "transcripts found in" not in out
+
+
+def test_prompt_inputs_ignores_ids_nothing_consumed():
+    """A prompt quoting a uuid in a path, an address off a page or any 3-digit number must not become an input:
+    the UI would demand a value no step uses (seen on a real research session)."""
+    from crystal.trace.transcripts import prompt_inputs
+
+    class C:
+        def __init__(self, inp):
+            self.input = inp
+
+    text = ("Read /tmp/x/52aa8d64-22d2-44b1-80cb-f427af64e41f/brief.md and follow it. Contact orders@example.com. "
+            "Error 501 was seen. Ticket PAY-108 is related.")
+    calls = [C({"url": "https://example.com/kegs"}), C({"issue_key": "PAY-108"})]
+    got = prompt_inputs(text, calls)
+    assert set(got) == {"prompt", "jira_key"} and got["jira_key"] == "PAY-108"

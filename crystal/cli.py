@@ -370,10 +370,18 @@ def cmd_candidates(args):
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(dump_flow(flow))
         print(f"induced {name} from candidate #{n} ({cand.support} episodes, {cand.length} steps) -> {out}")
+        total = sum(len(st.get("args") or {}) for st in flow.get("steps", []))
+        unres = sum(len(a) for a in (report.get("unresolved") or {}).values())
+        if total and unres / total > 0.4:
+            print(f"warning: {unres} of {total} arguments could not be derived from the request or an earlier result, so they"
+                  f" are hardcoded from the traces. The agent chose those values itself; this flow will replay them verbatim.")
         print(json.dumps({k: v for k, v in report.items() if k in ("sessions", "steps", "unresolved", "optional_steps", "ladders", "forEach", "tests")}, indent=1, default=str))
         return 0
     top = int(_opt(args, "--top", 20))
     cands = candidates(state_mod.current().traces, min_support=min_support, limit=top)
+    if "--fast" not in args:
+        from crystal.induce.mining import score_bindability
+        score_bindability(cands, workspace_meta=ws_mod.current().meta())
     if "--json" in args:
         print(json.dumps([c.view() for c in cands], indent=1))
         return 0

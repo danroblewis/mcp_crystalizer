@@ -349,14 +349,27 @@ def parse_transcript(path: Path) -> Transcript:
 
 
 # ---------------------------------------------------------------- inputs from a prompt
-def prompt_inputs(text: str | None) -> dict:
-    """What a flow induced from this session would take: the prompt, plus the first typed id of each kind it
-    mentions (a jira key, a slack channel, a sha), so the inducer can bind those arguments to inputs."""
+# Types that identify an entity a flow could be parameterised by. Deliberately excludes the shapes that match
+# almost any text (http_status is any 3-digit number; dates, emails, urls and ips litter fetched page content),
+# which otherwise become inputs the UI demands and nothing uses.
+INPUT_TYPES = frozenset({"jira_key", "sha40", "sha_short", "trace_id", "trace_id16", "uuid", "k8s_pod",
+                         "slack_ts", "slack_channel_id", "slack_channel", "slack_user_id", "slack_dm_id",
+                         "pd_incident_id", "pd_service_id"})
+
+
+def prompt_inputs(text: str | None, calls: list[dict] | None = None) -> dict:
+    """What a flow induced from this session would take: the prompt, plus the identifiers it mentions that the
+    session actually passed to a tool (a jira key, a channel, a sha). A value the prompt merely contains -- a
+    session id inside a path, an address quoted from a page -- is not an input: nothing would consume it."""
     if not text:
         return {}
     out: dict[str, Any] = {"prompt": text[:PROMPT_LIMIT]}
+    if calls is None:
+        return out
+    used = json.dumps([(c.get("input") if isinstance(c, dict) else getattr(c, "input", None)) or {} for c in calls], default=str)
     for m in ids.typed_mentions(text):
-        out.setdefault(m["type"], m["value"])
+        if m["type"] in INPUT_TYPES and m["value"] in used:
+            out.setdefault(m["type"], m["value"])
     return out
 
 
@@ -387,7 +400,7 @@ def _agents_meta(tx: Transcript) -> dict:
 def _write(tx: Transcript, trace_dir: Path, session_id: str, calls: list[Call], prompts: list[dict], result: str | None,
            workspace_meta: dict | None, extra_meta: dict | None = None) -> Path:
     first = prompts[0]["text"] if prompts else None
-    meta = {"trigger": TRIGGER, "inputs": prompt_inputs(first), "prompt": (first or "")[:PROMPT_LIMIT] or None,
+    meta = {"trigger": TRIGGER, "inputs": prompt_inputs(first, calls), "prompt": (first or "")[:PROMPT_LIMIT] or None,
             "cwd": tx.cwd, "cwd_exists": bool(tx.cwd and Path(tx.cwd).is_dir()), "transcript_path": str(tx.path),
             "claude_session_id": tx.session_id, "servers": tx.servers, **(extra_meta or {})}
     if workspace_meta:
@@ -475,7 +488,7 @@ def reattribute(tx: Transcript, trace_path: Path, workspace_meta: dict | None = 
                 continue
             extra, prompt, result = _episode_meta(tx, pi, agent, n)
             first = prompt["text"] if prompt else None
-            meta = {"trigger": TRIGGER, "inputs": prompt_inputs(first), "prompt": (first or "")[:PROMPT_LIMIT] or None,
+            meta = {"trigger": TRIGGER, "inputs": prompt_inputs(first, calls), "prompt": (first or "")[:PROMPT_LIMIT] or None,
                     "cwd": hook_meta.get("cwd") or tx.cwd, "transcript_path": str(tx.path), "claude_session_id": tx.session_id,
                     "from_hook_trace": trace_path.name, **extra}
             if workspace_meta:
