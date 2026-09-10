@@ -20,7 +20,7 @@
 {% if h.team_owners or h.people %}<div><dt>Owners</dt><dd>{% if h.team_owners %}{{ m.mark(h.team_owners | join(', ')) }}{% endif %}{% if h.people %}{{ ' — ' if h.team_owners }}{{ h.people | join(', ') }}{% endif %}</dd></div>{% endif %}
 {% if h.status.incident %}<div><dt>Incident</dt><dd><span class="pill {{ 'ok' if h.status.incident == 'resolved' else 'bad' }}">{{ h.status.incident }}</span></dd></div>{% endif %}
 {% if h.changed_before %}<div><dt>Changed before</dt><dd>{% for c in h.changed_before %}<div><span class="mono">{{ m.mark(c.sha) }}</span> {{ c.subject }}{% if c.author %} <span class="muted small">{{ c.author }}{% if c.date %}, {{ c.date }}{% endif %}</span>{% endif %}</div>{% endfor %}</dd></div>{% endif %}
-{% if h.repeat_of or h.caused_by or h.related %}<div><dt>History</dt><dd>{% if h.repeat_of %}Repeat of <a href="/flows/{{ r.flow }}?key={{ h.repeat_of }}">{{ m.mark(h.repeat_of) }}</a>. {% endif %}{% if h.caused_by %}Caused by {{ m.mark(h.caused_by) }}. {% endif %}{% for x in h.related %}{{ x.kind | capitalize }}: {{ x.title }}. {% endfor %}</dd></div>{% endif %}
+{% if h.repeat_of or h.caused_by or h.related %}<div><dt>History</dt><dd>{% if h.repeat_of %}Repeat of <a href="/flows/{{ r.flow }}?key={{ h.repeat_of }}">{{ m.mark(h.repeat_of, hop=false) }}</a>. {% endif %}{% if h.caused_by %}Caused by {{ m.mark(h.caused_by) }}. {% endif %}{% for x in h.related %}{{ x.kind | capitalize }}: {{ x.title }}. {% endfor %}</dd></div>{% endif %}
 {% if h.remediation %}<div><dt>Runbook says</dt><dd>{{ h.remediation }}</dd></div>{% endif %}
 {% if h.trace_ids %}<div><dt>Trace ids</dt><dd class="idlist">{% for t in h.trace_ids %}<span>{{ m.mark(t) }}</span>{% endfor %}</dd></div>{% endif %}
 {% if h.pods %}<div><dt>Pods</dt><dd class="idlist">{% for p in h.pods %}<span>{{ m.mark(p) }}</span>{% endfor %}</dd></div>{% endif %}
@@ -37,7 +37,14 @@
 
 <h2>How the research flowed</h2>
 <div class="dagwrap">{{ svg }}</div>
-<div class="legend">{% for t, c, l in types %}<span><i style="background:{{ c }}"></i>{{ l }}</span>{% endfor %}<span><i style="background:#fff;border:1px dashed #999"></i>nothing found</span><span>stacked = fan-out, one call per item</span></div>
+<div class="legend">{% for t, c, l in types %}<span><i style="background:{{ c }}"></i>{{ l }}</span>{% endfor %}<span><i style="background:#fff;border:1px dashed #999"></i>nothing found</span><span>stacked = fan-out, one call per item</span><span>each arrow is labelled with the value that moved along it; click a label to jump to the call that used it</span></div>
+
+<input type="checkbox" id="dimdet" class="vtog">
+<div class="vkey">
+<span><mark class="v used">a value carried onward<a class="hop" href="#facts">7</a></mark> the superscript is the step that used it — click it to jump there</span>
+{% if marker.detected_count %}<span><mark class="v det">a value only detected</mark> an extractor found it, no later call used it</span>
+<label for="dimdet">Dim the {{ marker.detected_count }} values nothing used</label>{% endif %}
+</div>
 
 {% if trace and r.prompt %}<details style="margin-top:12px"><summary>The prompt the agent was given</summary><div class="excerpt">{{ r.prompt }}</div></details>{% endif %}
 
@@ -69,14 +76,14 @@
 <h2>{{ g.label }} <span class="count">{{ g.hits }}</span></h2>
 {% if g.summary and g.summary.rows | length > 1 %}
 <table class="logsum"><tr><th>searched for</th><th class="n">lines</th><th>levels</th><th>pods</th><th>from</th><th>to</th></tr>
-{% for row in g.summary.rows %}<tr><td class="mono">{{ m.mark(row.item) if row.item else row.query }}</td><td class="n">{{ row.n }}</td>
+{% for row in g.summary.rows %}<tr><td class="mono">{{ m.mark(row.item, hop=false) if row.item else row.query }}</td><td class="n">{{ row.n }}</td>
 <td class="small">{% for k, v in row.levels.items() %}{{ k }} {{ v }}{{ ', ' if not loop.last }}{% endfor %}</td>
 <td class="mono small">{% for p in row.pods %}{{ m.mark(p) }}{{ ', ' if not loop.last }}{% endfor %}</td><td class="small">{{ (row.first or '')[11:19] }}</td><td class="small">{{ (row.last or '')[11:19] }}</td></tr>{% endfor %}
 <tr><td class="muted">all</td><td class="n">{{ g.summary.n }}</td><td class="small">{% for k, v in g.summary.levels.items() %}{{ k }} {{ v }}{{ ', ' if not loop.last }}{% endfor %}</td><td class="small muted">{{ g.summary.pods | length }} distinct pods</td><td></td><td></td></tr></table>
 {% endif %}
 {% for b in g.sources %}
 <div class="src" {% if b.anchor %}id="s-{{ b.step }}"{% endif %} data-step="{{ b.step }}">
-<div class="srchead">{{ b.title }}{% if b.item is not none %} for <code>{{ m.mark(b.item) }}</code>{% endif %}{% if b.error %} <span class="pill bad">error</span>{% endif %}</div>
+<div class="srchead">{{ b.title }}{% if b.item is not none %} for <code>{{ m.mark(b.item, hop=false) }}</code>{% endif %}{% if b.error %} <span class="pill bad">error</span>{% endif %}</div>
 {% set cards = b.cards %}
 {% set fold = 6 if g.type == 'log' else (12 if g.type in ('message', 'commit') else 40) %}
 {% for c in cards[:fold] %}{{ evcard(c, g, b) }}{% endfor %}
@@ -119,8 +126,8 @@
 {% endif %}
 
 <script>
-// enhancement only: clicking a diagram node outlines the evidence group(s) that step fed
-document.querySelectorAll('svg.dag a.node-link').forEach(function (a) {
+// enhancement only: clicking a diagram node (or an edge label) outlines the evidence group(s) that step fed
+document.querySelectorAll('svg.dag a.node-link, svg.dag a.edge-link').forEach(function (a) {
   a.addEventListener('click', function () {
     var id = a.getAttribute('data-step');
     document.querySelectorAll('.group.hl').forEach(function (g) { g.classList.remove('hl'); });
