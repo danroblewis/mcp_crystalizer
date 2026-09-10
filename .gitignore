@@ -8,3 +8,4 @@ runs/
 sim/repo/
 state/
 traces/cassettes/
+workspaces/

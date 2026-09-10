@@ -18,8 +18,14 @@ from pathlib import Path
 from typing import Any
 
 from crystal import PROJECT_ROOT
+from crystal.workspace import namespaced
 
 TRACE_DIR = PROJECT_ROOT / "traces"
+
+
+def current_trace_dir() -> Path:
+    """traces/ for the sim, traces/<workspace-slug>/ for any other workspace ($CRYSTAL_WORKSPACE)."""
+    return namespaced(TRACE_DIR)
 
 
 def _now() -> str:
@@ -30,7 +36,7 @@ class Recorder:
     def __init__(self, session_id: str, source: str, trace_dir: Path | None = None, meta: dict | None = None):
         self.session_id = session_id
         self.source = source
-        self.dir = trace_dir or TRACE_DIR
+        self.dir = trace_dir or current_trace_dir()
         self.dir.mkdir(parents=True, exist_ok=True)
         self.path = self.dir / f"{session_id}.jsonl"
         self.seq = 0
@@ -92,7 +98,7 @@ def hook_main(payload: dict | None = None, trace_dir: Path | None = None) -> int
     server, tool = split_tool_name(name)
     sid = payload.get("session_id", "unknown")
     if server == "claude-code":
-        if tool not in CLAUDE_CODE_TOOLS or not ((trace_dir or TRACE_DIR) / f"{sid}.jsonl").exists():
+        if tool not in CLAUDE_CODE_TOOLS or not ((trace_dir or current_trace_dir()) / f"{sid}.jsonl").exists():
             return 0  # only MCP calls and, inside an investigation, codebase reads are steps
     resp = payload.get("tool_response")
     output_text = ""

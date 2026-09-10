@@ -34,8 +34,18 @@ from crystal.induce.inducer import STEP_NAMES, dump_flow, induce
 from crystal.trace.driver import PROMPTS, run_agent
 from crystal.trace.record import TRACE_DIR
 from crystal.trace.store import Session, load_session, load_sessions
+from crystal.workspace import namespaced
 
-FEEDBACK = TRACE_DIR / "feedback.jsonl"
+FEEDBACK = TRACE_DIR / "feedback.jsonl"   # the repair queue is one per project (complaints name their run and flow)
+
+
+def _rdir(run_dir: Path | None) -> Path:
+    """runs/ for the current workspace (the top-level dir for the sim) unless an explicit one is given."""
+    return run_dir or namespaced(RUN_DIR)
+
+
+def _tdir(trace_dir: Path | None) -> Path:
+    return trace_dir or namespaced(TRACE_DIR)
 RAW_SERVERS = "jira, slack, confluence, chronosphere, logz, pagerduty, git, code"
 VERSION_RX = re.compile(r"^(.*)\.v(\d+)$")
 
@@ -169,7 +179,7 @@ def _record_of(output, run_dir: Path | None = None, trace_dir: Path | None = Non
     run_id = _run_id_of(output)
     if not run_id:
         return None
-    for d in ((run_dir or RUN_DIR), (trace_dir or TRACE_DIR) / "runs"):
+    for d in (_rdir(run_dir), _tdir(trace_dir) / "runs"):
         p = d / f"{run_id}.json"
         if p.exists():
             return json.loads(p.read_text())
@@ -179,13 +189,13 @@ def _record_of(output, run_dir: Path | None = None, trace_dir: Path | None = Non
 def archive_run_records(session: Session, run_dir: Path | None = None, trace_dir: Path | None = None) -> list[Path]:
     """Copy the run records a session's run_flow calls point at from runs/ (gitignored) into traces/runs/, next to
     the trace, so re-inducing the session later still expands run_flow into the flow's own calls."""
-    dest = (trace_dir or TRACE_DIR) / "runs"
+    dest = _tdir(trace_dir) / "runs"
     copied = []
     for c in session.calls:
         if c.get("server") != "flows" or c.get("tool") != "run_flow":
             continue
         run_id = _run_id_of(c.get("output"))
-        src = (run_dir or RUN_DIR) / f"{run_id}.json" if run_id else None
+        src = _rdir(run_dir) / f"{run_id}.json" if run_id else None
         if src and src.exists() and not (dest / src.name).exists():
             dest.mkdir(parents=True, exist_ok=True)
             (dest / src.name).write_text(src.read_text())
@@ -426,8 +436,7 @@ def repair(selector: str, budget="3", model=None, driver_fn=run_agent, feedback_
         todo = [c for c in todo if c.get("run_id") == selector]
     results = []
     for c in todo:
-        rdir = run_dir or RUN_DIR
-        p = rdir / f"{c['run_id']}.json"
+        p = _rdir(run_dir) / f"{c['run_id']}.json"
         record = json.loads(p.read_text()) if p.exists() else None
         fname = c.get("flow") or (record or {}).get("flow")
         try:

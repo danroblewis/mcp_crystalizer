@@ -13,3 +13,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # driven by this env var. `CRYSTAL_INPROCESS=0 uv run pytest` (or any ServerPool(inprocess=False)) still runs
 # the real stdio path -- see tests/test_transport_parity.py, which checks the two transports agree.
 os.environ.setdefault("CRYSTAL_INPROCESS", "1")
+
+# The effective server registry layers ~/.mcp.json over servers.yaml (crystal/registry.py). The suite must see the
+# project's servers only, whatever the developer keeps in their home: point the user-level file at nothing. Tests
+# of that layer set $CRYSTAL_USER_MCP (or delete it and monkeypatch Path.home) themselves. The workspace is the
+# project (the sim) unless a test activates another one.
+os.environ.setdefault("CRYSTAL_USER_MCP", str(Path(__file__).resolve().parent / "no-user-mcp.json"))
+os.environ.pop("CRYSTAL_WORKSPACE", None)

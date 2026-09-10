@@ -18,6 +18,9 @@ Design: `docs/PLAN.md`. Research behind it: `docs/research/`.
 | `crystal/induce/` | Trace → flow inducer (no LLM) |
 | `crystal/replay/` | Cassette record/replay so regression tests need no servers; `regression.py` runs a flow's test cases |
 | `crystal/author.py` | Agent-assisted authoring and repair (`crystal author`, `crystal repair`); the only code that launches the agent |
+| `crystal/workspace.py`, `crystal/registry.py`, `crystal/mcp_client.py` | The workspace (`--workspace` / `$CRYSTAL_WORKSPACE`), the effective server registry (`servers.yaml` < `~/.mcp.json` < `<workspace>/.mcp.json`), and the client pool (stdio, streamable HTTP, SSE, in-process) -- see "Using a real codebase" |
+| `crystal/servers/` | Generic `code` and `git` MCP servers over any workspace (`--root`); the sim's code/git servers are these pinned to `sim/repo` |
+| `examples/` | `agentarena.mcp.json`: a workspace `.mcp.json` for a real TypeScript repo (github via npx, deepwiki over HTTP, generic git/code) |
 | `app/` | FastAPI web UI: flow catalog, run dossier (`app/dossier.py`: headline, evidence by type, highlights; `app/diagram.py`: research-flow SVG), the same dossier for recorded agent traces at `/traces` |
 | `flows/` | Crystallized flows: `investigate-jira-ticket`, `investigate-slack-thread`, `investigate-slack-dm` (candidates), `<name>.v<N>.yaml` versions induced by `crystal author`, and the raw `induced-*` drafts |
 | `traces/` | Recorded sessions (JSONL), `runs/` run records referenced by recorded agent sessions, cassettes (gitignored); `feedback.jsonl` is the repair queue |
@@ -38,9 +41,10 @@ uv run uvicorn app.main:app --port 8765   # then open http://localhost:8765
 uv run pytest -q
 ```
 
-Commands (`uv run python -m crystal.cli <command>`): `flows`, `run`, `induce`, `test`, `status`, `author`, `repair`,
-`card`, `tools`, `mcp-config`. Only `author`, `repair` and `python -m crystal.trace.driver` launch Claude Code; nothing
-else ever calls an LLM.
+Commands (`uv run python -m crystal.cli [--workspace <dir>] <command>`): `flows`, `run`, `induce`, `test`, `status`,
+`author`, `repair`, `card`, `servers`, `tools`, `mcp-config`. Only `author`, `repair` and `python -m crystal.trace.driver`
+launch Claude Code; nothing else ever calls an LLM. `--workspace` (or `$CRYSTAL_WORKSPACE`) points everything at
+another codebase and its `.mcp.json`; see "Using a real codebase".
 
 ## Crystallization loop
 
@@ -188,8 +192,51 @@ uv run python -m crystal.cli card investigate-jira-ticket          # print the c
 uv run python -m crystal.cli card induced-jira-ticket --write      # append the skeleton to the YAML if it has no card
 ```
 
-## Pointing at real servers
+## Using a real codebase
 
-Replace entries in `servers.yaml` with the real MCP servers (the sim tools copy the public servers' tool
-names and parameter shapes) and rebuild `catalog/entities.yaml` from their data. Flows reference tools as
-`server.tool`, so nothing else changes.
+The tool is pointed at a **workspace** the way any AI agent is pointed at a directory: `--workspace <dir>` on every
+command (or `export CRYSTAL_WORKSPACE=<dir>`; a relative path is taken from this project; the default is the project
+itself, which is the simulated world). The workspace supplies three things:
+
+* the root of the generic `code` and `git` servers (`crystal/servers/code.py`, `git.py`: grep / glob / read_file /
+  codeowners and git_log / git_show / git_grep / git_blame, the same tool names the sim servers have, so every flow
+  keeps working; `sim/servers/code.py` and `git.py` are the same servers pinned to `sim/repo`);
+* its `.mcp.json`, the common `mcpServers` format Claude Code / Claude Desktop / Cursor read (`command`+`args`+`env`,
+  or `type: http|sse` + `url` + `headers`, `${VAR}` / `${VAR:-default}` expanded, `{{workspace}}` / `{{project}}`
+  substituted). The effective registry is `servers.yaml` (project defaults) < `~/.mcp.json` < `<workspace>/.mcp.json`,
+  later wins per server name; `"name": null` or `{"disabled": true}` drops a default. `crystal servers` lists the
+  result with each server's transport and source file; `crystal mcp-config` prints it as a plain mcp.json and
+  `--write` stores it as `<workspace>/.mcp.json` so a plain `claude` in that directory sees the same servers;
+* the namespace for runs and traces: `runs/<slug>/` and `traces/<slug>/` (the sim stays at the top level), so
+  sim runs and real-repo runs never mix. Flows, cassettes, the feedback queue and the lifecycle store stay in the
+  project.
+
+`ServerPool` speaks stdio (local servers: `npx ...`, `uvx ...`, `python ...`), streamable HTTP (`type: http`) and
+SSE (`type: sse`); the in-process shortcut applies only to python servers inside this project.
+
+Worked example with a TypeScript repo (`examples/agentarena.mcp.json`: the GitHub server via npx, DeepWiki over
+HTTP, the generic git and code servers over the workspace, the sim's jira/slack/... disabled):
+
+```bash
+git clone https://github.com/aabbcdl/AgentArena workspaces/agentarena     # workspaces/ is gitignored
+export CRYSTAL_WORKSPACE=workspaces/agentarena
+cp examples/agentarena.mcp.json workspaces/agentarena/.mcp.json
+uv run python -m crystal.cli servers        # git, code, flows, github (stdio), deepwiki (http) and where each came from
+uv run python -m crystal.cli tools          # connects to every server and lists its tools (a smoke test of each transport)
+uv run python -m crystal.cli mcp-config --write   # materialize the merged config as workspaces/agentarena/.mcp.json
+# record an agent session in the workspace (COSTS MONEY; the trace lands in traces/agentarena/):
+uv run python -m crystal.trace.driver codebase "question=where does a match get scored?" --budget 2
+uv run uvicorn app.main:app --port 8765     # the UI reads the same env: runs/agentarena/, traces/agentarena/
+```
+
+`export GITHUB_PERSONAL_ACCESS_TOKEN=...` raises the GitHub server's rate limit (public repos work without it; an
+unset `${VAR}` is simply not exported). DeepWiki answers only for repositories indexed at deepwiki.com (ask it about
+`modelcontextprotocol/python-sdk`, say); `https://mcp.context7.com/mcp` is another no-auth HTTP server. The official
+git server works too: `{"git": {"command": "uvx", "args": ["mcp-server-git", "--repository", "{{workspace}}"]}}`,
+but its tool names differ from the flows'. The driver runs Claude Code *in* the workspace with a temporary mcp.json
+holding the effective registry (`--strict-mcp-config`, so it sees exactly the servers the runner uses) and the
+project's recording hook (`--settings .claude/settings.json`), so Read/Grep/Glob work there like any agent's.
+
+To use real Jira/Slack/... servers, add them to `~/.mcp.json` or the workspace's `.mcp.json` under the names the flows
+use (the sim tools copy the public servers' tool names and parameter shapes) and rebuild `catalog/entities.yaml` from
+their data. Flows reference tools as `server.tool`, so nothing else changes.

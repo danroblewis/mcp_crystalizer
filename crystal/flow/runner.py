@@ -26,9 +26,15 @@ from crystal.extract.catalog import load_catalog
 from crystal.extract.extractors import run_extractor, select
 from crystal.flow.templating import ENV, render
 from crystal.mcp_client import ServerPool
+from crystal.workspace import namespaced
 
 FLOW_DIR = PROJECT_ROOT / "flows"
 RUN_DIR = PROJECT_ROOT / "runs"
+
+
+def current_run_dir() -> Path:
+    """runs/ for the sim, runs/<workspace-slug>/ for any other workspace ($CRYSTAL_WORKSPACE)."""
+    return namespaced(RUN_DIR)
 
 
 def load_flow(name_or_path: str | Path) -> dict:
@@ -220,8 +226,9 @@ class FlowRunner:
         record["summary"] = {s["id"]: {"hits": s.get("hits"), "error": s.get("error"), "skipped": s.get("skipped")} for s in record["steps"]}
         if save:
             self._record_lifecycle(record, flow)
-            RUN_DIR.mkdir(exist_ok=True)
-            (RUN_DIR / f"{run_id}.json").write_text(json.dumps(record, indent=1, default=str))
+            d = current_run_dir()
+            d.mkdir(parents=True, exist_ok=True)
+            (d / f"{run_id}.json").write_text(json.dumps(record, indent=1, default=str))
         return record
 
     def _record_lifecycle(self, record: dict, flow: dict) -> None:
