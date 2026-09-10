@@ -40,8 +40,9 @@ def test_parse_pairs_calls_with_results_and_prompts():
     assert tx.session_id == SID and tx.cwd == FIXTURE_CWD and tx.lines == 24
     assert [p["text"][:12] for p in tx.prompts] == ["Investigate ", "now check pa"]      # meta and injected text are not prompts
     tools = [(c.server, c.tool) for c in tx.calls]
+    # a Read is recorded as the built-in server that can replay it; a non-git Bash stays unreplayable
     assert tools == [("jira", "jira_get_issue"), ("claude-code", "Bash"), ("slack", "conversations_search_messages"),
-                     ("pagerduty", "list_incidents"), ("claude-code", "Read"), ("pagerduty", "get_incident")]
+                     ("pagerduty", "list_incidents"), ("code", "read_file"), ("pagerduty", "get_incident")]
     assert tx.skipped_tools == 2                       # the Bash before the first MCP call, and the Edit
     jira, bash, slack, pd, read, pd2 = tx.calls
     assert jira.output["fields"]["components"][0]["name"] == "payments"       # content blocks -> JSON parsed
@@ -52,7 +53,7 @@ def test_parse_pairs_calls_with_results_and_prompts():
     assert pd2.is_error and pd2.output == "Error: incident Q1PAY not found"
     assert [c.prompt_index for c in tx.calls] == [0, 0, 0, 1, 1, 1]
     assert jira.prompt.startswith("Investigate Jira ticket PAY-108") and pd.prompt.startswith("now check pagerduty")
-    assert tx.servers == {"pagerduty": 2, "jira": 1, "slack": 1}
+    assert tx.servers == {"pagerduty": 2, "code": 1, "jira": 1, "slack": 1}
     assert tx.episode_prompts() == [0, 1]
     assert tx.results_by_prompt[0].startswith("PAY-108 is a PaymentGatewayTimeout") and tx.result.startswith("PagerDuty incident Q1PAY")
     # an id becomes an input only when the session actually passed it to a tool
@@ -85,7 +86,7 @@ def test_import_writes_hook_format_episodes_and_is_idempotent(tmp_path, monkeypa
     assert not st.dir.exists()                              # a dry run writes nothing
 
     rep = import_transcripts(base, workspace_root=ws)
-    assert rep["imported"] == 1 and rep["skipped"] == 0 and rep["episodes"] == 2 and rep["servers"] == {"pagerduty": 4, "jira": 2, "slack": 2}
+    assert rep["imported"] == 1 and rep["skipped"] == 0 and rep["episodes"] == 2 and rep["servers"] == {"pagerduty": 4, "code": 2, "jira": 2, "slack": 2}
     files = sorted(p.name for p in st.traces.glob("*.jsonl"))
     assert files == [f"{SID}-e1.jsonl", f"{SID}-e2.jsonl", f"{SID}.jsonl"]
     whole = load_session(st.traces / f"{SID}.jsonl")
@@ -94,7 +95,7 @@ def test_import_writes_hook_format_episodes_and_is_idempotent(tmp_path, monkeypa
     assert whole.meta["cwd"] == str(ws) and whole.meta["cwd_exists"] is True and whole.meta["claude_session_id"] == SID
     assert len(whole.prompts) == 2 and whole.prompt.startswith("Investigate Jira ticket PAY-108")
     assert [f"{c['server']}.{c['tool']}" for c in whole.calls] == ["jira.jira_get_issue", "claude-code.Bash", "slack.conversations_search_messages",
-                                                                    "pagerduty.list_incidents", "claude-code.Read", "pagerduty.get_incident"]
+                                                                    "pagerduty.list_incidents", "code.read_file", "pagerduty.get_incident"]
     assert [c["seq"] for c in whole.calls] == [1, 2, 3, 4, 5, 6] and whole.calls[0]["tool_use_id"] == "toolu_02"
     assert whole.calls[0]["output"]["key"] == "PAY-108" and whole.calls[3]["output"]["incidents"][0]["id"] == "Q1PAY"
     assert whole.calls[5]["is_error"] is True and whole.result.startswith("PagerDuty incident Q1PAY")
@@ -105,7 +106,7 @@ def test_import_writes_hook_format_episodes_and_is_idempotent(tmp_path, monkeypa
     assert e2.meta["parent_session"] == SID and e2.meta["prompt"] == "now check pagerduty for the incident on the payments service"
     assert e2.meta["inputs"] == {"prompt": e2.meta["prompt"]}
     assert [c["tool"] for c in e1.calls] == ["jira_get_issue", "Bash", "conversations_search_messages"] and [c["seq"] for c in e1.calls] == [1, 2, 3]
-    assert [c["tool"] for c in e2.calls] == ["list_incidents", "Read", "get_incident"]
+    assert [c["tool"] for c in e2.calls] == ["list_incidents", "read_file", "get_incident"]
     assert e1.result.startswith("PAY-108 is a") and e2.result.startswith("PagerDuty incident")
     # mining sees the episodes, never the whole session as well
     assert sorted(e.session_id for e in episodes(load_sessions(st.traces))) == [f"{SID}-e1", f"{SID}-e2"]
@@ -292,3 +293,20 @@ def test_prompt_inputs_ignores_ids_nothing_consumed():
     calls = [C({"url": "https://example.com/kegs"}), C({"issue_key": "PAY-108"})]
     got = prompt_inputs(text, calls)
     assert set(got) == {"prompt", "jira_key"} and got["jira_key"] == "PAY-108"
+
+
+def test_builtin_map_makes_claude_code_calls_replayable():
+    """Most sessions never touch an MCP server: their Read/Grep/Glob/git calls must land on the built-in servers
+    that can replay them, and anything else must stay unmapped rather than become a step nothing can run."""
+    from crystal.trace.builtin_map import map_call
+
+    assert map_call("Read", {"file_path": "a/b.py", "offset": 10, "limit": 5}) == ("code", "read_file", {"path": "a/b.py", "start": 10, "end": 14})
+    assert map_call("Grep", {"pattern": "TODO", "type": "py", "-C": 2}) == ("code", "grep", {"pattern": "TODO", "glob": "**/*.py", "context": 2})
+    assert map_call("Glob", {"pattern": "src/**/*.ts"}) == ("code", "glob", {"pattern": "src/**/*.ts"})
+    assert map_call("Bash", {"command": "git log -n 20 --since=2026-01-01 -- src/app"}) == (
+        "git", "git_log", {"max_count": 20, "since": "2026-01-01", "path": "src/app"})
+    assert map_call("Bash", {"command": "git show abc123"}) == ("git", "git_show", {"sha": "abc123"})
+    # not mapped: a pipeline, a mutating command, an editor tool
+    assert map_call("Bash", {"command": "git log | head -3"}) is None
+    assert map_call("Bash", {"command": "rm -rf build"}) is None
+    assert map_call("Edit", {"file_path": "a.py"}) is None

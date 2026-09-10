@@ -36,6 +36,7 @@ from typing import Any, Iterator
 
 from crystal import state as state_mod
 from crystal.extract import ids
+from crystal.trace.builtin_map import map_call
 from crystal.trace.record import CLAUDE_CODE_TOOLS, Recorder, _preview, split_tool_name
 
 TRANSCRIPTS_ENV = "MCP_EXPLORER_TRANSCRIPTS"
@@ -238,11 +239,14 @@ class _Parser:
                 if use is None:
                     continue
                 server, tool = split_tool_name(use["name"])
+                args = use["input"]
+                if use.get("mapped"):
+                    server, tool, args = use["mapped"]      # recorded as the built-in server that can replay it
                 is_err = bool(b.get("is_error"))
                 output, output_text = parse_result(b.get("content"))
                 if server == "claude-code":
                     output, output_text = _preview(output), _preview(output_text)
-                th.calls.append(Call(seq=0, server=server, tool=tool, input=use["input"], output=output, output_text=output_text,
+                th.calls.append(Call(seq=0, server=server, tool=tool, input=args, output=output, output_text=output_text,
                                      is_error=is_err, ts=use["ts"] or ts, tool_use_id=use["id"], prompt_index=use["prompt_index"],
                                      prompt=None, agent=th.agent))
             elif b.get("type") == "text" and not rec.get("isMeta"):
@@ -278,13 +282,18 @@ class _Parser:
                 th.agent_uses[str(b.get("id"))] = {"prompt_index": th.prompt_index, "ts": ts, "description": inp.get("description"),
                                                    "prompt": inp.get("prompt")}
             server, tool = split_tool_name(name)
+            mapped = None
             if server == "claude-code":
-                if tool not in CLAUDE_CODE_TOOLS or not self.active:
+                # Most sessions never touch an MCP server; their Read/Grep/Glob/git calls are the investigation, and
+                # the built-in code/git servers can replay them, so record those under the server that can.
+                mapped = map_call(tool, inp)
+                if mapped is None and (tool not in CLAUDE_CODE_TOOLS or not self.active):
                     self.tx.skipped_tools += 1
                     continue
             else:
                 self.active = True
-            th.pending[str(b.get("id"))] = {"id": str(b.get("id")), "name": name, "input": inp, "ts": ts, "prompt_index": th.prompt_index}
+            th.pending[str(b.get("id"))] = {"id": str(b.get("id")), "name": name, "input": inp, "ts": ts,
+                                            "prompt_index": th.prompt_index, "mapped": mapped}
 
 
 def _agent_meta(path: Path) -> dict:
