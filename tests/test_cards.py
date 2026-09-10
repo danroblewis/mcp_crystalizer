@@ -16,7 +16,7 @@ from crystal.flow.runner import FlowRunner, load_flow
 from crystal.mcp_client import ServerPool
 from tests.test_author import extra_comments, fake_driver_factory, world  # noqa: F401  (fixture)
 
-FLOWS = Path(__file__).resolve().parent.parent / "flows"
+FLOWS = Path(__file__).resolve().parent.parent / "examples" / "sim" / "flows"
 
 
 def _run(flow: str, inputs: dict) -> dict:

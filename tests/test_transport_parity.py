@@ -1,7 +1,7 @@
-"""The in-process transport (CRYSTAL_INPROCESS=1, sim/servers/*.py's MCPServer connected over in-memory
+"""The in-process transport (CRYSTAL_INPROCESS=1, examples/sim/servers/*.py's MCPServer connected over in-memory
 streams) must return exactly what real stdio does (a subprocess for each server, same as Claude Code's
 .mcp.json and the UI use) -- it is only a speed shortcut for the test suite, never a different simulation.
-One representative call per sim server, both transports against the same servers.yaml/world.json."""
+One representative call per sim server, both transports against the same .mcp.json/world.json."""
 import asyncio
 
 from crystal.mcp_client import ServerPool

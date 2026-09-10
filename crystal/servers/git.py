@@ -1,17 +1,15 @@
 """Generic git server over a workspace (tool shapes after the reference git MCP, plus git_grep and git_blame).
 
-  .venv/bin/python crystal/servers/git.py --root /path/to/workspace
+  python -m crystal.servers.git --root /path/to/workspace
 """
 from __future__ import annotations
 
 import subprocess
-import sys
 from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from crystal.servers import RootFn, RootHolder, root_from, text  # noqa: E402
+from crystal.servers import RootFn, RootHolder, root_from, text
 
 
 def make_server(root: RootFn | Path, name: str = "git") -> MCPServer:

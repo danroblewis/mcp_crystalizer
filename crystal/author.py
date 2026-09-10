@@ -1,15 +1,15 @@
 """Agent-assisted authoring and repair (milestone 2). The only code paths that launch the agent, and only on an
 explicit command with --yes (or an interactive confirmation). Every launch costs real money; the cost is printed.
 
-  crystal author <trigger> k=v ... [--yes] [--budget 3] [--model m] [--name base] [--no-test]
+  mcp-explorer author <trigger> k=v ... [--yes] [--budget 3] [--model m] [--name base] [--no-test]
       Runs Claude Code headless with a prompt that lists the existing flows for the trigger and says: run them FIRST
       through the `flows` MCP server (run_flow), explore with the raw tools only for what the flow lacked, then
       summarise. The trace shows "ran flow X, then did Y". The run_flow call is expanded into the calls the flow made
       (from the saved run record) and the inducer compiles that session plus the existing sessions of the trigger
-      into flows/<base>.v<N>.yaml (a new version; promoted flows are never overwritten).
+      into <state dir>/flows/<base>.v<N>.yaml (a new version; promoted flows are never overwritten).
 
-  crystal repair [--all | <run_id>] [--yes] [--budget 3] [--model m] [--no-test]
-      Consumes traces/feedback.jsonl (the UI's "this didn't help" queue): for each unhelpful run the agent gets the
+  mcp-explorer repair [--all | <run_id>] [--yes] [--budget 3] [--model m] [--no-test]
+      Consumes the workspace's feedback.jsonl (the UI's "this didn't help" queue): for each unhelpful run the agent gets the
       flow YAML, the inputs, a compact evidence summary and the complaint, finds what was missing with the MCP tools,
       and a new version is induced as above. The complaint is marked handled by appending a record (never deleted).
 
@@ -27,25 +27,27 @@ from pathlib import Path
 
 import yaml
 
-from crystal import PROJECT_ROOT
+from crystal import state
 from crystal.flow.cards import card_prompt, merge_card, parse_card, skeleton_card
-from crystal.flow.runner import FLOW_DIR, RUN_DIR, list_flows, load_flow
+from crystal.flow.runner import list_flows, load_flow
 from crystal.induce.inducer import STEP_NAMES, dump_flow, induce
 from crystal.trace.driver import PROMPTS, run_agent
-from crystal.trace.record import TRACE_DIR
 from crystal.trace.store import Session, load_session, load_sessions
-from crystal.workspace import namespaced
 
-FEEDBACK = TRACE_DIR / "feedback.jsonl"   # the repair queue is one per project (complaints name their run and flow)
+
+def feedback_path() -> Path:
+    """The repair queue: one per workspace (complaints name their run and flow)."""
+    return state.feedback_path()
 
 
 def _rdir(run_dir: Path | None) -> Path:
-    """runs/ for the current workspace (the top-level dir for the sim) unless an explicit one is given."""
-    return run_dir or namespaced(RUN_DIR)
+    return run_dir or state.run_dir()
 
 
 def _tdir(trace_dir: Path | None) -> Path:
-    return trace_dir or namespaced(TRACE_DIR)
+    return trace_dir or state.trace_dir()
+
+
 RAW_SERVERS = "jira, slack, confluence, chronosphere, logz, pagerduty, git, code"
 VERSION_RX = re.compile(r"^(.*)\.v(\d+)$")
 
@@ -163,7 +165,7 @@ def repair_prompt(complaint: dict, flow: dict | None, flow_yaml: str, record: di
 
 
 # ---------------------------------------------------------------- traces: expand run_flow into the flow's own calls
-RUN_ARCHIVE = TRACE_DIR / "runs"   # run records referenced by recorded agent sessions (tracked, unlike runs/)
+# run records referenced by recorded agent sessions are archived under <traces>/runs/, next to the trace
 
 
 def _run_id_of(output) -> str | None:
@@ -268,7 +270,8 @@ def base_name(name: str) -> str:
 
 
 def next_version(base: str, flow_dir: Path | None = None) -> tuple[Path, int]:
-    d = flow_dir or FLOW_DIR
+    d = flow_dir or state.flow_dir()
+    d.mkdir(parents=True, exist_ok=True)
     n = 0
     p0 = d / f"{base}.yaml"
     if p0.exists():
@@ -340,7 +343,7 @@ def print_induction(res: dict) -> None:
 
 # ---------------------------------------------------------------- feedback queue
 def load_feedback(path: Path | None = None) -> list[dict]:
-    p = path or FEEDBACK
+    p = path or feedback_path()
     if not p.exists():
         return []
     return [json.loads(l) for l in p.read_text().splitlines() if l.strip()]
@@ -353,7 +356,7 @@ def pending_complaints(path: Path | None = None) -> list[dict]:
 
 
 def mark_handled(run_id: str, info: dict, path: Path | None = None) -> None:
-    p = path or FEEDBACK
+    p = path or feedback_path()
     p.parent.mkdir(parents=True, exist_ok=True)
     with p.open("a") as fh:
         fh.write(json.dumps({"ts": datetime.now(timezone.utc).isoformat(), "kind": "handled", "run_id": run_id, **info}) + "\n")
@@ -501,7 +504,7 @@ def author_main(args: list[str]) -> int:
     budget = _opt(args, "--budget", "3")
     flows = flows_for_trigger(trigger)
     print(f"trigger {trigger} inputs {inputs}; existing flows: {[f['name'] for f in flows] or 'none'}; budget ${budget}")
-    if not confirm(args, f"crystal author {trigger} {inputs}"):
+    if not confirm(args, f"mcp-explorer author {trigger} {inputs}"):
         return 2
     res = author(trigger, inputs, budget=budget, model=_opt(args, "--model"), name=_opt(args, "--name"), test="--no-test" not in args)
     _print_agent(res["agent"])
@@ -518,7 +521,7 @@ def repair_main(args: list[str]) -> int:
     pending = pending_complaints()
     sel = "--all" if "--all" in args else next(iter(positionals(args)), None)
     if not sel:
-        print(f"{len(pending)} pending complaint(s) in {FEEDBACK}:")
+        print(f"{len(pending)} pending complaint(s) in {feedback_path()}:")
         for c in pending:
             print(f"  {c['run_id']}  {c.get('flow')}  {c.get('inputs')}  \"{(c.get('text') or '')[:80]}\"")
         print("usage: repair [--all | <run_id>] [--yes] [--budget 3] [--model m] [--no-test]")
@@ -531,7 +534,7 @@ def repair_main(args: list[str]) -> int:
     print(f"{len(todo)} complaint(s) to repair, budget ${budget} each:")
     for c in todo:
         print(f"  {c['run_id']}  {c.get('flow')}  {c.get('inputs')}  \"{(c.get('text') or '')[:80]}\"")
-    if not confirm(args, f"crystal repair {sel}"):
+    if not confirm(args, f"mcp-explorer repair {sel}"):
         return 2
     total = 0.0
     for res in repair(sel, budget=budget, model=_opt(args, "--model"), test="--no-test" not in args):
@@ -543,6 +546,6 @@ def repair_main(args: list[str]) -> int:
             continue
         print_induction(res)
         _print_test(res.get("test"))
-        print("marked handled in", FEEDBACK)
+        print("marked handled in", feedback_path())
     print(f"\nTOTAL COST: ${total:.4f}")
     return 0

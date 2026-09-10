@@ -1,4 +1,5 @@
-"""Promotion lifecycle and circuit breaker for flows. State lives in state/lifecycle.sqlite (gitignored).
+"""Promotion lifecycle and circuit breaker for flows. State lives in the workspace's state dir, lifecycle.sqlite
+($CRYSTAL_LIFECYCLE_DB overrides the path; the test suite uses that to isolate a test).
 
 Two notions of status:
   * author intent   - the `status` field in the flow YAML (draft | candidate | promoted). Authoritative; edited by hand.
@@ -25,11 +26,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from crystal import PROJECT_ROOT
+from crystal import state
 
-STATE_DIR = PROJECT_ROOT / "state"
-DEFAULT_DB = STATE_DIR / "lifecycle.sqlite"
 LEVELS = ["draft", "candidate", "promoted"]
+
+
+def default_db() -> Path:
+    return Path(os.environ.get("CRYSTAL_LIFECYCLE_DB") or state.lifecycle_db())
 DEFAULT_PROMOTE_AFTER = 5
 DEFAULT_CANDIDATE_AFTER = 2
 
@@ -96,7 +99,7 @@ def classify_run(record: dict, flow: dict | None = None) -> str | None:
 
 class Lifecycle:
     def __init__(self, path: Path | str | None = None):
-        p = Path(path or os.environ.get("CRYSTAL_LIFECYCLE_DB") or DEFAULT_DB)
+        p = Path(path) if path else default_db()
         p.parent.mkdir(parents=True, exist_ok=True)
         self.path = p
         # one connection per store, shared across threads (an MCP server runs sync tools in a worker thread and async
@@ -235,9 +238,10 @@ _default: Lifecycle | None = None
 
 
 def get_lifecycle() -> Lifecycle:
-    """Process-wide default store (honours CRYSTAL_LIFECYCLE_DB)."""
+    """Process-wide default store: the current workspace's (honours CRYSTAL_LIFECYCLE_DB); reopened when the
+    workspace or the home changes."""
     global _default
-    if _default is None or str(_default.path) != str(Path(os.environ.get("CRYSTAL_LIFECYCLE_DB") or DEFAULT_DB)):
+    if _default is None or str(_default.path) != str(default_db()):
         _default = Lifecycle()
     return _default
 

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "jira":         { "command": "${MCP_EXPLORER_PYTHON:-python}", "args": ["servers/jira.py"] },
+    "slack":        { "command": "${MCP_EXPLORER_PYTHON:-python}", "args": ["servers/slack.py"] },
+    "confluence":   { "command": "${MCP_EXPLORER_PYTHON:-python}", "args": ["servers/confluence.py"] },
+    "logz":         { "command": "${MCP_EXPLORER_PYTHON:-python}", "args": ["servers/logz.py"] },
+    "chronosphere": { "command": "${MCP_EXPLORER_PYTHON:-python}", "args": ["servers/chronosphere.py"] },
+    "pagerduty":    { "command": "${MCP_EXPLORER_PYTHON:-python}", "args": ["servers/pagerduty.py"] },
+    "git":          { "command": "${MCP_EXPLORER_PYTHON:-python}", "args": ["servers/git.py"] },
+    "code":         { "command": "${MCP_EXPLORER_PYTHON:-python}", "args": ["servers/code.py"] }
+  }
+}

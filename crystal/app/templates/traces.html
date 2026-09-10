@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block title %}Agent traces{% endblock %}{% block body %}<h1>Agent traces</h1>
+<p class="muted" style="max-width:70ch">Recorded sessions of an agent investigating the same triggers, rendered as the same dossier: what the agent did, with the values it carried from one call to the next highlighted.</p>
+<table><tr><th>session</th><th>source</th><th>trigger</th><th>inputs / prompt</th><th class="n">calls</th><th>recorded</th></tr>
+{% for t in traces %}<tr><td><a href="/traces/{{ t.session_id }}" class="mono">{{ t.session_id }}</a></td><td>{{ t.source }}</td><td>{{ t.trigger or '' }}</td><td class="mono small">{{ t.inputs if t.inputs else (t.prompt | truncate(140)) }}</td><td>{{ t.calls }}</td><td class="small">{{ (t.ts or '')[:19] | replace('T', ' ') }}</td></tr>{% endfor %}</table>
+{% if not traces %}<p class="muted">No traces recorded yet.</p>{% endif %}
+{% endblock %}

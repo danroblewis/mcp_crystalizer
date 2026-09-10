@@ -1,9 +1,9 @@
-"""Regression tests for sim/scenarios.py: the cascade / repeat / escalation / deploy / still-open
+"""Regression tests for examples/sim/scenarios.py: the cascade / repeat / escalation / deploy / still-open
 archetypes, on-call rotations, cross-referencing Jira comments, the runbook -> architecture ->
 postmortem web, and noise -- plus the hard rules that protect the original 10 incidents.
 
-Structural checks load sim/data/world.json directly (fast, no subprocess); the determinism and
-first-11-git-commit checks regenerate the world via `sim/world.py` in a subprocess, since that is the
+Structural checks load examples/sim/data/world.json directly (fast, no subprocess); the determinism and
+first-11-git-commit checks regenerate the world via `examples/sim/world.py` in a subprocess, since that is the
 only way to observe the real generated repo.
 """
 from __future__ import annotations
@@ -17,8 +17,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-WORLD_PATH = ROOT / "sim" / "data" / "world.json"
-REPO_PATH = ROOT / "sim" / "repo"
+SIM = ROOT / "examples" / "sim"
+WORLD_PATH = SIM / "data" / "world.json"
+REPO_PATH = SIM / "repo"
 
 ORIGINAL_SERVICES = ["payments-api", "checkout-web", "inventory-sync", "notifier"]
 
@@ -84,19 +85,19 @@ def test_first_eight_confluence_pages_unchanged(world, main_world):
 
 
 def test_scenarios_module_is_the_only_new_generator_hook():
-    """sim/world.py calls sim/scenarios.py in exactly one place; sim/servers edits stay additive
+    """examples/sim/world.py calls examples/sim/scenarios.py in exactly one place; sim/servers edits stay additive
     (new optional fields read with .get(...) defaults, no removed or renamed fields)."""
-    world_src = (ROOT / "sim" / "world.py").read_text()
+    world_src = (SIM / "world.py").read_text()
     assert world_src.count("scenarios.extend(") == 1
     for path, needle in [
-        ("sim/servers/jira.py", 'issue.get("issuelinks", [])'),
-        ("sim/servers/jira.py", 'inc["jira"].get("comments")'),
-        ("sim/servers/pagerduty.py", 'pd.get("related_incidents", [])'),
-        ("sim/servers/confluence.py", 'p.get("links", [])'),
-        ("sim/servers/confluence.py", 'p.get("parent_id")'),
-        ("sim/servers/slack.py", 'w.get("deploys", [])'),
+        ("servers/jira.py", 'issue.get("issuelinks", [])'),
+        ("servers/jira.py", 'inc["jira"].get("comments")'),
+        ("servers/pagerduty.py", 'pd.get("related_incidents", [])'),
+        ("servers/confluence.py", 'p.get("links", [])'),
+        ("servers/confluence.py", 'p.get("parent_id")'),
+        ("servers/slack.py", 'w.get("deploys", [])'),
     ]:
-        assert needle in (ROOT / path).read_text(), f"{path} missing additive change {needle!r}"
+        assert needle in (SIM / path).read_text(), f"{path} missing additive change {needle!r}"
 
 
 # ---------------------------------------------------------------- counts
@@ -203,7 +204,7 @@ def test_new_entities_are_not_isolated_islands(world):
 
     new_incident_ids = {i["id"] for i in world["incidents"][10:]}
     # filler/reference pages are deliberately generic wiki pages, not tied to any incident (that's the
-    # point of them, per sim/scenarios.py's FILLER_PAGE_TITLES) -- they are exempt from "must have an edge"
+    # point of them, per examples/sim/scenarios.py's FILLER_PAGE_TITLES) -- they are exempt from "must have an edge"
     new_page_ids = {p["id"] for p in world["confluence_pages"][8:] if p.get("labels") != ["reference"]}
     new_deploy_ids = {d["id"] for d in world["deploys"]}
     new_nodes = new_incident_ids | new_page_ids | new_deploy_ids
@@ -458,10 +459,10 @@ def test_new_commits_exist_and_come_after_the_first_eleven(world):
 def test_regenerating_the_world_is_byte_identical(tmp_path):
     before = WORLD_PATH.read_bytes()
     before_log = subprocess.run(["git", "log", "--format=%H"], cwd=REPO_PATH, capture_output=True, text=True, check=True).stdout
-    subprocess.run([sys.executable, "sim/world.py"], cwd=ROOT, check=True, capture_output=True)
+    subprocess.run([sys.executable, "world.py"], cwd=SIM, check=True, capture_output=True)
     after = WORLD_PATH.read_bytes()
     after_log = subprocess.run(["git", "log", "--format=%H"], cwd=REPO_PATH, capture_output=True, text=True, check=True).stdout
-    assert before == after, "regenerating sim/world.py must be byte-for-byte deterministic"
+    assert before == after, "regenerating examples/sim/world.py must be byte-for-byte deterministic"
     assert before_log == after_log, "regenerating the repo must produce identical commit SHAs"
 
 

@@ -15,8 +15,8 @@ from typing import Any
 
 from markupsafe import Markup
 
-from app import diagram
-from app.render import cards as render_cards
+from crystal.app import diagram
+from crystal.app.render import cards as render_cards
 from crystal.extract.ids import ID_PATTERNS, typed_mentions
 from crystal.flow.runner import count_hits
 

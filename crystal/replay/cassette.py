@@ -10,9 +10,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from crystal import PROJECT_ROOT
+from crystal import state
 
-CASSETTE_DIR = PROJECT_ROOT / "traces" / "cassettes"
+
+def current_cassette_dir() -> Path:
+    return state.cassette_dir()
 
 
 def call_key(server: str, tool: str, args: dict) -> str:

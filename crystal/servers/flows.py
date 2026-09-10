@@ -1,26 +1,24 @@
 """MCP server exposing the crystallized flows as tools, so the authoring agent can try a flow before exploring.
 
 Not a simulation: it runs the real flow interpreter (crystal.flow.runner) over the other registered servers and
-returns a compact run summary with evidence (never raw results; capped in size). Registered as `flows` in
-servers.yaml / .mcp.json. The recorder hook records mcp__flows__run_flow calls like any other, so a trace reads
-"ran flow X, then did Y" - the diff the inducer needs.
+returns a compact run summary with evidence (never raw results; capped in size). A built-in server (`flows`) of
+every workspace: the flows it lists and runs are the workspace's, from its state dir under $MCP_EXPLORER_HOME
+(the workspace is $CRYSTAL_WORKSPACE, else the directory it is started in). The recorder hook records
+mcp__flows__run_flow calls like any other, so a trace reads "ran flow X, then did Y" - the diff the inducer needs.
+
+  python -m crystal.servers.flows
 """
 from __future__ import annotations
 
 import asyncio
 import json
-import sys
-from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
-
-from app.render import cards  # noqa: E402
-from crystal.flow.lifecycle import describe, get_lifecycle  # noqa: E402
-from crystal.flow.runner import FlowRunner, list_flows, load_flow  # noqa: E402
-from crystal.mcp_client import ServerPool, load_registry  # noqa: E402
+from crystal.app.render import cards
+from crystal.flow.lifecycle import describe, get_lifecycle
+from crystal.flow.runner import FlowRunner, list_flows, load_flow
+from crystal.mcp_client import ServerPool, load_registry
 
 mcp = MCPServer("flows", instructions="Crystallized investigation flows. Call list_flows, then run_flow(name, inputs_json) "
                                        "before exploring with the raw tools; it returns the evidence the flow gathered.")
@@ -120,7 +118,7 @@ def list_flows_tool() -> str:
 @mcp.tool(structured_output=False, name="run_flow",
           description="Run a crystallized flow end to end (no AI) and return its evidence: per step the query, hit count, "
                       "extracted values and a few evidence cards. inputs_json is a JSON object, e.g. '{\"key\": \"PAY-101\"}'. "
-                      "The full run is saved as runs/<run_id>.json.")
+                      "The full run is saved in the workspace's runs/ as <run_id>.json.")
 async def run_flow_tool(name: str, inputs_json: str = "{}") -> str:
     try:
         inputs = json.loads(inputs_json) if inputs_json.strip() else {}

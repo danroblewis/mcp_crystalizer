@@ -1,17 +1,17 @@
-"""Run the real agent (Claude Code headless) against the effective MCP servers with trace recording.
+"""Run the real agent (Claude Code headless) in the workspace with trace recording: `mcp-explorer record`.
 
-  uv run python -m crystal.trace.driver [--workspace <dir>] jira_issue key=SUP-105 [--model sonnet] [--budget 3] [--prompt-file f]
-  uv run python -m crystal.trace.driver --workspace workspaces/agentarena codebase "question=where is the match loop?"
+  mcp-explorer [--workspace <dir>] record jira_issue key=SUP-105 [--model sonnet] [--budget 3] [--prompt-file f] [--yes]
+  mcp-explorer record codebase "question=where is the match loop?"
 
 Claude Code runs in the workspace (its cwd, so Read/Grep/Glob work there like any agent's) with `--mcp-config` set
-to the effective registry for that workspace (servers.yaml < ~/.mcp.json < <workspace>/.mcp.json; written to a
-temporary mcp.json so the agent sees exactly the servers the flow runner uses) and `--strict-mcp-config`, so nothing
-else it is configured with leaks in. Recording: the session id is chosen up front so the trace file is known; a
-meta record (trigger, inputs, workspace) is written before launch, and the project's PostToolUse hook
-(.claude/settings.json, passed with --settings when the workspace is not the project) appends every MCP call to the
-same file under traces/<workspace-slug>/.
+to the effective registry for that workspace (built-ins < ~/.claude.json < ~/.mcp.json < <workspace>/.mcp.json,
+written to a temporary mcp.json so the agent sees exactly the servers the flow runner uses) and
+`--strict-mcp-config`, so nothing else it is configured with leaks in. Recording: the session id is chosen up front
+so the trace file is known; a meta record (trigger, inputs, workspace) is written before launch, and the recording
+hooks (crystal/hooks.py, written to a temporary settings file and passed with --settings) append the prompt, every
+MCP call and the final message to the same file under the workspace's state dir.
 
-`run_agent` is the library entry point used by `crystal author` / `crystal repair`; nothing in this codebase calls it
+`run_agent` is the library entry point used by `mcp-explorer author` / `repair`; nothing in this codebase calls it
 without an explicit user command, and every call costs real money (cap with budget).
 """
 from __future__ import annotations
@@ -24,14 +24,13 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from crystal import PROJECT_ROOT
+from crystal import hooks
+from crystal import state as state_mod
 from crystal import workspace as ws_mod
 from crystal.mcp_client import load_registry
 from crystal.registry import to_mcp_json
-from crystal.trace.record import TRACE_DIR, Recorder
+from crystal.trace.record import Recorder
 from crystal.trace.store import load_session
-
-SETTINGS = PROJECT_ROOT / ".claude" / "settings.json"
 
 PROMPTS = {
     "jira_issue": (
@@ -60,25 +59,22 @@ PROMPTS = {
 
 
 def build_command(prompt: str, sid: str, budget, model: str | None, servers: list[str], mcp_config: Path,
-                  ws: ws_mod.Workspace) -> list[str]:
+                  settings: Path) -> list[str]:
     allowed = [f"mcp__{s}" for s in servers] + [f"mcp__{s}__*" for s in servers] + ["Read", "Grep", "Glob"]
     cmd = ["claude", "-p", prompt, "--session-id", sid, "--output-format", "json", "--max-budget-usd", str(budget),
-           "--allowedTools", *allowed, "--mcp-config", str(mcp_config), "--strict-mcp-config"]
-    if not ws.is_project:
-        # the recording hook lives in the project's settings; running in another directory, Claude Code would not
-        # load them on its own
-        cmd += ["--settings", str(SETTINGS)]
+           "--allowedTools", *allowed, "--mcp-config", str(mcp_config), "--strict-mcp-config",
+           "--settings", str(settings)]
     if model:
         cmd += ["--model", model]
     return cmd
 
 
 def agent_env(ws: ws_mod.Workspace) -> dict[str, str]:
-    """The child's environment: no CLAUDE_* (nested-session detection), the workspace for the servers it spawns
-    and for the hook (which records under traces/<slug>/), and the project dir the hook must `cd` into."""
+    """The child's environment: no CLAUDE_* (nested-session detection), the workspace and the state home for the
+    servers it spawns and for the hook (which maps cwd to the same workspace)."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE")}
     env[ws_mod.ENV] = str(ws.root)
-    env["CRYSTAL_PROJECT_DIR"] = str(PROJECT_ROOT)
+    env[state_mod.HOME_ENV] = str(state_mod.home())
     return env
 
 
@@ -86,22 +82,23 @@ def run_agent(trigger: str, inputs: dict, prompt: str, budget: str | float = "3"
               servers: list[str] | None = None, meta: dict | None = None, session_id: str | None = None,
               quiet: bool = False, workspace: str | Path | None = None) -> dict:
     """Launch `claude -p` once with recording, in the workspace (`workspace`, else $CRYSTAL_WORKSPACE, else the
-    project). Returns {session_id, cost_usd, num_turns, duration_ms, is_error, result, returncode, stderr, trace_path,
-    calls, workspace, mcp_config}. COSTS MONEY: capped by `budget` (USD)."""
+    current directory). Returns {session_id, cost_usd, num_turns, duration_ms, is_error, result, returncode, stderr,
+    trace_path, calls, workspace, mcp_config}. COSTS MONEY: capped by `budget` (USD)."""
     ws = ws_mod.workspace(workspace)
+    st = ws.state.ensure()
     sid = session_id or str(uuid.uuid4())
-    trace_dir = ws.namespaced(TRACE_DIR)
+    trace_dir = st.traces
     Recorder(sid, "claude-code", trace_dir=trace_dir,
              meta={"trigger": trigger, "inputs": inputs, "model": model or "default", "prompt": prompt,
                    "workspace": ws.slug, "workspace_root": str(ws.root), "workspace_meta": ws.meta(), **(meta or {})})
     registry = load_registry(workspace=ws)
     servers = servers or list(registry)
     cfg = to_mcp_json(registry, only=servers)
-    tmp = tempfile.NamedTemporaryFile("w", prefix="crystal-mcp-", suffix=".json", delete=False)
-    with tmp:
-        json.dump(cfg, tmp, indent=2)
-    mcp_config = Path(tmp.name)
-    cmd = build_command(prompt, sid, budget, model, servers, mcp_config, ws)
+    tmpdir = Path(tempfile.mkdtemp(prefix="mcp-explorer-record-"))
+    mcp_config = tmpdir / "mcp.json"
+    mcp_config.write_text(json.dumps(cfg, indent=2))
+    settings = hooks.write_temp_settings(tmpdir / "settings.json")
+    cmd = build_command(prompt, sid, budget, model, servers, mcp_config, settings)
     if not quiet:
         print(f"session {sid} in workspace {ws}\n$ {' '.join(cmd[:4])} ... ({len(cfg['mcpServers'])} servers from "
               f"{mcp_config.name}, budget ${budget})", flush=True)
@@ -109,6 +106,11 @@ def run_agent(trigger: str, inputs: dict, prompt: str, budget: str | float = "3"
         proc = subprocess.run(cmd, cwd=ws.root, env=agent_env(ws), capture_output=True, text=True)
     finally:
         mcp_config.unlink(missing_ok=True)
+        settings.unlink(missing_ok=True)
+        try:
+            tmpdir.rmdir()
+        except OSError:
+            pass
     out = proc.stdout.strip()
     res: dict = {}
     try:
@@ -121,7 +123,10 @@ def run_agent(trigger: str, inputs: dict, prompt: str, budget: str | float = "3"
             "workspace": ws.slug, "mcp_config": cfg}
     p = Path(info["trace_path"])
     if p.exists():
-        info["calls"] = [{"seq": c["seq"], "server": c["server"], "tool": c["tool"], "input": c.get("input")} for c in load_session(p).calls]
+        sess = load_session(p)
+        info["calls"] = [{"seq": c["seq"], "server": c["server"], "tool": c["tool"], "input": c.get("input")} for c in sess.calls]
+        if info["result"] and sess.result is None:
+            Recorder(sid, "claude-code", trace_dir=trace_dir).result(info["result"])   # the Stop hook may not have fired (headless)
     return info
 
 
@@ -137,18 +142,30 @@ def print_result(info: dict) -> None:
 
 
 def main(argv: list[str]) -> int:
+    from crystal.author import confirm
     ws, argv = ws_mod.split_argv(argv)
     if ws is not None:
         ws_mod.activate(ws)
-    if not argv:
+    if not argv or argv[0].startswith("-"):
         print(__doc__)
         return 1
     trigger = argv[0]
     inputs = dict(a.split("=", 1) for a in argv[1:] if "=" in a and not a.startswith("--"))
     model = argv[argv.index("--model") + 1] if "--model" in argv else None
     budget = argv[argv.index("--budget") + 1] if "--budget" in argv else "3"
-    prompt = Path(argv[argv.index("--prompt-file") + 1]).read_text() if "--prompt-file" in argv else PROMPTS[trigger]
-    prompt = prompt.format(**inputs)
+    if "--prompt-file" in argv:
+        prompt = Path(argv[argv.index("--prompt-file") + 1]).read_text()
+    elif trigger in PROMPTS:
+        prompt = PROMPTS[trigger]
+    else:
+        prompt = "Investigate {inputs} using the MCP tools available. Use the tools directly; do not ask questions. Finish with a short summary."
+    try:
+        prompt = prompt.format(**inputs, inputs=json.dumps(inputs))
+    except KeyError as e:
+        print(f"the {trigger} prompt needs an input {e}; pass it as {str(e).strip(chr(39))}=...")
+        return 1
+    if not confirm(argv, f"mcp-explorer record {trigger} {inputs} in {ws_mod.current()}"):
+        return 2
     info = run_agent(trigger, inputs, prompt, budget=budget, model=model)
     print_result(info)
     return info["returncode"]

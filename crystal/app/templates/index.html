@@ -1,5 +1,22 @@
 {% extends "base.html" %}{% block body %}
-<h1>Flows</h1>
+{% set ws = workspace() %}
+<h1>Flows <span class="muted small" style="font-weight:400">in {{ ws.name }}</span></h1>
+{% if not flows %}
+<div class="start" id="getting-started">
+<h2>No flows yet for this workspace</h2>
+<p class="muted">A flow is compiled from recorded Claude Code sessions in <span class="mono">{{ ws.root }}</span>. Nothing here calls an LLM; the recording happens in the sessions you already run.</p>
+<ol>
+<li><b>Record sessions.</b> Either install the hook once, so every Claude Code session in any directory records its prompt and MCP calls
+{% if ws.hook.PostToolUse and ws.hook.UserPromptSubmit %}<span class="pill ok">hook installed</span>{% else %}<pre>mcp-explorer install-hook</pre>then run <code>claude</code> here as usual{% endif %}
+— or run one headless session now (costs money; <code>--budget</code> caps it):
+<pre>mcp-explorer record &lt;trigger&gt; key=value ... --yes --budget 3</pre></li>
+<li><b>Induce a flow</b> from the recorded traces of a trigger (no AI):
+<pre>mcp-explorer induce &lt;trigger&gt;</pre></li>
+<li><b>Run it</b> from this page or with <code>mcp-explorer run &lt;flow&gt; key=value</code>; the dossier shows the evidence it gathered.</li>
+</ol>
+<p class="small muted">{{ trace_count }} recorded session{{ '' if trace_count == 1 else 's' }} so far{% if trace_count %} (<a href="/traces">agent traces</a>){% endif %}. State lives in <span class="mono">{{ ws.state_dir }}</span>; servers come from <span class="mono">{{ ws.root }}/.mcp.json</span> (<code>mcp-explorer servers</code>).</p>
+</div>
+{% endif %}
 <div class="cards">
 {% for f in flows %}
 <div class="fcard">
