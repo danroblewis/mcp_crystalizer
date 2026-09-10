@@ -1,0 +1,1705 @@
+{
+ "run_id": "20260910T004639-3b6bf8",
+ "flow": "investigate-jira-ticket",
+ "flow_path": "/Users/danroblewis/mcp_explorer/.claude/worktrees/agent-a82ab760bb8283900/flows/investigate-jira-ticket.yaml",
+ "inputs": {
+  "key": "AUTH-122"
+ },
+ "started": "2026-09-10T00:46:39.226579+00:00",
+ "steps": [
+  {
+   "id": "issue",
+   "title": "Jira ticket",
+   "tool": "jira.jira_get_issue",
+   "args": {
+    "issue_key": "AUTH-122"
+   },
+   "result": {
+    "key": "AUTH-122",
+    "id": "27702",
+    "fields": {
+     "summary": "auth-service: elevated 5xx after AuthTokenExpired",
+     "status": {
+      "name": "Done"
+     },
+     "issuetype": {
+      "name": "Bug"
+     },
+     "priority": {
+      "name": "P1"
+     },
+     "project": {
+      "key": "AUTH"
+     },
+     "components": [
+      {
+       "name": "auth-service"
+      }
+     ],
+     "labels": [
+      "incident",
+      "identity"
+     ],
+     "reporter": {
+      "displayName": "judy"
+     },
+     "assignee": {
+      "displayName": "ivan"
+     },
+     "created": "2026-12-20T13:14:00Z",
+     "updated": "2026-12-20T19:02:00Z",
+     "issuelinks": [],
+     "description": "Alert fired on auth-service at 2026-12-20T13:02:00Z.\n\nError: AuthTokenExpired: auth token expired mid-request\nSample trace: trace_id=1589cbb8cf4f9818fe9aaf2485aad023\nAffected pod: auth-service-06e3a752d-e055a\n\nCustomers saw failures in validate_token(). Slack discussion in #incidents. Runbook: auth-service runbook.\n\nThis looks like AUTH-117 again -- same error class, same service."
+    }
+   },
+   "error": null,
+   "duration_ms": 316.8,
+   "attempts": [],
+   "extracts": {
+    "summary": "auth-service: elevated 5xx after AuthTokenExpired",
+    "created": "2026-12-20T13:14:00Z",
+    "service": "auth-service",
+    "service_in_text": "auth-service",
+    "error_sig": "AuthTokenExpired: auth token expired mid-request",
+    "error_class": "AuthTokenExpired",
+    "trace_ids": [
+     "1589cbb8cf4f9818fe9aaf2485aad023"
+    ],
+    "pods": [
+     "auth-service-06e3a752d-e055a"
+    ],
+    "window": {
+     "start": "2026-12-20T12:14:00Z",
+     "end": "2026-12-20T19:14:00Z",
+     "anchor": "2026-12-20T13:14:00Z",
+     "start_date": "2026-12-20",
+     "end_date": "2026-12-20"
+    },
+    "commit_window": {
+     "start": "2026-12-16T13:14:00Z",
+     "end": "2026-12-21T13:14:00Z",
+     "anchor": "2026-12-20T13:14:00Z",
+     "start_date": "2026-12-16",
+     "end_date": "2026-12-21"
+    }
+   },
+   "hits": 1
+  },
+  {
+   "id": "slack",
+   "title": "Slack discussion",
+   "tool": "slack.conversations_search_messages",
+   "args": {
+    "limit": 20,
+    "search_query": "\"AuthTokenExpired: auth token expired mid-request\" in:#incidents after:2026-12-20 before:2026-12-20"
+   },
+   "result": {
+    "total": 1,
+    "page": 1,
+    "messages": {
+     "matches": [
+      {
+       "ts": "1797772320.020098",
+       "thread_ts": "1797771960.020096",
+       "time": "2026-12-20T13:12:00Z",
+       "channel": {
+        "id": "C542575C5",
+        "name": "incidents"
+       },
+       "user": "UA15F8B81",
+       "username": "ivan",
+       "text": "Seeing `AuthTokenExpired: auth token expired mid-request` in logs, e.g. trace_id=1589cbb8cf4f9818fe9aaf2485aad023 on auth-service-06e3a752d-e055a",
+       "permalink": "https://sim.slack.com/archives/C542575C5/p1797772320020098",
+       "reply_count": 0
+      }
+     ]
+    },
+    "next_cursor": ""
+   },
+   "error": null,
+   "duration_ms": 305.8,
+   "attempts": [
+    {
+     "rung": 0,
+     "value": "\"AuthTokenExpired: auth token expired mid-request\" in:#incidents after:2026-12-20 before:2026-12-20",
+     "hits": 1,
+     "error": null
+    }
+   ],
+   "extracts": {
+    "channel_id": "C542575C5",
+    "thread_ts": [
+     "1797771960.020096"
+    ],
+    "trace_ids": [
+     "1589cbb8cf4f9818fe9aaf2485aad023"
+    ]
+   },
+   "hits": 1
+  },
+  {
+   "id": "thread",
+   "title": "Slack thread replies",
+   "tool": "slack.conversations_replies",
+   "items": [
+    {
+     "tool": "slack.conversations_replies",
+     "args": {
+      "channel_id": "C542575C5",
+      "thread_ts": "1797771960.020096",
+      "limit": 50
+     },
+     "result": {
+      "messages": [
+       {
+        "ts": "1797771960.020097",
+        "thread_ts": "1797771960.020096",
+        "time": "2026-12-20T13:06:00Z",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "UA15F8B81",
+        "username": "ivan",
+        "text": "Pager went off again for auth-service: AuthTokenExpired. This looks like AUTH-117 again. Ticket AUTH-122 incoming.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1797771960020097",
+        "reply_count": 7
+       },
+       {
+        "ts": "1797772320.020098",
+        "thread_ts": "1797771960.020096",
+        "time": "2026-12-20T13:12:00Z",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "UA15F8B81",
+        "username": "ivan",
+        "text": "Seeing `AuthTokenExpired: auth token expired mid-request` in logs, e.g. trace_id=1589cbb8cf4f9818fe9aaf2485aad023 on auth-service-06e3a752d-e055a",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1797772320020098",
+        "reply_count": 0
+       },
+       {
+        "ts": "1797772500.020099",
+        "thread_ts": "1797771960.020096",
+        "time": "2026-12-20T13:15:00Z",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "U38FC8CAE",
+        "username": "judy",
+        "text": "Also trace_id=00c6d586f4d7926c39739540219dc795 from a customer report, same error.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1797772500020099",
+        "reply_count": 0
+       },
+       {
+        "ts": "1797772620.020276",
+        "thread_ts": "1797771960.020096",
+        "time": "2026-12-20T13:17:00Z",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "UA15F8B81",
+        "username": "ivan",
+        "text": "Wait, might be cc19837675 -- that also touched auth-service recently.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1797772620020276",
+        "reply_count": 0
+       },
+       {
+        "ts": "1797772680.020277",
+        "thread_ts": "1797771960.020096",
+        "time": "2026-12-20T13:18:00Z",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "UA15F8B81",
+        "username": "ivan",
+        "text": "Also someone pasted trace_id=ccaf267c4ac9a05465f94fddf08cddfb in support, not sure it's related.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1797772680020277",
+        "reply_count": 0
+       },
+       {
+        "ts": "1797772800.020278",
+        "thread_ts": "1797771960.020096",
+        "time": "2026-12-20T13:20:00Z",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "UA15F8B81",
+        "username": "ivan",
+        "text": "False alarm on that other commit, that's unrelated to this one.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1797772800020278",
+        "reply_count": 0
+       },
+       {
+        "ts": "1797773160.020100",
+        "thread_ts": "1797771960.020096",
+        "time": "2026-12-20T13:26:00Z",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "UA15F8B81",
+        "username": "ivan",
+        "text": "Suspect 25acaf6a47 touched validate_token() yesterday. Rolling back.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1797773160020100",
+        "reply_count": 0
+       },
+       {
+        "ts": "1797775260.020101",
+        "thread_ts": "1797771960.020096",
+        "time": "2026-12-20T14:01:00Z",
+        "channel": {
+         "id": "C542575C5",
+         "name": "incidents"
+        },
+        "user": "UA15F8B81",
+        "username": "ivan",
+        "text": "Rollback done, error rate back to baseline. Will write up in AUTH-122.",
+        "permalink": "https://sim.slack.com/archives/C542575C5/p1797775260020101",
+        "reply_count": 0
+       }
+      ]
+     },
+     "error": null,
+     "duration_ms": 1.5,
+     "attempts": [],
+     "extracts": {
+      "trace_ids": [
+       "1589cbb8cf4f9818fe9aaf2485aad023",
+       "00c6d586f4d7926c39739540219dc795",
+       "ccaf267c4ac9a05465f94fddf08cddfb"
+      ],
+      "shas": [
+       "06e3a752d",
+       "cc19837675",
+       "25acaf6a47"
+      ],
+      "people": [
+       "ivan",
+       "ivan",
+       "judy",
+       "ivan",
+       "ivan",
+       "ivan",
+       "ivan",
+       "ivan"
+      ]
+     },
+     "hits": 8,
+     "item": "1797771960.020096"
+    }
+   ],
+   "hits": 8
+  },
+  {
+   "id": "code",
+   "title": "Code that raises or logs the error",
+   "tool": "code.grep",
+   "args": {
+    "pattern": "AuthTokenExpired",
+    "glob": "**/*.py",
+    "context": 2
+   },
+   "result": {
+    "matches": [
+     {
+      "file": "services/auth_service/handler.py",
+      "line": 7,
+      "text": "class AuthTokenExpired(Exception):",
+      "context": [
+       "",
+       "",
+       "class AuthTokenExpired(Exception):",
+       "    pass",
+       ""
+      ]
+     },
+     {
+      "file": "services/auth_service/handler.py",
+      "line": 16,
+      "text": "        log.error(\"AuthTokenExpired: auth token expired mid-request (account=%s) trace_id=%s pod=%s fn=validate_token\", request.account, request.trace_id, request.pod)",
+      "context": [
+       "        return _do_validate_token(request)",
+       "    except Exception as exc:  # noqa: BLE001",
+       "        log.error(\"AuthTokenExpired: auth token expired mid-request (account=%s) trace_id=%s pod=%s fn=validate_token\", request.account, request.trace_id, request.pod)",
+       "        raise AuthTokenExpired(str(exc)) from exc",
+       ""
+      ]
+     },
+     {
+      "file": "services/auth_service/handler.py",
+      "line": 17,
+      "text": "        raise AuthTokenExpired(str(exc)) from exc",
+      "context": [
+       "    except Exception as exc:  # noqa: BLE001",
+       "        log.error(\"AuthTokenExpired: auth token expired mid-request (account=%s) trace_id=%s pod=%s fn=validate_token\", request.account, request.trace_id, request.pod)",
+       "        raise AuthTokenExpired(str(exc)) from exc",
+       "",
+       ""
+      ]
+     }
+    ],
+    "truncated": false
+   },
+   "error": null,
+   "duration_ms": 309.0,
+   "attempts": [],
+   "extracts": {
+    "files": [
+     "services/auth_service/handler.py",
+     "services/auth_service/handler.py",
+     "services/auth_service/handler.py"
+    ]
+   },
+   "hits": 3
+  },
+  {
+   "id": "owners",
+   "title": "Owning team (CODEOWNERS)",
+   "tool": "code.codeowners",
+   "items": [
+    {
+     "tool": "code.codeowners",
+     "args": {
+      "path": "services/auth_service/handler.py"
+     },
+     "result": {
+      "path": "services/auth_service/handler.py",
+      "owners": [
+       "@identity"
+      ]
+     },
+     "error": null,
+     "duration_ms": 1.3,
+     "attempts": [],
+     "extracts": {
+      "teams": [
+       "@identity"
+      ]
+     },
+     "hits": 1,
+     "item": "services/auth_service/handler.py"
+    }
+   ],
+   "hits": 1
+  },
+  {
+   "id": "confluence",
+   "title": "Runbook / wiki",
+   "tool": "confluence.confluence_search",
+   "args": {
+    "limit": 5,
+    "query": "text ~ \"AuthTokenExpired\" AND space = IDENTITY"
+   },
+   "result": {
+    "total": 2,
+    "results": [
+     {
+      "id": "50000",
+      "title": "auth-service runbook",
+      "space": {
+       "key": "IDENTITY"
+      },
+      "labels": [
+       "runbook",
+       "auth-service"
+      ],
+      "created": "2026-06-24T09:00:00Z",
+      "last_modified": "2027-05-30T09:00:00Z",
+      "url": "https://sim.atlassian.net/wiki/pages/50000",
+      "links": [
+       "50015"
+      ],
+      "parent_id": null,
+      "excerpt": "h1. auth-service runbook\n\nOwned by team identity (ivan, judy, mallory). Alerts go to #identity-alerts; incidents are discussed in #incidents.\n\nh2. Known failure modes\n\nh3. AuthTokenExpired\nSymptom: log lines containing 'AuthTokenExpired: au"
+     },
+     {
+      "id": "50021",
+      "title": "auth-service postmortem: AuthTokenExpired recurrence",
+      "space": {
+       "key": "IDENTITY"
+      },
+      "labels": [
+       "postmortem",
+       "auth-service"
+      ],
+      "created": "2026-12-22T13:02:00Z",
+      "last_modified": "2026-12-22T13:02:00Z",
+      "url": "https://sim.atlassian.net/wiki/pages/50021",
+      "links": [
+       "AUTH-117",
+       "AUTH-122",
+       "121446e804d231fb01c05b643561ca6f4cb6b60a",
+       "25acaf6a47d6d1fc0423cf627138620da0470ab1",
+       "50015"
+      ],
+      "parent_id": "50000",
+      "excerpt": "h1. auth-service postmortem: AuthTokenExpired recurrence\n\nh2. Summary\nTwo incidents on auth-service with the same error class AuthTokenExpired: AUTH-117 and AUTH-122, 39 days apart. The first fix (commit 121446e804) did not fully address th"
+     }
+    ]
+   },
+   "error": null,
+   "duration_ms": 320.3,
+   "attempts": [
+    {
+     "rung": 0,
+     "value": "text ~ \"AuthTokenExpired\" AND space = IDENTITY",
+     "hits": 2,
+     "error": null
+    }
+   ],
+   "extracts": {
+    "page_ids": [
+     "50000",
+     "50021"
+    ]
+   },
+   "hits": 2
+  },
+  {
+   "id": "runbook",
+   "title": "Runbook page",
+   "tool": "confluence.confluence_get_page",
+   "items": [
+    {
+     "tool": "confluence.confluence_get_page",
+     "args": {
+      "page_id": "50000"
+     },
+     "result": {
+      "id": "50000",
+      "title": "auth-service runbook",
+      "space": {
+       "key": "IDENTITY"
+      },
+      "labels": [
+       "runbook",
+       "auth-service"
+      ],
+      "created": "2026-06-24T09:00:00Z",
+      "last_modified": "2027-05-30T09:00:00Z",
+      "url": "https://sim.atlassian.net/wiki/pages/50000",
+      "links": [
+       "50015"
+      ],
+      "parent_id": null,
+      "body": "h1. auth-service runbook\n\nOwned by team identity (ivan, judy, mallory). Alerts go to #identity-alerts; incidents are discussed in #incidents.\n\nh2. Known failure modes\n\nh3. AuthTokenExpired\nSymptom: log lines containing 'AuthTokenExpired: auth token expired mid-request' from validate_token().\nCheck: error rate panel for service=auth-service; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of auth-service; if persists, page identity on-call.\n\nh3. IdentityProviderTimeout\nSymptom: log lines containing 'IdentityProviderTimeout: identity provider did not respond within 10s' from authenticate().\nCheck: error rate panel for service=auth-service; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of auth-service; if persists, page identity on-call.\n\nh2. Dashboards\nChronosphere: rate(http_requests_total{service=\"auth-service\",code=~\"5..\"}[5m])\n"
+     },
+     "error": null,
+     "duration_ms": 1.3,
+     "attempts": [],
+     "extracts": {
+      "remediation": [
+       "roll back the latest deploy of auth-service; if persists, page identity on-call."
+      ]
+     },
+     "hits": 2,
+     "item": "50000"
+    },
+    {
+     "tool": "confluence.confluence_get_page",
+     "args": {
+      "page_id": "50021"
+     },
+     "result": {
+      "id": "50021",
+      "title": "auth-service postmortem: AuthTokenExpired recurrence",
+      "space": {
+       "key": "IDENTITY"
+      },
+      "labels": [
+       "postmortem",
+       "auth-service"
+      ],
+      "created": "2026-12-22T13:02:00Z",
+      "last_modified": "2026-12-22T13:02:00Z",
+      "url": "https://sim.atlassian.net/wiki/pages/50021",
+      "links": [
+       "AUTH-117",
+       "AUTH-122",
+       "121446e804d231fb01c05b643561ca6f4cb6b60a",
+       "25acaf6a47d6d1fc0423cf627138620da0470ab1",
+       "50015"
+      ],
+      "parent_id": "50000",
+      "body": "h1. auth-service postmortem: AuthTokenExpired recurrence\n\nh2. Summary\nTwo incidents on auth-service with the same error class AuthTokenExpired: AUTH-117 and AUTH-122, 39 days apart. The first fix (commit 121446e804) did not fully address the root cause; the second incident was resolved with commit 25acaf6a47.\n\nh2. Timeline\n* AUTH-117 at 2026-11-11T13:02:00Z\n* AUTH-122 at 2026-12-20T13:02:00Z\n\nh2. Follow-ups\nSee the auth-service runbook and the identity architecture page for context."
+     },
+     "error": null,
+     "duration_ms": 1.1,
+     "attempts": [],
+     "extracts": {
+      "remediation": []
+     },
+     "hits": 2,
+     "item": "50021"
+    }
+   ],
+   "hits": 4
+  },
+  {
+   "id": "metrics",
+   "title": "Error rate around the incident",
+   "tool": "chronosphere.query_prometheus_range",
+   "args": {
+    "query": "rate(http_requests_total{service=\"auth-service\",code=~\"5..\"}[5m])",
+    "start": "2026-12-20T12:14:00Z",
+    "end": "2026-12-20T19:14:00Z",
+    "step_seconds": 300
+   },
+   "result": {
+    "status": "success",
+    "data": {
+     "resultType": "matrix",
+     "result": [
+      {
+       "metric": {
+        "__name__": "http_requests_total:error_rate",
+        "service": "auth-service",
+        "env": "prod"
+       },
+       "values": [
+        [
+         1797768840,
+         "0.400"
+        ],
+        [
+         1797769140,
+         "0.400"
+        ],
+        [
+         1797769440,
+         "0.400"
+        ],
+        [
+         1797769740,
+         "0.400"
+        ],
+        [
+         1797770040,
+         "0.400"
+        ],
+        [
+         1797770340,
+         "0.400"
+        ],
+        [
+         1797770640,
+         "0.400"
+        ],
+        [
+         1797770940,
+         "0.400"
+        ],
+        [
+         1797771240,
+         "0.400"
+        ],
+        [
+         1797771540,
+         "18.500"
+        ],
+        [
+         1797771840,
+         "18.500"
+        ],
+        [
+         1797772140,
+         "18.500"
+        ],
+        [
+         1797772440,
+         "18.500"
+        ],
+        [
+         1797772740,
+         "18.500"
+        ],
+        [
+         1797773040,
+         "18.500"
+        ],
+        [
+         1797773340,
+         "18.500"
+        ],
+        [
+         1797773640,
+         "18.500"
+        ],
+        [
+         1797773940,
+         "18.500"
+        ],
+        [
+         1797774240,
+         "18.500"
+        ],
+        [
+         1797774540,
+         "18.500"
+        ],
+        [
+         1797774840,
+         "0.400"
+        ],
+        [
+         1797775140,
+         "0.400"
+        ],
+        [
+         1797775440,
+         "0.400"
+        ],
+        [
+         1797775740,
+         "0.400"
+        ],
+        [
+         1797776040,
+         "0.400"
+        ],
+        [
+         1797776340,
+         "0.400"
+        ],
+        [
+         1797776640,
+         "0.400"
+        ],
+        [
+         1797776940,
+         "0.400"
+        ],
+        [
+         1797777240,
+         "0.400"
+        ],
+        [
+         1797777540,
+         "0.400"
+        ],
+        [
+         1797777840,
+         "0.400"
+        ],
+        [
+         1797778140,
+         "0.400"
+        ],
+        [
+         1797778440,
+         "0.400"
+        ],
+        [
+         1797778740,
+         "0.400"
+        ],
+        [
+         1797779040,
+         "0.400"
+        ],
+        [
+         1797779340,
+         "0.400"
+        ],
+        [
+         1797779640,
+         "0.400"
+        ],
+        [
+         1797779940,
+         "0.400"
+        ],
+        [
+         1797780240,
+         "0.400"
+        ],
+        [
+         1797780540,
+         "0.400"
+        ],
+        [
+         1797780840,
+         "0.400"
+        ],
+        [
+         1797781140,
+         "0.400"
+        ],
+        [
+         1797781440,
+         "0.400"
+        ],
+        [
+         1797781740,
+         "0.400"
+        ],
+        [
+         1797782040,
+         "0.400"
+        ],
+        [
+         1797782340,
+         "0.400"
+        ],
+        [
+         1797782640,
+         "0.400"
+        ],
+        [
+         1797782940,
+         "0.400"
+        ],
+        [
+         1797783240,
+         "0.400"
+        ],
+        [
+         1797783540,
+         "0.400"
+        ],
+        [
+         1797783840,
+         "0.400"
+        ],
+        [
+         1797784140,
+         "0.400"
+        ],
+        [
+         1797784440,
+         "0.400"
+        ],
+        [
+         1797784740,
+         "0.400"
+        ],
+        [
+         1797785040,
+         "0.400"
+        ],
+        [
+         1797785340,
+         "0.400"
+        ],
+        [
+         1797785640,
+         "0.400"
+        ],
+        [
+         1797785940,
+         "0.400"
+        ],
+        [
+         1797786240,
+         "0.400"
+        ],
+        [
+         1797786540,
+         "0.400"
+        ],
+        [
+         1797786840,
+         "0.400"
+        ],
+        [
+         1797787140,
+         "0.400"
+        ],
+        [
+         1797787440,
+         "0.400"
+        ],
+        [
+         1797787740,
+         "0.400"
+        ],
+        [
+         1797788040,
+         "0.400"
+        ],
+        [
+         1797788340,
+         "0.400"
+        ],
+        [
+         1797788640,
+         "0.400"
+        ],
+        [
+         1797788940,
+         "0.400"
+        ],
+        [
+         1797789240,
+         "0.400"
+        ],
+        [
+         1797789540,
+         "0.400"
+        ],
+        [
+         1797789840,
+         "0.400"
+        ],
+        [
+         1797790140,
+         "0.400"
+        ],
+        [
+         1797790440,
+         "0.400"
+        ],
+        [
+         1797790740,
+         "0.400"
+        ],
+        [
+         1797791040,
+         "0.400"
+        ],
+        [
+         1797791340,
+         "0.400"
+        ],
+        [
+         1797791640,
+         "0.400"
+        ],
+        [
+         1797791940,
+         "0.400"
+        ],
+        [
+         1797792240,
+         "0.400"
+        ],
+        [
+         1797792540,
+         "0.400"
+        ],
+        [
+         1797792840,
+         "0.400"
+        ],
+        [
+         1797793140,
+         "0.400"
+        ],
+        [
+         1797793440,
+         "0.400"
+        ],
+        [
+         1797793740,
+         "0.400"
+        ],
+        [
+         1797794040,
+         "0.400"
+        ]
+       ]
+      }
+     ]
+    }
+   },
+   "error": null,
+   "duration_ms": 322.7,
+   "attempts": [],
+   "extracts": {},
+   "hits": 1
+  },
+  {
+   "id": "logs",
+   "title": "Logs per trace id",
+   "tool": "logz.search_logs",
+   "items": [
+    {
+     "tool": "logz.search_logs",
+     "args": {
+      "query": "trace_id:1589cbb8cf4f9818fe9aaf2485aad023",
+      "from_time": "2026-12-20T12:14:00Z",
+      "to_time": "2026-12-20T19:14:00Z",
+      "size": 20
+     },
+     "result": {
+      "total": 8,
+      "range": {
+       "from": "2026-12-20T12:14:00+00:00",
+       "to": "2026-12-20T19:14:00+00:00"
+      },
+      "hits": [
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:39:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+         "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_5d4250) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:33:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+         "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_dddef7) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:27:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+         "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_998306) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:21:00Z",
+         "level": "WARN",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+         "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_fa3e44) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:15:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+         "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_ff9c4c) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:09:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+         "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_54d606) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:03:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+         "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_2bad5a) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T12:57:00Z",
+         "level": "WARN",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+         "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_8f4b6f) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token"
+        }
+       }
+      ]
+     },
+     "error": null,
+     "duration_ms": 343.0,
+     "attempts": [],
+     "extracts": {
+      "pods": [
+       "auth-service-06e3a752d-14338",
+       "auth-service-06e3a752d-e055a",
+       "auth-service-06e3a752d-14338",
+       "auth-service-06e3a752d-e055a",
+       "auth-service-06e3a752d-14338",
+       "auth-service-06e3a752d-e055a",
+       "auth-service-06e3a752d-14338",
+       "auth-service-06e3a752d-e055a"
+      ],
+      "lines": [
+       "AuthTokenExpired: auth token expired mid-request (account=acc_5d4250) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_dddef7) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_998306) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_fa3e44) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_ff9c4c) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_54d606) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_2bad5a) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_8f4b6f) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token"
+      ]
+     },
+     "hits": 8,
+     "item": "1589cbb8cf4f9818fe9aaf2485aad023"
+    },
+    {
+     "tool": "logz.search_logs",
+     "args": {
+      "query": "trace_id:00c6d586f4d7926c39739540219dc795",
+      "from_time": "2026-12-20T12:14:00Z",
+      "to_time": "2026-12-20T19:14:00Z",
+      "size": 20
+     },
+     "result": {
+      "total": 8,
+      "range": {
+       "from": "2026-12-20T12:14:00+00:00",
+       "to": "2026-12-20T19:14:00+00:00"
+      },
+      "hits": [
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:41:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+         "trace_id": "00c6d586f4d7926c39739540219dc795",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_c60fdf) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:35:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+         "trace_id": "00c6d586f4d7926c39739540219dc795",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_f1c2fd) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:29:00Z",
+         "level": "WARN",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+         "trace_id": "00c6d586f4d7926c39739540219dc795",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_50b168) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:23:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+         "trace_id": "00c6d586f4d7926c39739540219dc795",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_4967c3) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:17:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+         "trace_id": "00c6d586f4d7926c39739540219dc795",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_b27287) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:11:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+         "trace_id": "00c6d586f4d7926c39739540219dc795",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_94730e) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T13:05:00Z",
+         "level": "WARN",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+         "trace_id": "00c6d586f4d7926c39739540219dc795",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_361a34) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token"
+        }
+       },
+       {
+        "_source": {
+         "@timestamp": "2026-12-20T12:59:00Z",
+         "level": "ERROR",
+         "service": "auth-service",
+         "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+         "trace_id": "00c6d586f4d7926c39739540219dc795",
+         "logger": "services.auth_service.handler",
+         "message": "AuthTokenExpired: auth token expired mid-request (account=acc_d673bf) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token"
+        }
+       }
+      ]
+     },
+     "error": null,
+     "duration_ms": 2.3,
+     "attempts": [],
+     "extracts": {
+      "pods": [
+       "auth-service-06e3a752d-e055a",
+       "auth-service-06e3a752d-14338",
+       "auth-service-06e3a752d-e055a",
+       "auth-service-06e3a752d-14338",
+       "auth-service-06e3a752d-e055a",
+       "auth-service-06e3a752d-14338",
+       "auth-service-06e3a752d-e055a",
+       "auth-service-06e3a752d-14338"
+      ],
+      "lines": [
+       "AuthTokenExpired: auth token expired mid-request (account=acc_c60fdf) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_f1c2fd) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_50b168) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_4967c3) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_b27287) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_94730e) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_361a34) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token",
+       "AuthTokenExpired: auth token expired mid-request (account=acc_d673bf) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token"
+      ]
+     },
+     "hits": 8,
+     "item": "00c6d586f4d7926c39739540219dc795"
+    },
+    {
+     "tool": "logz.search_logs",
+     "args": {
+      "query": "trace_id:ccaf267c4ac9a05465f94fddf08cddfb",
+      "from_time": "2026-12-20T12:14:00Z",
+      "to_time": "2026-12-20T19:14:00Z",
+      "size": 20
+     },
+     "result": {
+      "total": 0,
+      "range": {
+       "from": "2026-12-20T12:14:00+00:00",
+       "to": "2026-12-20T19:14:00+00:00"
+      },
+      "hits": []
+     },
+     "error": null,
+     "duration_ms": 1.6,
+     "attempts": [],
+     "extracts": {
+      "pods": [],
+      "lines": []
+     },
+     "hits": 0,
+     "item": "ccaf267c4ac9a05465f94fddf08cddfb"
+    }
+   ],
+   "hits": 16
+  },
+  {
+   "id": "logs_by_error",
+   "title": "All log lines with this error in the window",
+   "tool": "logz.search_logs",
+   "args": {
+    "from_time": "2026-12-20T12:14:00Z",
+    "to_time": "2026-12-20T19:14:00Z",
+    "size": 50,
+    "query": "\"AuthTokenExpired: auth token expired mid-request\" AND service:auth-service"
+   },
+   "result": {
+    "total": 24,
+    "range": {
+     "from": "2026-12-20T12:14:00+00:00",
+     "to": "2026-12-20T19:14:00+00:00"
+    },
+    "hits": [
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:43:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "b7d434d8b6a3f6cf0ef259317c3ee59c",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_4b7fe3) trace_id=b7d434d8b6a3f6cf0ef259317c3ee59c pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:41:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "00c6d586f4d7926c39739540219dc795",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_c60fdf) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:39:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_5d4250) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:37:00Z",
+       "level": "WARN",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "b7d434d8b6a3f6cf0ef259317c3ee59c",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_9526c7) trace_id=b7d434d8b6a3f6cf0ef259317c3ee59c pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:35:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "00c6d586f4d7926c39739540219dc795",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_f1c2fd) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:33:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_dddef7) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:31:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "b7d434d8b6a3f6cf0ef259317c3ee59c",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_c6c5b4) trace_id=b7d434d8b6a3f6cf0ef259317c3ee59c pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:29:00Z",
+       "level": "WARN",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "00c6d586f4d7926c39739540219dc795",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_50b168) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:27:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_998306) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:25:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "b7d434d8b6a3f6cf0ef259317c3ee59c",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_ea15ee) trace_id=b7d434d8b6a3f6cf0ef259317c3ee59c pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:23:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "00c6d586f4d7926c39739540219dc795",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_4967c3) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:21:00Z",
+       "level": "WARN",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_fa3e44) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:19:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "b7d434d8b6a3f6cf0ef259317c3ee59c",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_00c2c2) trace_id=b7d434d8b6a3f6cf0ef259317c3ee59c pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:17:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "00c6d586f4d7926c39739540219dc795",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_b27287) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:15:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_ff9c4c) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:13:00Z",
+       "level": "WARN",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "b7d434d8b6a3f6cf0ef259317c3ee59c",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_b0f387) trace_id=b7d434d8b6a3f6cf0ef259317c3ee59c pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:11:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "00c6d586f4d7926c39739540219dc795",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_94730e) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:09:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_54d606) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:07:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "b7d434d8b6a3f6cf0ef259317c3ee59c",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_54cb7d) trace_id=b7d434d8b6a3f6cf0ef259317c3ee59c pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:05:00Z",
+       "level": "WARN",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "00c6d586f4d7926c39739540219dc795",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_361a34) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:03:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_2bad5a) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T13:01:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "b7d434d8b6a3f6cf0ef259317c3ee59c",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_dd70c3) trace_id=b7d434d8b6a3f6cf0ef259317c3ee59c pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T12:59:00Z",
+       "level": "ERROR",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-14338",
+       "trace_id": "00c6d586f4d7926c39739540219dc795",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_d673bf) trace_id=00c6d586f4d7926c39739540219dc795 pod=auth-service-06e3a752d-14338 fn=validate_token"
+      }
+     },
+     {
+      "_source": {
+       "@timestamp": "2026-12-20T12:57:00Z",
+       "level": "WARN",
+       "service": "auth-service",
+       "kubernetes.pod_name": "auth-service-06e3a752d-e055a",
+       "trace_id": "1589cbb8cf4f9818fe9aaf2485aad023",
+       "logger": "services.auth_service.handler",
+       "message": "AuthTokenExpired: auth token expired mid-request (account=acc_8f4b6f) trace_id=1589cbb8cf4f9818fe9aaf2485aad023 pod=auth-service-06e3a752d-e055a fn=validate_token"
+      }
+     }
+    ]
+   },
+   "error": null,
+   "duration_ms": 1.6,
+   "attempts": [
+    {
+     "rung": 0,
+     "value": "\"AuthTokenExpired: auth token expired mid-request\" AND service:auth-service",
+     "hits": 24,
+     "error": null
+    }
+   ],
+   "extracts": {},
+   "hits": 24
+  },
+  {
+   "id": "commits",
+   "title": "Commits touching the service just before",
+   "tool": "git.git_log",
+   "args": {
+    "path": "services/auth_service",
+    "since": "2026-12-16T13:14:00Z",
+    "until": "2026-12-21T13:14:00Z",
+    "max_count": 10
+   },
+   "result": {
+    "commits": [
+     {
+      "sha": "25acaf6a47d6d1fc0423cf627138620da0470ab1",
+      "author": "ivan",
+      "date": "2026-12-19T13:02:00+00:00",
+      "subject": "auth-service: tighten validation in validate_token"
+     }
+    ]
+   },
+   "error": null,
+   "duration_ms": 349.1,
+   "attempts": [],
+   "extracts": {
+    "shas": [
+     "25acaf6a47d6d1fc0423cf627138620da0470ab1"
+    ]
+   },
+   "hits": 1
+  },
+  {
+   "id": "suspect_commit",
+   "title": "Commit named in Slack",
+   "tool": "git.git_show",
+   "items": [
+    {
+     "tool": "git.git_show",
+     "args": {
+      "sha": "06e3a752d"
+     },
+     "result": "error: fatal: ambiguous argument '06e3a752d': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'",
+     "error": null,
+     "duration_ms": 21.1,
+     "attempts": [],
+     "extracts": {},
+     "hits": 1,
+     "item": "06e3a752d"
+    },
+    {
+     "tool": "git.git_show",
+     "args": {
+      "sha": "cc19837675"
+     },
+     "result": "commit cc1983767595b7fe1467a6443917a554935aa741\nAuthor: judy <judy@example.com>\nDate:   2026-09-16T10:45:00+00:00\n\n    auth-service: tighten validation in validate_token\n---\n services/auth_service/handler.py | 1 +\n 1 file changed, 1 insertion(+)\n\ndiff --git a/services/auth_service/handler.py b/services/auth_service/handler.py\nindex c721ee8..88c0dbc 100644\n--- a/services/auth_service/handler.py\n+++ b/services/auth_service/handler.py\n@@ -18,6 +18,7 @@ def validate_token(request):\n \n \n def _do_validate_token(request):\n+    # INC-011: tightened validation\n     raise NotImplementedError\n \n \n",
+     "error": null,
+     "duration_ms": 17.8,
+     "attempts": [],
+     "extracts": {},
+     "hits": 1,
+     "item": "cc19837675"
+    }
+   ],
+   "hits": 2
+  },
+  {
+   "id": "pagerduty",
+   "title": "PagerDuty incident",
+   "tool": "pagerduty.list_incidents",
+   "args": {
+    "service_ids": "P072A81",
+    "since": "2026-12-20T12:14:00Z",
+    "until": "2026-12-20T19:14:00Z",
+    "limit": 5
+   },
+   "result": {
+    "incidents": [
+     {
+      "id": "QD3E252CF6D3AF",
+      "incident_number": 9027,
+      "title": "[auth-service] AuthTokenExpired rate above threshold",
+      "status": "resolved",
+      "urgency": "high",
+      "created_at": "2026-12-20T13:02:00Z",
+      "resolved_at": "2026-12-20T15:02:00Z",
+      "service": {
+       "id": "P072A81",
+       "summary": "auth-service"
+      },
+      "assignments": [
+       {
+        "assignee": {
+         "summary": "ivan"
+        }
+       }
+      ],
+      "teams": [
+       {
+        "summary": "identity"
+       }
+      ],
+      "html_url": "https://sim.pagerduty.com/incidents/QD3E252CF6D3AF",
+      "body": {
+       "details": "AuthTokenExpired: auth token expired mid-request\ntrace_id=1589cbb8cf4f9818fe9aaf2485aad023\npod=auth-service-06e3a752d-e055a"
+      },
+      "related_incidents": []
+     }
+    ],
+    "total": 1
+   },
+   "error": null,
+   "duration_ms": 368.0,
+   "attempts": [],
+   "extracts": {},
+   "hits": 1
+  }
+ ],
+ "status": "ok",
+ "finished": "2026-09-10T00:46:42.194605+00:00",
+ "summary": {
+  "issue": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "slack": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "thread": {
+   "hits": 8,
+   "error": null,
+   "skipped": null
+  },
+  "code": {
+   "hits": 3,
+   "error": null,
+   "skipped": null
+  },
+  "owners": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "confluence": {
+   "hits": 2,
+   "error": null,
+   "skipped": null
+  },
+  "runbook": {
+   "hits": 4,
+   "error": null,
+   "skipped": null
+  },
+  "metrics": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "logs": {
+   "hits": 16,
+   "error": null,
+   "skipped": null
+  },
+  "logs_by_error": {
+   "hits": 24,
+   "error": null,
+   "skipped": null
+  },
+  "commits": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "suspect_commit": {
+   "hits": 2,
+   "error": null,
+   "skipped": null
+  },
+  "pagerduty": {
+   "hits": 1,
+   "error": null,
+   "skipped": null
+  }
+ },
+ "lifecycle": {
+  "outcome": "clean",
+  "reason": null,
+  "status": "candidate",
+  "author_status": "candidate",
+  "transition": null
+ }
+}
