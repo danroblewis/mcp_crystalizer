@@ -239,3 +239,81 @@ def test_all_sessions_no_unresolved_and_runs_on_unseen_ticket(induced_all):
     assert s["pagerduty"]["hits"] == 1 and s["metrics"]["hits"] == 1
     assert s["pagerduty_incident"]["hits"] == 1 and s["commits"]["hits"] >= 1
     assert not any(st.get("error") for st in rec["steps"]), [st.get("error") for st in rec["steps"]]
+
+
+# ---------------------------------------------------------------- review fixes
+def test_unexplained_literal_never_becomes_a_ladder_rung():
+    """A value one session used that nothing explains (a sha typed from memory) is a hardcoded value in disguise:
+    it is dropped from the ladder and reported, instead of shipping as a rung that can only hit for that ticket."""
+    a = _synthetic("a", "X-1", "alpha", "AlphaError", "a" * 32, ["grep", "logs"])
+    b = _synthetic("b", "X-2", "beta", "BetaError", "b" * 32, ["grep", "logs"])
+    c = _synthetic("c", "X-3", "gamma", "GammaError", "c" * 32, ["grep", "logs"])
+    b.calls[1]["input"]["pattern"] = "handler_timeout_xyz"      # not in any result of session b
+    flow, report = induce([a, b, c], "t", catalog={})
+    assert _step(flow, "code")["args"]["pattern"] == "{{ issue.error_class }}"
+    assert report["dropped_rungs"] == {"code": {"pattern": ["handler_timeout_xyz"]}}
+    assert report["kinds"]["code"]["pattern"] == {"regex": 2, "unresolved": 1} or report["kinds"]["code"]["pattern"].get("unresolved") == 1
+
+
+def test_induced_flow_carries_regression_cases_with_min_hits():
+    a = _synthetic("a", "X-1", "alpha", "AlphaError", "a" * 32, ["grep", "logs"])
+    b = _synthetic("b", "X-2", "beta", "BetaError", "b" * 32, ["grep", "logs"], extra=True)
+    b2 = _synthetic("b2", "X-2", "beta", "BetaError", "b" * 32, ["logs", "grep"])
+    flow, report = induce([a, b, b2], "t", catalog={})
+    assert [t["inputs"] for t in flow["tests"]] == [{"key": "X-1"}, {"key": "X-2"}]      # one case per distinct input
+    assert flow["tests"][0]["expect"] == {"issue": {"min_hits": 1}, "code": {"min_hits": 1}, "logs": {"min_hits": 1}}   # not the optional step
+    assert report["tests"] == {"cases": 2, "min_hits": ["code", "issue", "logs"]}
+    from crystal.replay.regression import test_cases
+    assert test_cases(flow) == flow["tests"]
+
+
+def test_position_program_needs_held_out_agreement():
+    from crystal.extract import positions as P
+    from crystal.induce.inducer import held_out_ok
+    texts = ["pods a1b2c3d4 e5f6a7b8\nsuspect=deadbeef\nother=cafebabe", "pods 11112222\nsuspect=feedface\nother=0badf00d 22223333",
+             "pods 33334444 55556666 77778888\nsuspect=abad1dea\nother=00000000"]
+    assert held_out_ok([(t, P.example_from_value(t, v)) for t, v in zip(texts, ["deadbeef", "feedface", "abad1dea"])])
+    memorised = [("alpha beta gamma delta", P.example_from_value("alpha beta gamma delta", "gamma")),
+                 ("one two three four five six", P.example_from_value("one two three four five six", "five"))]
+    assert P.learn(memorised) and not held_out_ok(memorised)      # a program fits both, but neither example predicts the other
+
+
+def test_committed_drafts_and_versions_match_the_inducer():
+    """`crystal induce jira_issue` over the tracked corpus (author sessions expanded from traces/runs/) must reproduce
+    flows/induced-jira-ticket-all.yaml byte for byte, and no draft or version may carry the shapes the inducer no
+    longer emits: timestamp ladders, literal rungs, YAML anchors."""
+    import yaml
+    from crystal.author import expand_flow_calls
+    from crystal.induce.inducer import dump_flow
+    sessions = [e for e in (expand_flow_calls(s, TRACES.parent / "runs", TRACES)[0] for s in load_sessions(TRACES, trigger="jira_issue")) if e.calls]
+    assert len(sessions) == 17
+    flow, report = induce(sessions, "induced-jira-ticket-all")
+    committed = (TRACES.parent / "flows" / "induced-jira-ticket-all.yaml").read_text()
+    assert dump_flow(flow) == committed
+    assert report["dropped_rungs"] == {"commit_2": {"sha": ["99988c8b3"]}} and report["unresolved"] == {}
+    for p in sorted((TRACES.parent / "flows").glob("*.yaml")):
+        text = p.read_text()
+        assert "&id" not in text, p.name
+        f = yaml.safe_load(text)
+        for st in f.get("steps", []):
+            for k, v in (st.get("args") or {}).items():
+                if isinstance(v, dict) and "ladder" in v:
+                    assert k not in TS_ARGS, f"{p.name}: {st['id']}.{k} is a timestamp ladder"
+                    assert all("{{" in str(r) for r in v["ladder"]), f"{p.name}: {st['id']}.{k} has a literal rung"
+        if f["name"].startswith("induced-") or f.get("base"):
+            assert f.get("tests") and all(c["expect"] for c in f["tests"]), f"{p.name}: no regression cases"
+
+
+def test_topo_cuts_reference_cycles_cleanly():
+    """Two sessions that did the same two things in opposite orders leave each step with a fallback rung that
+    references the other. The order must still settle; the cut is a rung (never a scalar) and is reported."""
+    from crystal.induce.inducer import _topo
+    steps = [{"id": "a", "args": {"q": {"ladder": ["{{ inputs.key }}", "{{ b.x | first }}"]}}},
+             {"id": "b", "args": {"q": "{{ a.y }}"}, "forEach": "(a.items + c.items) | unique | list"},
+             {"id": "c", "args": {"q": {"ladder": ["{{ b.z }}", "{{ inputs.key }}"]}}}]
+    cuts = {}
+    out = _topo([dict(s, args=dict(s["args"])) for s in steps], cuts)
+    assert [s["id"] for s in out] == ["a", "b", "c"]
+    assert cuts == {"a": ["q: {{ b.x | first }}"], "b": ["forEach: c.items"]}
+    assert out[0]["args"]["q"] == "{{ inputs.key }}" and out[1]["forEach"] == "a.items | unique | list" and out[1]["args"]["q"] == "{{ a.y }}"
+    assert out[2]["args"]["q"] == {"ladder": ["{{ b.z }}", "{{ inputs.key }}"]}

@@ -42,6 +42,9 @@ def world(tmp_path, monkeypatch):
     monkeypatch.setattr(author, "FEEDBACK", tdir / "feedback.jsonl")
     import crystal.flow.runner as runner_mod
     monkeypatch.setattr(runner_mod, "FLOW_DIR", fdir)
+    from crystal.flow import lifecycle as lc_mod
+    monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lc.sqlite"))   # never the real state/lifecycle.sqlite
+    monkeypatch.setattr(lc_mod, "_default", None)
     return {"traces": tdir, "flows": fdir, "runs": rdir, "feedback": tdir / "feedback.jsonl"}
 
 
@@ -240,3 +243,86 @@ def test_run_record_archived_next_to_trace_so_reinduction_expands(world):
     archived[0].unlink()
     dropped, ran2 = expand_flow_calls(sess, world["runs"], world["traces"])
     assert ran2 == ["investigate-jira-ticket"] and dropped.tool_sequence == ["jira.jira_get_issue_comments"]
+
+
+# ---------------------------------------------------------------- review fixes
+def test_flows_for_trigger_ranks_by_effective_status(world):
+    """The agent is told to run the flow the runtime trusts most; a flow the breaker tripped goes last."""
+    from crystal.author import flows_for_trigger
+    from crystal.flow.lifecycle import Lifecycle
+    lc = Lifecycle(world["traces"] / "lc.sqlite")
+    assert flows_for_trigger("jira_issue", world["flows"], lifecycle=lc)[0]["name"] == "investigate-jira-ticket"
+    for _ in range(2):
+        lc.record_run({"run_id": "x", "flow": "investigate-jira-ticket", "status": "failed", "steps": []}, {"name": "investigate-jira-ticket", "status": "candidate"})
+    ranked = flows_for_trigger("jira_issue", world["flows"], lifecycle=lc)
+    assert ranked[-1]["name"] == "investigate-jira-ticket" and ranked[-1]["effective_status"] == "draft"
+    assert "[candidate, tripped to draft]" in author.describe_flow(ranked[-1])
+    assert flows_for_trigger("jira_issue", world["flows"], lifecycle=False)[0]["name"] == "investigate-jira-ticket"
+
+
+def test_repair_leaves_complaint_pending_when_the_agent_run_fails(world):
+    fb = world["feedback"]
+    fb.write_text(json.dumps({"ts": "t", "kind": "feedback", "run_id": "run-A", "flow": "investigate-jira-ticket", "inputs": {"key": "PAY-101"}, "helpful": False, "text": "bad"}) + "\n")
+
+    def failing_driver(trigger, inputs, prompt, budget="3", model=None, meta=None, **kw):
+        rec = Recorder("dead-session", "claude-code", trace_dir=world["traces"], meta={"trigger": trigger, "inputs": inputs})
+        return {"session_id": "dead-session", "cost_usd": 0.01, "is_error": True, "result": "Budget exceeded", "trace_path": str(rec.path), "calls": []}
+    results = repair("--all", driver_fn=failing_driver, feedback_path=fb, trace_dir=world["traces"], flow_dir=world["flows"], run_dir=world["runs"], test=False)
+    assert len(results) == 1 and "Budget exceeded" in results[0]["error"] and "pending" in results[0]["error"]
+    assert [c["run_id"] for c in pending_complaints(fb)] == ["run-A"]
+    assert len(fb.read_text().splitlines()) == 1
+
+
+def test_author_reports_failed_agent_run(world):
+    def failing_driver(trigger, inputs, prompt, budget="3", model=None, meta=None, **kw):
+        rec = Recorder("dead-session", "claude-code", trace_dir=world["traces"], meta={"trigger": trigger, "inputs": inputs})
+        return {"session_id": "dead-session", "cost_usd": None, "is_error": True, "result": "", "stderr": "claude: not found", "trace_path": str(rec.path), "calls": []}
+    res = author_cmd("jira_issue", {"key": "PAY-101"}, driver_fn=failing_driver, trace_dir=world["traces"], flow_dir=world["flows"], run_dir=world["runs"], test=False)
+    assert "no tool calls" in res["error"] and "claude: not found" in res["error"] and "path" not in res
+
+
+def test_expand_warns_when_a_run_record_is_missing(world, capsys):
+    sess = load_session(sorted(world["traces"].glob("scripted-PAY-101-v0.jsonl"))[0])
+    rec = Recorder("s-missing", "claude-code", trace_dir=world["traces"], meta={"trigger": "jira_issue", "inputs": {"key": "PAY-101"}})
+    rec.record("flows", "run_flow", {"name": "investigate-jira-ticket", "inputs_json": "{}"}, {"run_id": "gone-01", "flow": "investigate-jira-ticket"}, "")
+    rec.record("flows", "run_flow", {"name": "investigate-jira-ticket", "inputs_json": "{"}, {"error": "bad inputs_json"}, "")
+    rec.record("jira", "jira_get_issue", {"issue_key": "PAY-101"}, sess.calls[0]["output"], "")
+    expanded, ran = expand_flow_calls(load_session(rec.path), world["runs"], world["traces"])
+    err = capsys.readouterr().err
+    assert expanded.tool_sequence == ["jira.jira_get_issue"] and ran == ["investigate-jira-ticket"] * 2
+    assert "gone-01.json missing" in err and "run_flow returned an error" in err and err.count("warning") == 2
+
+
+def test_positionals_skip_option_values():
+    from crystal.author import positionals
+    assert positionals(["--budget", "5", "--yes"]) == []
+    assert positionals(["run-1", "--budget", "5", "--model", "m", "--no-test"]) == ["run-1"]
+    assert positionals(["--budget", "5", "run-2"]) == ["run-2"]
+
+
+def test_ran_flow_first_ignores_claude_code_reads():
+    from crystal.author import _ran_flow_first
+    from crystal.trace.store import Session
+    read = {"server": "claude-code", "tool": "Read", "input": {}, "output": ""}
+    run = {"server": "flows", "tool": "run_flow", "input": {}, "output": {}}
+    raw = {"server": "jira", "tool": "jira_get_issue", "input": {}, "output": {}}
+    assert _ran_flow_first(Session("s", "claude-code", calls=[read, run, raw])) is True
+    assert _ran_flow_first(Session("s", "claude-code", calls=[read, raw, run])) is False
+    assert _ran_flow_first(Session("s", "claude-code", calls=[read])) is False
+
+
+def test_hook_records_reads_only_inside_an_investigation(tmp_path):
+    """A session that never calls an MCP server (a code review in this checkout) leaves no trace; inside a
+    recorded session, Read results are kept as short previews, never whole files."""
+    from crystal.trace.record import hook_main
+    big = "x" * 5000
+    read = {"session_id": "sess", "tool_name": "Read", "tool_input": {"file_path": "a.py"}, "tool_response": {"type": "text", "file": {"filePath": "a.py", "content": big}}}
+    assert hook_main(read, trace_dir=tmp_path) == 0 and not (tmp_path / "sess.jsonl").exists()
+    mcp = {"session_id": "sess", "tool_name": "mcp__jira__jira_get_issue", "tool_input": {"issue_key": "PAY-101"},
+           "tool_response": {"content": [{"type": "text", "text": json.dumps({"key": "PAY-101"})}]}}
+    hook_main(mcp, trace_dir=tmp_path)
+    hook_main(read, trace_dir=tmp_path)
+    s = load_session(tmp_path / "sess.jsonl")
+    assert s.tool_sequence == ["jira.jira_get_issue", "claude-code.Read"] and s.calls[0]["output"] == {"key": "PAY-101"}
+    content = s.calls[1]["output"]["file"]["content"]
+    assert len(content) < 400 and content.endswith("(5000 chars)")

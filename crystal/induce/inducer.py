@@ -713,8 +713,9 @@ def solve_positions(groups: list[dict], gids: list[str], extracts: dict[str, dic
             for (src, path), items in sorted(sources.items(), key=lambda kv: -len(kv[1])):
                 if len(items) < len(todo):
                     continue   # the source must explain every unresolved session
-                progs = positions.learn([(c["text"], c["span"]) for _, c in items])
-                if not progs:
+                pairs = [(c["text"], c["span"]) for _, c in items]
+                progs = positions.learn(pairs)
+                if not progs or not held_out_ok(pairs):
                     continue
                 prog = positions.serializable(progs[0])
                 spec = {"from": path, "using": "position", "program": prog}
@@ -733,6 +734,19 @@ def solve_positions(groups: list[dict], gids: list[str], extracts: dict[str, dic
     return solved
 
 
+def held_out_ok(pairs: list[tuple[str, tuple[int, int]]]) -> bool:
+    """Held-out gate for a position program: for every example, a program learned from the others alone must
+    reproduce it. A program that only memorises its training spans (an ordinal that happens to fit) fails here
+    instead of at runtime on the next ticket."""
+    if len(pairs) < 2:
+        return False
+    for i, (text, (s, e)) in enumerate(pairs):
+        progs = positions.learn(pairs[:i] + pairs[i + 1:])
+        if not progs or positions.apply(progs[0], text) != text[s:e]:
+            return False
+    return True
+
+
 def _window_width(tpl: Any, extracts: dict[str, dict]) -> float:
     m = re.fullmatch(r"\{\{\s*(\w+)\.(\w+)\.(start|end)\s*\}\}", str(tpl))
     if not m:
@@ -745,23 +759,76 @@ def _window_width(tpl: Any, extracts: dict[str, dict]) -> float:
         return 0.0
 
 
-def _topo(steps: list[dict]) -> list[dict]:
-    """Reorder so every step comes after the steps its templates reference."""
+def _deps(st: dict, ids_: set[str]) -> set[str]:
+    text = json.dumps({k: v for k, v in st.items() if k in ("args", "forEach", "when")})
+    return ({m.group(1) for m in REF_RX.finditer(text)} & ids_) - {st["id"]}
+
+
+def _refs_in(v: Any) -> set[str]:
+    return {m.group(1) for m in REF_RX.finditer(str(v))}
+
+
+def _cut(st: dict, unmet: set[str], dry: bool = False) -> tuple[bool, list[str]]:
+    """Remove the references to `unmet` steps: ladder rungs and forEach terms go; a scalar template stays (it
+    renders blank at runtime). Returns (clean, what was cut); clean = nothing had to stay. dry: only decide."""
+    cut, clean = [], True
+    for k, v in list(st["args"].items()):
+        if isinstance(v, dict) and "ladder" in v:
+            keep = [r for r in v["ladder"] if not (_refs_in(r) & unmet)]
+            if keep and len(keep) < len(v["ladder"]):
+                cut += [f"{k}: {r}" for r in v["ladder"] if r not in keep]
+                if not dry:
+                    st["args"][k] = {"ladder": keep} if len(keep) > 1 else keep[0]
+            elif not keep:
+                clean = False
+                cut.append(f"{k}: every rung references {sorted(unmet)} (kept; renders blank)")
+        elif _refs_in(v) & unmet:
+            clean = False
+            cut.append(f"{k}: {v} (kept; renders blank)")
+    fe = st.get("forEach")
+    if fe and (_refs_in(fe) & unmet):
+        m = re.fullmatch(r"\(?(.*?)\)?\s*\|\s*unique\s*\|\s*list", fe)
+        terms = [t.strip() for t in (m.group(1) if m else fe).split(" + ")]
+        keep = [t for t in terms if not (_refs_in(t) & unmet)]
+        cut += [f"forEach: {t}" for t in terms if t not in keep]
+        if not dry:
+            st["forEach"] = (f"{keep[0]} | unique | list" if len(keep) == 1 else "(" + " + ".join(keep) + ") | unique | list") if keep else "[]"
+    return clean, cut
+
+
+def _sort(steps: list[dict]) -> bool:
+    """Move each step after the last step it references, in place. False when that never settles (a cycle)."""
     ids_ = [s["id"] for s in steps]
     for _ in range(len(steps) ** 2):
         moved = False
         for i, st in enumerate(steps):
-            text = json.dumps({k: v for k, v in st.items() if k in ("args", "forEach", "when")})
-            deps = {m.group(1) for m in REF_RX.finditer(text)} & set(ids_)
-            deps.discard(st["id"])
-            last = max((ids_.index(d) for d in deps), default=-1)
+            last = max((ids_.index(d) for d in _deps(st, set(ids_))), default=-1)
             if last > i:
                 steps.insert(last + 1, steps.pop(i))
                 ids_ = [s["id"] for s in steps]
                 moved = True
                 break
         if not moved:
-            break
+            return True
+    return False
+
+
+def _topo(steps: list[dict], cuts: dict | None = None) -> list[dict]:
+    """Reorder so every step comes after the steps its templates reference. Sessions that did things in opposite
+    orders can leave a cycle (A's ladder falls back to B, B's to A; the fan-out of A includes what B found): one
+    forward reference is cut per round, preferring a step that loses only a fallback rung or a fan-out term over
+    one whose scalar template would render blank; every cut goes to the report."""
+    for _ in range(len(steps) + 1):
+        order = list(steps)
+        if _sort(steps):
+            return steps
+        steps[:] = order                       # decide the cut on the majority order, not a half-sorted one
+        ids_ = [s["id"] for s in steps]
+        fwd = [(st, {d for d in _deps(st, set(ids_)) if ids_.index(d) > i}) for i, st in enumerate(steps)]
+        fwd = [(st, u) for st, u in fwd if u]
+        st, unmet = next(((st, u) for st, u in fwd if _cut(dict(st, args=dict(st["args"])), u, dry=True)[0]), fwd[0])
+        if cuts is not None:
+            cuts[st["id"]] = _cut(st, unmet)[1]
     return steps
 
 
@@ -786,7 +853,7 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
         gids[gi] = gid
     extracts = canonicalize(bound, groups, gids)
     position_solved = solve_positions(groups, gids, extracts, n)
-    merged, window_alts, kinds_report = [], {}, {}
+    merged, window_alts, kinds_report, dropped_rungs = [], {}, {}, {}
     for g, sid in zip(groups, gids):
         items = [st for _, _, st in g["members"]]
         n_sess = len({si for si, _, _ in g["members"]})
@@ -798,6 +865,7 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
             variants: dict[Any, list[int]] = defaultdict(list)
             sessions_of: dict[Any, set] = defaultdict(set)
             raw_vals = set()
+            unbound: set = set()          # literal values no binding explained (their sessions' raw values)
             is_ts = False
             for si, _, st in g["members"]:
                 if k not in st["args"]:
@@ -811,6 +879,7 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
                     sessions_of[_hashable(st["args"][k])].add(si)
                 if st["kinds"].get(k) == "unresolved":
                     raw_vals.add(json.dumps(st["raw_args"].get(k), default=str))
+                    unbound.add(_hashable(st["raw_args"].get(k)))
                 if _ts(st["raw_args"].get(k)) or st["classes"].get(k) == {"window"}:
                     is_ts = True
                 kinds_report[sid].setdefault(k, Counter())[st["kinds"].get(k, "literal")] += 1
@@ -824,8 +893,14 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
                 args[k] = _coerce(ranked[0])
                 window_alts.setdefault(sid, {})[k] = {str(t): len(sessions_of[t]) for t in ranked}
             else:
-                ranked = sorted(variants.items(), key=lambda kv: (-(sum(1 for h in kv[1] if h > 0) / len(kv[1])), -len(kv[1]), -str(kv[0]).count("{{")))
-                args[k] = {"ladder": [_coerce(t) for t, _ in ranked]}
+                # a literal rung that one session used and nothing explains is a hardcoded value in disguise (one ticket's
+                # sha, one DM's words): it can never hit for another input, so it is dropped and reported instead
+                dropped = [t for t in variants if not (isinstance(t, str) and "{{" in t) and t in unbound and len(sessions_of[t]) == 1]
+                if dropped:
+                    dropped_rungs.setdefault(sid, {})[k] = sorted(str(t) for t in dropped)
+                ranked = sorted(((t, h) for t, h in variants.items() if t not in dropped),
+                                key=lambda kv: (-(sum(1 for h in kv[1] if h > 0) / len(kv[1])), -len(kv[1]), -str(kv[0]).count("{{")))
+                args[k] = {"ladder": [_coerce(t) for t, _ in ranked]} if len(ranked) > 1 else _coerce(ranked[0][0])
             if len(raw_vals) > 1:
                 unresolved[k] = sorted(raw_vals)
         step: dict[str, Any] = {"id": sid, "title": sid.replace("_", " "), "tool": g["tool"], "args": args}
@@ -853,7 +928,8 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
             step["unresolved"] = unresolved
         merged.append((g["mean_pos"], step))
     merged.sort(key=lambda x: x[0])
-    steps = _topo([s for _, s in merged])
+    cut_refs: dict[str, list[str]] = {}
+    steps = _topo([s for _, s in merged], cut_refs)
     text_all = json.dumps(steps)
     for st in steps:
         exs = {nm: sp for nm, sp in extracts.get(st["id"], {}).items() if re.search(r"\b%s\.%s\b" % (re.escape(st["id"]), re.escape(nm)), text_all)}
@@ -863,9 +939,21 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
     for s in sessions:
         for k, v in (s.meta.get("inputs") or {}).items():
             inputs.setdefault(k, {"type": ids.type_of(str(v)) or "string", "required": True, "example": v})
+    # regression cases (`crystal test`): one per distinct traced input; every step that had hits in every session
+    # must find something again, so a run where the steps quietly return nothing is a failure, not a pass
+    always_hit = {gid for g, gid in zip(groups, gids)
+                  if len({si for si, _, _ in g["members"]}) == n and all(st["hits"] > 0 for _, _, st in g["members"])}
+    expect = {st["id"]: {"min_hits": 1} for st in steps if st["id"] in always_hit}
+    tests, seen_inputs = [], set()
+    for s in sessions:
+        inp = s.meta.get("inputs") or {}
+        key = json.dumps(inp, sort_keys=True, default=str)
+        if inp and key not in seen_inputs:
+            seen_inputs.add(key)
+            tests.append({"inputs": dict(inp), "expect": {k: dict(v) for k, v in expect.items()}})   # fresh dicts: no YAML anchors
     flow = {"name": name, "title": name.replace("-", " "), "status": "draft", "version": 1,
             "induced_from": [s.session_id for s in sessions],
-            "trigger": {"type": sessions[0].meta.get("trigger", "unknown")}, "inputs": inputs, "steps": steps}
+            "trigger": {"type": sessions[0].meta.get("trigger", "unknown")}, "inputs": inputs, "steps": steps, "tests": tests}
     alignment = {gid: {"sessions": len({si for si, _, _ in g["members"]}),
                        "local_ids": dict(Counter(st["id"] for _, _, st in g["members"]))}
                  for g, gid in zip(groups, gids)}
@@ -875,7 +963,10 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
               "ladders": {st["id"]: {k: len(v["ladder"]) for k, v in st["args"].items() if isinstance(v, dict) and "ladder" in v} for st in steps if any(isinstance(v, dict) and "ladder" in v for v in st["args"].values())},
               "forEach": {st["id"]: st["forEach"] for st in steps if st.get("forEach")},
               "window_alternatives": window_alts,
+              "dropped_rungs": dropped_rungs,
+              "cut_refs": cut_refs,
               "position_programs": position_solved,
+              "tests": {"cases": len(tests), "min_hits": sorted(expect)},
               "alignment": alignment,
               "kinds": {sid: {k: dict(c) for k, c in ks.items()} for sid, ks in kinds_report.items()}}
     return flow, report

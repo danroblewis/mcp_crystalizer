@@ -21,7 +21,7 @@ Background research lives in `docs/research/`.
 |---|---|---|
 | **Flow runner** (UI + interpreter) | no | Runs a crystallized flow end to end against MCP servers, renders an evidence view. |
 | **Flow author** (agent, offline) | yes, bounded | Invoked on a miss or a complaint. Tries existing flows first; explores only for what they lack; writes or updates a flow. |
-| **Test suite** | no | Generated from the author's traces. Replays each flow against recorded responses and decides whether a flow may appear in the UI. |
+| **Test suite** | no | Generated from the author's traces. Replays each flow against recorded responses; a failure demotes the flow's effective status (the UI lists every flow with its badges; only the badge changes). |
 
 ## Architecture
 
@@ -223,12 +223,16 @@ author/repair). What exists:
 - **Promotion lifecycle + circuit breaker** (`crystal/flow/lifecycle.py`, `state/lifecycle.sqlite`, gitignored). The
   YAML `status` is the author's intent; the runtime keeps an effective status next to it with clean/failed counters,
   a clean streak, test results, complaints and an event log. A step error, a required step with zero hits, a failed
-  run, a failed regression test or a UI "This didn't help" demotes one level; N consecutive clean saved runs
-  re-promote (`candidate_after: 2`, `promote_after: 5`, per flow), never above the author's intent. `crystal status`
-  prints the table; the UI shows both badges, counters, the last failure and recent events.
+  run, a failed regression test or a UI "This didn't help" demotes one level; N consecutive clean live runs
+  re-promote (`candidate_after: 2`, `promote_after: 5`, per flow), never above the author's intent. A passing test
+  is recorded but is not live evidence (it never advances the streak), and the authoring agent's `run_flow` runs
+  are saved without touching the lifecycle. `crystal status` prints the table; the UI shows both badges, counters,
+  the last failure and recent events.
 - **Regression per flow** (`crystal/replay/regression.py`, `crystal test <flow>`): runs the flow's `tests:` cases
-  (or one built from the inputs' examples) through `traces/cassettes/<flow>.json`, seeded from the sessions in
-  `induced_from`; live for cassette misses unless `--offline`; the result feeds the lifecycle.
+  (or one built from the inputs' examples, which must find at least something) through `traces/cassettes/<flow>.json`,
+  seeded from the sessions in `induced_from`; live for cassette misses unless `--offline`; the result feeds the
+  lifecycle. The inducer writes the `tests:` block itself: one case per traced input with `min_hits: 1` on every step
+  that had hits in every session, so a draft whose steps quietly return nothing fails its own regression.
 - **Flows as tools for the agent** (`sim/servers/flows.py`, registered as `flows` in `servers.yaml`/`.mcp.json`):
   `list_flows()` and `run_flow(name, inputs_json)` execute the interpreter and return a size-capped evidence summary.
 - **`crystal author <trigger> k=v --yes`** (`crystal/author.py`): the prompt lists the existing flows ordered by trust
@@ -239,7 +243,9 @@ author/repair). What exists:
   the same expansion, so author sessions merge instead of contributing a `flows.run_flow` step.
   One real run (`author jira_issue key=PAY-108`, $0.50): the agent ran the flow first, then made exactly two raw
   calls (logs for a third trace id the flow surfaced but never queried; `pagerduty.get_incident`) and named a false
-  extract in the flow (a pod hash taken for a git sha). `flows/investigate-jira-ticket.v2.yaml` is the result.
+  extract in the flow (a pod hash taken for a git sha). `flows/investigate-jira-ticket.v2.yaml` is the result,
+  re-induced with the merged inducer (the first version, produced before the merge, carried timestamp ladders,
+  hardcoded-date windows and the pod hash as a literal rung).
 - **`crystal repair [--all|<run_id>] --yes`**: hands each queued complaint (flow YAML, inputs, compact evidence,
   complaint text) to the agent, induces a version the same way and appends a `handled` record. Tested with a fake
   driver only; never run for real yet.
@@ -256,9 +262,15 @@ milestone: $0.90 + $0.84 (Slack traces) + $0.50 (author) = $2.24.
 What remains:
 
 - The inducer treats a fan-out item that erred (the flow's git_show on the pod hash) like any other call: in the
-  17-session jira draft it splits `commit` into a 16/17 step and a 2/17 `commit_2` with a literal rung. Dropping
-  error results from the expansion, or fixing the false extract in `investigate-jira-ticket.yaml` (the sha regex
-  matches pod hashes), would remove that; the candidate flows are unaffected.
+  17-session jira draft it splits `commit` into a 16/17 step and a 2/17 `commit_2`. The pod hash itself no longer
+  ships as a rung (an unexplained literal from one session is dropped and reported), but fixing the false extract
+  in `investigate-jira-ticket.yaml` (the sha regex matches pod hashes) would remove the split; the candidate flows
+  are unaffected. Reference cycles between merged steps (the thread agent searched Jira before reading the issue,
+  the scripted one after) are cut by dropping the forward fallback rung; the report names each cut.
+- Position programs have a held-out gate but no real corpus exercises them: all three drafts report
+  `position_programs: {}`, so the feature is validated by synthetic tests only.
+- The `PostToolUse` hook now records Claude Code's Read/Grep/Glob only inside a session that already has a trace
+  (driver-launched, or after an MCP call), as short previews; sessions recorded before this change carry none.
 - The three candidate flows are still hand-fixed copies of the induced drafts (`{% if %}` rung guards, `hits:`,
   `when:`, precedence chains). Those fixes are the next things the inducer should learn to emit.
 - Flow cards (below) are not produced yet; `author` ends with prose. Content-based list selection (the runbook whose

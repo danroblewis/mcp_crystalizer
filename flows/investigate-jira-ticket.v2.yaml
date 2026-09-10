@@ -34,31 +34,40 @@ steps:
   args:
     issue_key: '{{ inputs.key }}'
   extract:
-    window:
-      from: fields.updated
-      using: window
-      before: 6h
     error_class:
       from: fields.summary
       using: ids:error_class
-    slack_channel:
-      from: fields.description
-      using: ids:slack_channel
     service:
       from: fields.summary
       using: catalog:service
     trace_id:
       from: fields.description
       using: ids:trace_id
-    window_window:
-      from: fields.created
-      using: window
-      before: 4d
-      after: 1d
     error:
       from: fields.description
       using: regex
       pattern: ^Error\s*:\s*(.+)$
+    window:
+      from: fields.created
+      using: window
+      before: 1h
+      after: 6h
+    window_4d_1d:
+      from: fields.created
+      using: window
+      before: 4d
+      after: 1d
+    slack_channel:
+      from: fields.description
+      using: ids:slack_channel
+    iso_ts:
+      from: fields.description
+      using: ids:iso_ts
+    window_7d_r1d:
+      from: fields.created
+      using: window
+      before: 7d
+      round: 1d
 - id: jira_get_issue_comments
   title: jira get issue comments
   tool: jira.jira_get_issue_comments
@@ -95,10 +104,6 @@ steps:
   args: {}
   optional: true
   seen_in: 1/17 sessions
-  extract:
-    ids:
-      from: services[*].id
-      all: true
 - id: thread
   title: thread
   tool: slack.conversations_replies
@@ -107,13 +112,13 @@ steps:
     limit: 50
     thread_ts: '{{ slack.slack_ts_list | first }}'
   extract:
-    trace_ids:
-      from: messages[*].text
-      using: ids:trace_id
-      all: true
     sha_shorts:
       from: messages[*].text
       using: ids:sha_short
+      all: true
+    trace_ids:
+      from: messages[*].text
+      using: ids:trace_id
       all: true
 - id: code
   title: code
@@ -151,38 +156,6 @@ steps:
       - text ~ "{{ issue.error_class }}" AND space = {{ catalog.service[issue.service].confluence_space }}
       - title ~ "{{ issue.service }} runbook"
   extract:
-    window:
-      from: results[*].last_modified
-      using: window
-      after: 30450m
-    window_window:
-      from: results[*].last_modified
-      using: window
-      after: 510h
-    window_2:
-      from: results[*].last_modified
-      using: window
-      after: 507h
-    window_3:
-      from: results[*].last_modified
-      using: window
-      after: 515h
-    window_4:
-      from: results[*].last_modified
-      using: window
-      after: 327h
-    window_5:
-      from: results[*].last_modified
-      using: window
-      after: 495h
-    window_6:
-      from: results[*].last_modified
-      using: window
-      after: 519h
-    window_7:
-      from: results[*].last_modified
-      using: window
-      after: 159h
     ids:
       from: results[*].id
       all: true
@@ -190,79 +163,62 @@ steps:
   title: metrics
   tool: chronosphere.query_prometheus_range
   args:
-    end:
-      ladder:
-      - '{{ issue.window.end }}'
-      - '{{ confluence.window_window.end }}'
+    end: '{{ issue.window.end }}'
     query:
       ladder:
       - rate(http_requests_total{ {{ catalog.service[issue.service].prom_selector }},code=~"5.."}[5m])
       - sum(rate(http_requests_total{ {{ catalog.service[issue.service].prom_selector }},status=~"5.."}[5m])) / sum(rate(http_requests_total{
         {{ catalog.service[issue.service].prom_selector }} }[5m]))
-    start:
-      ladder:
-      - '{{ issue.window.start }}'
-      - '{{ confluence.window.end }}'
+    start: '{{ issue.window.start }}'
     step_seconds: 300
 - id: runbook
   title: runbook
   tool: confluence.confluence_get_page
   args:
     page_id: '{{ confluence.ids | first }}'
-- id: logs
-  title: logs
-  tool: logz.search_logs
-  args:
-    from_time:
-      ladder:
-      - '{{ issue.window.start }}'
-      - '{{ confluence.window_2.end }}'
-    query: trace_id:{{ item }}
-    size: 20
-    to_time:
-      ladder:
-      - '{{ issue.window.end }}'
-      - '{{ confluence.window_3.end }}'
-  forEach: ([issue.trace_id] + thread.trace_ids) | unique | list
-  max_items: 4
 - id: logs_2
   title: logs 2
   tool: logz.search_logs
   args:
-    from_time:
-      ladder:
-      - '{{ issue.window.start }}'
-      - '{{ confluence.window_2.end }}'
+    from_time: '{{ issue.window.start }}'
     query:
       ladder:
       - '"{{ issue.error }}" AND service:{{ issue.service }}'
       - '"{{ issue.error_class }}" AND service:{{ issue.service }}'
     size: 50
-    to_time:
-      ladder:
-      - '{{ issue.window.end }}'
-      - '{{ confluence.window_3.end }}'
+    to_time: '{{ issue.window.end }}'
   extract:
     trace_ids:
       from: hits[*]._source.trace_id
       all: true
+- id: commits_2
+  title: commits 2
+  tool: git.git_log
+  args:
+    max_count: 20
+    path: services/{{ issue.service }}
+    since: '{{ issue.window_7d_r1d.start }}'
+    until: '{{ issue.iso_ts }}'
+  optional: true
+  seen_in: 1/17 sessions
+- id: logs
+  title: logs
+  tool: logz.search_logs
+  args:
+    from_time: '{{ issue.window.start }}'
+    query: trace_id:{{ item }}
+    size: 20
+    to_time: '{{ issue.window.end }}'
+  forEach: ([issue.trace_id] + logs_2.trace_ids + thread.trace_ids) | unique | list
+  max_items: 4
 - id: commits
   title: commits
   tool: git.git_log
   args:
     max_count: 10
-    path:
-      ladder:
-      - '{{ catalog.service[issue.service].repo_path }}'
-      - services/{{ issue.service }}
-    since:
-      ladder:
-      - '{{ issue.window_window.start }}'
-      - '{{ confluence.window_4.end }}'
-    until:
-      ladder:
-      - '{{ issue.window_window.end }}'
-      - '{{ issue.window.start }}'
+    path: '{{ catalog.service[issue.service].repo_path }}'
+    since: '{{ issue.window_4d_1d.start }}'
+    until: '{{ issue.window_4d_1d.end }}'
 - id: commit
   title: commit
   tool: git.git_show
@@ -271,24 +227,14 @@ steps:
       ladder:
       - '{{ thread.sha_shorts | first }}'
       - '{{ jira_get_issue_comments.sha_shorts | first }}'
-      - 99988c8b3
 - id: pagerduty
   title: pagerduty
   tool: pagerduty.list_incidents
   args:
     limit: 5
-    service_ids:
-      ladder:
-      - '{{ catalog.service[issue.service].pagerduty_service_id }}'
-      - '{{ list_services.ids | first }}'
-    since:
-      ladder:
-      - '{{ issue.window.start }}'
-      - '{{ confluence.window_5.end }}'
-    until:
-      ladder:
-      - '{{ issue.window.end }}'
-      - '{{ confluence.window_6.end }}'
+    service_ids: '{{ catalog.service[issue.service].pagerduty_service_id }}'
+    since: '{{ issue.window.start }}'
+    until: '{{ issue.window.end }}'
   extract:
     pd_incident_ids:
       from: incidents[*].id
@@ -300,34 +246,19 @@ steps:
     sha: '{{ thread.sha_shorts | first }}'
   optional: true
   seen_in: 1/17 sessions
-- id: commits_2
-  title: commits 2
-  tool: git.git_log
-  args:
-    max_count: 20
-    path: '{{ catalog.service[issue.service].repo_path }}'
-    since: '{{ confluence.window_7.end }}'
-    until: '{{ issue.window.start }}'
-  optional: true
-  seen_in: 1/17 sessions
 - id: logs_3
   title: logs 3
   tool: logz.search_logs
   args:
-    from_time:
-      ladder:
-      - '{{ confluence.window_2.end }}'
-      - '{{ issue.window.start }}'
-    query: trace_id:{{ item }}
-    size: 100
-    to_time:
-      ladder:
-      - '{{ confluence.window_3.end }}'
-      - '{{ issue.window.end }}'
-  forEach: logs_2.trace_ids | unique | list
-  max_items: 4
+    from_time: '{{ issue.window.start }}'
+    query: trace_id:{{ logs_3.trace_ids | first }}
+    to_time: '{{ issue.window.end }}'
   optional: true
-  seen_in: 2/17 sessions
+  seen_in: 1/17 sessions
+  extract:
+    trace_ids:
+      from: hits[*]._source.trace_id
+      all: true
 - id: pagerduty_incident
   title: pagerduty incident
   tool: pagerduty.get_incident
@@ -335,6 +266,210 @@ steps:
     incident_id: '{{ pagerduty.pd_incident_ids | first }}'
   optional: true
   seen_in: 2/17 sessions
+tests:
+- inputs:
+    key: SUP-105
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    commit:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: PAY-101
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    commit:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: PAY-102
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    commit:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: PLAT-102
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    commit:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: STF-109
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    commit:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: SUP-102
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    commit:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: PAY-108
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    commit:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
 base: investigate-jira-ticket
 authored:
   at: '2026-09-09T23:26:46.368884+00:00'

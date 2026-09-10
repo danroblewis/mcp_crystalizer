@@ -40,12 +40,19 @@ VERSION_RX = re.compile(r"^(.*)\.v(\d+)$")
 
 
 # ---------------------------------------------------------------- flows and prompts
-def flows_for_trigger(trigger: str, flow_dir: Path | None = None) -> list[dict]:
+def flows_for_trigger(trigger: str, flow_dir: Path | None = None, lifecycle=None) -> list[dict]:
+    """Flows for a trigger, most trusted first (the agent is told to run flows[0]); versions of one base after their
+    base. Trust is the runtime's effective status (circuit breaker), not the YAML's author intent, unless
+    lifecycle=False; `effective_status` is set on each flow."""
     flows = list_flows() if flow_dir is None else _list_flows(flow_dir)
     flows = [f for f in flows if f.get("status") != "broken" and (f.get("trigger") or {}).get("type") == trigger]
-    # most trusted first: the agent is told to run flows[0]; versions of one base after their base
+    if lifecycle is not False:
+        from crystal.flow.lifecycle import get_lifecycle
+        lc = lifecycle or get_lifecycle()
+        for f in flows:
+            f["effective_status"] = lc.view(f)["status"]
     rank = {"promoted": 0, "candidate": 1, "draft": 2}
-    return sorted(flows, key=lambda f: (rank.get(f.get("status"), 3), base_name(f["name"]), -int(f.get("version") or 1)))
+    return sorted(flows, key=lambda f: (rank.get(f.get("effective_status", f.get("status")), 3), base_name(f["name"]), -int(f.get("version") or 1)))
 
 
 def _list_flows(flow_dir: Path) -> list[dict]:
@@ -60,7 +67,9 @@ def _list_flows(flow_dir: Path) -> list[dict]:
 def describe_flow(f: dict) -> str:
     steps = " -> ".join(f"{s['id']}({s.get('tool')})" for s in f.get("steps", []))
     ins = ", ".join(f"{k}: {v.get('type')}" for k, v in (f.get("inputs") or {}).items())
-    return f"- {f['name']} [{f.get('status')}] inputs({ins}); steps: {steps}"
+    eff = f.get("effective_status")
+    status = f"{f.get('status')}" if eff in (None, f.get("status")) else f"{f.get('status')}, tripped to {eff}"
+    return f"- {f['name']} [{status}] inputs({ins}); steps: {steps}"
 
 
 def author_prompt(trigger: str, inputs: dict, flows: list[dict]) -> str:
@@ -202,17 +211,22 @@ def flow_calls(record: dict) -> list[dict]:
 def expand_flow_calls(session: Session, run_dir: Path | None = None, trace_dir: Path | None = None) -> tuple[Session, list[str]]:
     """Replace each flows.run_flow call by the calls that flow made; drop flows.list_flows and Claude Code's own
     Read/Grep/Glob (a flow cannot run those). Returns the new session and the names of the flows it ran. A run_flow
-    call whose run record is missing from both runs/ and traces/runs/ is dropped (the flow's calls are unknown)."""
+    call whose run record is missing from both runs/ and traces/runs/ (or that returned an error, so no run was
+    saved) is dropped with a warning on stderr: the session then merges as its raw calls only."""
     calls, ran = [], []
     for c in session.calls:
         if c["server"] == "flows":
             if c["tool"] == "run_flow":
                 rec = _record_of(c.get("output"), run_dir, trace_dir)
+                name = (c.get("input") or {}).get("name", "?")
                 if rec:
                     ran.append(rec["flow"])
                     calls.extend(flow_calls(rec))
                 else:
-                    ran.append((c.get("input") or {}).get("name", "?"))
+                    ran.append(name)
+                    why = "run_flow returned an error" if _run_id_of(c.get("output")) is None else f"run record {_run_id_of(c.get('output'))}.json missing from runs/ and traces/runs/"
+                    print(f"warning: session {session.session_id}: run_flow({name}) call #{c.get('seq')} dropped ({why}); "
+                          "the session contributes its raw calls only", file=sys.stderr)
             continue
         if c["server"] == "claude-code":
             continue
@@ -279,6 +293,12 @@ def print_induction(res: dict) -> None:
         print("  unresolved:", json.dumps(r["unresolved"])[:400])
     if r.get("ladders"):
         print("  ladders:", json.dumps(r["ladders"]))
+    if r.get("cut_refs"):
+        print("  reference cycles cut:", json.dumps(r["cut_refs"]))
+    if r.get("dropped_rungs"):
+        print("  dropped literal rungs (one session's value, unexplained):", json.dumps(r["dropped_rungs"]))
+    if r.get("tests"):
+        print(f"  tests: {r['tests']['cases']} cases; min_hits on {', '.join(r['tests']['min_hits'])}")
     if r.get("forEach"):
         print("  forEach:", json.dumps(r["forEach"]))
 
@@ -319,21 +339,50 @@ def _opt(args: list[str], flag: str, default=None):
     return args[args.index(flag) + 1] if flag in args and len(args) > args.index(flag) + 1 else default
 
 
+VALUE_OPTS = ("--budget", "--model", "--name")
+
+
+def positionals(args: list[str]) -> list[str]:
+    """Arguments that are neither options nor an option's value (`--budget 5` is not the run id 5)."""
+    out, skip = [], False
+    for a in args:
+        if skip:
+            skip = False
+        elif a in VALUE_OPTS:
+            skip = True
+        elif not a.startswith("-"):
+            out.append(a)
+    return out
+
+
 # ---------------------------------------------------------------- commands
+def _ran_flow_first(session: Session) -> bool:
+    """Was the first MCP call run_flow? Claude Code's own Read/Grep/Glob (recorded by the hook) do not count."""
+    mcp = [c for c in session.calls if c["server"] != "claude-code"]
+    return bool(mcp) and mcp[0]["server"] == "flows" and mcp[0]["tool"] == "run_flow"
+
+
+def _no_calls_error(info: dict) -> str:
+    msg = "the session recorded no tool calls; nothing to induce"
+    if info.get("is_error"):
+        msg += f" (the agent run failed: {(info.get('result') or info.get('stderr') or '')[:200].strip() or 'is_error'})"
+    return msg
+
+
 def author(trigger: str, inputs: dict, budget="3", model=None, name: str | None = None, driver_fn=run_agent,
            trace_dir: Path | None = None, flow_dir: Path | None = None, run_dir: Path | None = None, test: bool = True,
-           catalog: dict | None = None) -> dict:
-    flows = flows_for_trigger(trigger, flow_dir)
+           catalog: dict | None = None, lifecycle=None) -> dict:
+    flows = flows_for_trigger(trigger, flow_dir, lifecycle)
     prompt = author_prompt(trigger, inputs, flows)
     info = driver_fn(trigger, inputs, prompt, budget=budget, model=model, meta={"command": "author"})
     session = load_session(Path(info["trace_path"]))
     archive_run_records(session, run_dir, trace_dir)
     expanded, ran = expand_flow_calls(session, run_dir, trace_dir)
     base = base_name(name or (ran[0] if ran and ran[0] != "?" else (flows[0]["name"] if flows else f"induced-{trigger.replace('_', '-')}")))
-    res = {"agent": info, "ran_flows": ran, "ran_flow_first": bool(session.calls) and session.calls[0]["server"] == "flows" and session.calls[0]["tool"] == "run_flow",
+    res = {"agent": info, "ran_flows": ran, "ran_flow_first": _ran_flow_first(session),
            "raw_calls": [f"{c['server']}.{c['tool']}" for c in session.calls if c["server"] not in ("flows", "claude-code")]}
     if not expanded.calls:
-        res["error"] = "the session recorded no tool calls; nothing to induce"
+        res["error"] = _no_calls_error(info)
         return res
     ind = induce_version(trigger, base, expanded, trace_dir, flow_dir, catalog, run_dir=run_dir,
                          note={"command": "author", "inputs": inputs, "cost_usd": info.get("cost_usd"), "ran_flows": ran})
@@ -374,10 +423,10 @@ def repair(selector: str, budget="3", model=None, driver_fn=run_agent, feedback_
             res.update(ind)
             if test:
                 res["test"] = _test_new(ind["flow"])
+            # handled only once a version exists; a failed agent run (error, budget, no calls) leaves the complaint pending
+            mark_handled(c["run_id"], {"session_id": info["session_id"], "cost_usd": info.get("cost_usd"), "new_flow": ind["flow"]["name"]}, feedback_path)
         else:
-            res["error"] = "the session recorded no tool calls; nothing to induce"
-        mark_handled(c["run_id"], {"session_id": info["session_id"], "cost_usd": info.get("cost_usd"),
-                                   "new_flow": res.get("flow", {}).get("name"), "error": res.get("error")}, feedback_path)
+            res["error"] = _no_calls_error(info) + "; the complaint stays pending"
         results.append(res)
     return results
 
@@ -431,7 +480,7 @@ def author_main(args: list[str]) -> int:
 
 def repair_main(args: list[str]) -> int:
     pending = pending_complaints()
-    sel = "--all" if "--all" in args else next((a for a in args if not a.startswith("-")), None)
+    sel = "--all" if "--all" in args else next(iter(positionals(args)), None)
     if not sel:
         print(f"{len(pending)} pending complaint(s) in {FEEDBACK}:")
         for c in pending:
@@ -454,7 +503,7 @@ def repair_main(args: list[str]) -> int:
         _print_agent(res["agent"])
         total += res["agent"].get("cost_usd") or 0
         if res.get("error"):
-            print("error:", res["error"])
+            print("error:", res["error"], "(not marked handled)")
             continue
         print_induction(res)
         _print_test(res.get("test"))

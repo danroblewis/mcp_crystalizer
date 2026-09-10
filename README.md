@@ -71,9 +71,17 @@ ever calls an LLM.
    (tracked, unlike `runs/`), so those sessions merge with the others instead of adding a `flows.run_flow` step.
    The report lists unresolved bindings (values that differ across sessions with no explanation), optional
    steps, ladders, fan-outs, how each session's steps were aligned, the window alternatives that lost the
-   majority vote, and the bindings solved by learned position programs. Steps align across sessions by a
+   majority vote, the bindings solved by learned position programs (each gated leave-one-out: a program learned
+   from the other examples must reproduce every held-out span), the literal rungs dropped (a value one session
+   used that nothing explains never becomes a ladder rung) and the reference cycles cut (sessions that did two
+   things in opposite orders: the fallback rung or fan-out term that pointed forward is removed). Steps align across sessions by a
    signature of what their bound arguments reference (tool + text/id/window classes), so an agent that runs
-   the same tools in a different order still merges; timestamp arguments never become ladders.
+   the same tools in a different order still merges; timestamp arguments never become ladders. Every draft
+   carries `tests:` (one case per traced input, `min_hits: 1` on each step that had hits in every session), so
+   `crystal test` on a draft checks that it still finds what the agent found.
+   Sessions the hook records are only those that touch an MCP server; Claude Code's own Read/Grep/Glob results
+   are kept as short previews inside such a session and never on their own (a review session in this checkout
+   leaves no trace).
    `flows/induced-jira-ticket-all.yaml` is the merge of the 15 scripted sessions with the two real Claude Code
    sessions (one exploratory, one `crystal author` run); `induced-slack-thread` / `induced-slack-dm` merge 15 / 18
    scripted sessions with one real session each. The hand-fixed candidates are `investigate-*.yaml`.
@@ -84,28 +92,36 @@ ever calls an LLM.
    own *effective* state per flow in `state/lifecycle.sqlite` (gitignored) with a circuit breaker: a run with a step
    error, a required step with zero hits, a failed regression test or a "this didn't help" from the UI demotes the
    flow one level (promoted → candidate → draft); it climbs back after N consecutive clean live runs
-   (`candidate_after: 2` and `promote_after: 5` in the YAML, per flow), never above the author's intent. The UI shows
-   both badges plus counters and the last failure.
+   (`candidate_after: 2` and `promote_after: 5` in the YAML, per flow), never above the author's intent. A passing
+   regression test is recorded but never counts toward re-promotion (it replays the same responses every time), and
+   the authoring agent's `run_flow` runs are saved but never counted either way. The UI lists every flow, drafts
+   included, with both badges plus counters and the last failure; if the lifecycle store is locked the run is still
+   saved (with `lifecycle: {error}`).
    ```bash
    uv run python -m crystal.cli status                       # table: author intent, effective state, counters
    uv run python -m crystal.cli test investigate-jira-ticket  # regression via cassette (live for misses); recorded
    ```
-   `crystal test` runs the flow's `tests:` cases (or one built from the inputs' `example`s) through
-   `traces/cassettes/<flow>.json`, seeded from the sessions the flow was induced from; `--live` re-records,
-   `--offline` never starts a server.
+   `crystal test` runs the flow's `tests:` cases (or one built from the inputs' `example`s, which must then find
+   something: a run where every step returns zero hits fails) through `traces/cassettes/<flow>.json`, seeded from
+   the sessions the flow was induced from; `--live` re-records, `--offline` never starts a server. A flow with no
+   cases at all is an error, not a failure (the lifecycle is untouched).
 5. **Author / repair (the only commands that launch the agent; each costs money, capped with `--budget`).**
    ```bash
    uv run python -m crystal.cli author jira_issue key=PAY-108 --yes --budget 3
    uv run python -m crystal.cli repair            # list the queue; then: repair --all --yes  |  repair <run_id> --yes
    ```
-   `author` runs Claude Code headless with the existing flows listed and the instruction to run the best one FIRST
+   `author` runs Claude Code headless with the existing flows listed (ordered by the runtime's effective status, so
+   a flow the circuit breaker tripped is never the one to run first) and the instruction to run the best one FIRST
    through the `flows` MCP server (`sim/servers/flows.py`: `list_flows`, `run_flow(name, inputs_json)`, which executes
    the interpreter and returns a compact evidence summary), then explore with the raw tools only for what the flow
    lacked. The recorded trace reads "ran flow X, then did Y"; the run record is copied to `traces/runs/`, the
    `run_flow` call is expanded into the calls the flow made, and the inducer compiles that session plus every earlier session of the trigger
    into `flows/<base>.v<N>.yaml` (`status: draft`, `base`, `authored:` provenance). Nothing is overwritten.
    `repair` does the same for each unhelpful run queued in `traces/feedback.jsonl`, handing the agent the flow YAML,
-   the inputs, a compact evidence summary and the complaint; it then appends a `handled` record (never deletes).
+   the inputs, a compact evidence summary and the complaint; once a version exists it appends a `handled` record
+   (never deletes). A failed agent run (error, budget, no tool calls) leaves the complaint pending. A `run_flow`
+   call whose run record is missing (or that errored) is dropped from the session with a warning on stderr.
+   `flows/investigate-jira-ticket.v2.yaml` is that author session's version, re-induced with the current inducer.
    Without `--yes` both commands ask for confirmation on a terminal and refuse when non-interactive.
 
 ## Flow YAML in one screen

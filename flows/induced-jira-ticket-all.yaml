@@ -215,10 +215,7 @@ steps:
   title: commit 2
   tool: git.git_show
   args:
-    sha:
-      ladder:
-      - '{{ jira_get_issue_comments.sha_shorts | first }}'
-      - 99988c8b3
+    sha: '{{ jira_get_issue_comments.sha_shorts | first }}'
   optional: true
   seen_in: 2/17 sessions
 - id: commits
@@ -268,3 +265,193 @@ steps:
     incident_id: '{{ pagerduty.pd_incident_ids | first }}'
   optional: true
   seen_in: 2/17 sessions
+tests:
+- inputs:
+    key: SUP-105
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: PAY-108
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: PAY-101
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: PAY-102
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: PLAT-102
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: STF-109
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1
+- inputs:
+    key: SUP-102
+  expect:
+    issue:
+      min_hits: 1
+    slack:
+      min_hits: 1
+    thread:
+      min_hits: 1
+    code:
+      min_hits: 1
+    owners:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    pagerduty:
+      min_hits: 1

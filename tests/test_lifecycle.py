@@ -193,3 +193,86 @@ def test_ui_feedback_demotes_and_queues(tmp_path, monkeypatch):
     assert line["kind"] == "feedback" and line["helpful"] is False and line["flow"] == "investigate-jira-ticket"
     resp = asyncio.run(web.feedback("r1", text="", helpful="yes"))
     assert "Thanks" in resp.headers["location"] and lc_mod.get_lifecycle().get("investigate-jira-ticket")["complaints"] == 1
+
+
+# ---------------------------------------------------------------- review fixes
+def test_passing_regression_tests_never_repromote(lc):
+    """A passing test replays the same recorded responses every time: it is recorded but is not live evidence,
+    so a tripped flow climbs back only on clean live runs."""
+    lc.record_run(rec(status="failed"), FLOW)
+    assert lc.get("f")["status"] == "candidate"
+    for _ in range(6):
+        st = lc.record_test(FLOW, True)
+    assert st["status"] == "candidate" and st["transition"] is None and st["tests_passed"] == 6
+    assert st["clean_streak"] == 0 and st["clean_runs"] == 0 and st["total_runs"] == 1
+    assert "clean live runs" in describe(st)["hint"]
+    for i in range(5):
+        st = lc.record_run(rec(run_id=f"c{i}"), FLOW)
+    assert st["status"] == "promoted" and st["transition"] == ("candidate", "promoted")
+    assert st["clean_runs"] == 5 and lc.get("f")["tests_passed"] == 6
+
+
+def test_regression_without_cases_leaves_lifecycle_untouched(lc, tmp_path):
+    no_example = {**FLOW, "inputs": {"key": {"type": "jira_key", "required": True}}}
+    rep = regression(no_example, mode="offline", cassette_dir=tmp_path, lifecycle=lc)
+    assert not rep["passed"] and rep["cases"] == [] and "no test cases" in rep["error"] and "lifecycle" not in rep
+    assert lc.get("f") is None
+
+
+def test_regression_fails_when_every_step_returns_nothing(lc, tmp_path):
+    """No `tests:`, no `required:`: the default expectation is still that the flow found something."""
+    optional = {**FLOW, "steps": [{**FLOW["steps"][0], "required": False}, FLOW["steps"][1]]}
+    empty = {("jira", "jira_get_issue"): {}, ("slack", "conversations_search_messages"): {"messages": {"matches": []}}}
+    rep = regression(optional, mode="live", cassette_dir=tmp_path, lifecycle=lc, live_pool_factory=lambda: FakePool(empty))
+    assert not rep["passed"] and rep["cases"][0]["reason"] == "every step returned zero hits"
+    assert lc.get("f")["status"] == "candidate" and lc.get("f")["tests_failed"] == 1
+    rep = regression(optional, mode="live", cassette_dir=tmp_path / "b", lifecycle=lc, live_pool_factory=lambda: FakePool(OK_ANSWERS))
+    assert rep["passed"]
+
+
+def test_runner_saves_the_run_when_the_lifecycle_store_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr(runner_mod, "RUN_DIR", tmp_path / "runs")
+
+    class Locked:
+        def record_run(self, record, flow):
+            raise RuntimeError("database is locked")
+    r = asyncio.run(FlowRunner(FakePool(OK_ANSWERS), catalog={}, lifecycle=Locked()).run(FLOW, {"key": "PAY-101"}, save=True))
+    assert r["lifecycle"] == {"error": "RuntimeError: database is locked"} and r["status"] == "ok"
+    saved = json.loads((tmp_path / "runs" / f"{r['run_id']}.json").read_text())
+    assert saved["steps"][0]["hits"] == 1
+
+
+def test_flows_server_run_flow_is_not_a_live_run(tmp_path, monkeypatch):
+    """The authoring agent's run_flow saves a run record (the expansion needs it) but never feeds the breaker:
+    an exploratory run with made-up inputs is neither evidence for nor against the flow."""
+    import sys
+    from crystal.flow import lifecycle as lc_mod
+    sys.path.insert(0, str(runner_mod.PROJECT_ROOT / "sim" / "servers"))
+    flows_srv = __import__("flows")
+    monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lc.sqlite"))
+    monkeypatch.setattr(lc_mod, "_default", None)
+    monkeypatch.setattr(runner_mod, "RUN_DIR", tmp_path / "runs")
+    monkeypatch.setattr(flows_srv, "load_flow", lambda name: dict(FLOW))
+    monkeypatch.setattr(flows_srv, "load_registry", lambda: {"jira": {}, "slack": {}, "flows": {}})
+    bad = {**OK_ANSWERS, ("slack", "conversations_search_messages"): RuntimeError("slack down")}
+    monkeypatch.setattr(flows_srv, "ServerPool", lambda registry: FakePool(bad))
+    out = json.loads(asyncio.run(flows_srv.run_flow_tool("f", '{"key": "PAY-101"}')))
+    assert out["flow"] == "f" and out["steps"][1]["error"].startswith("slack down") and out["lifecycle"] is None
+    assert (tmp_path / "runs" / f"{out['run_id']}.json").exists()
+    assert lc_mod.get_lifecycle().get("f") is None
+
+
+def test_ui_feedback_keeps_author_status_when_yaml_is_unreadable(tmp_path, monkeypatch):
+    """A complaint filed while the flow YAML is mid-edit must not re-declare the flow a draft."""
+    import app.main as web
+    from crystal.flow import lifecycle as lc_mod
+    monkeypatch.setenv("CRYSTAL_LIFECYCLE_DB", str(tmp_path / "lc.sqlite"))
+    monkeypatch.setattr(lc_mod, "_default", None)
+    monkeypatch.setattr(web, "RUN_DIR", tmp_path / "runs")
+    monkeypatch.setattr(web, "FEEDBACK", tmp_path / "feedback.jsonl")
+    lc_mod.get_lifecycle().sync({"name": "no-such-flow", "status": "promoted"})
+    (tmp_path / "runs").mkdir()
+    (tmp_path / "runs" / "r1.json").write_text(json.dumps({"run_id": "r1", "flow": "no-such-flow", "inputs": {}, "steps": []}))
+    asyncio.run(web.feedback("r1", text="nope", helpful="no"))
+    st = lc_mod.get_lifecycle().get("no-such-flow")
+    assert st["author_status"] == "promoted" and st["status"] == "candidate" and st["complaints"] == 1

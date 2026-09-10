@@ -7,7 +7,9 @@ Two notions of status:
     above author intent: promotion beyond that is the author's call (edit the YAML).
 
 Failure signals: a run with a step error, a required step with zero hits, a failed run status, a failed regression
-test (`crystal test`), or a user's "this didn't help" from the UI.
+test (`crystal test`), or a user's "this didn't help" from the UI. Only live runs (kind="run") count toward
+re-promotion: a passing regression test replays the same recorded responses every time, so it is recorded
+(tests_passed, last_test) but never advances the clean streak.
 
 Per-flow knobs in the YAML (all optional):
   promote_after: 5      clean runs needed for candidate -> promoted (default 5)
@@ -177,8 +179,9 @@ class Lifecycle:
             return self.record_outcome(flow, ok=False, reason=f"user: {text.strip() or 'this did not help'}", kind="feedback", run_id=run_id)
 
     def record_outcome(self, flow: dict, ok: bool, reason: str | None, kind: str = "run", run_id: str | None = None) -> dict:
-        """The state machine. Clean run: streak += 1, promote one level when the streak reaches the threshold for the
-        next level (never above author intent). Failure: streak = 0, demote one level (never below draft)."""
+        """The state machine. Clean live run: streak += 1, promote one level when the streak reaches the threshold for
+        the next level (never above author intent). A clean signal of any other kind (a passing test) is logged only.
+        Failure of any kind: streak = 0, demote one level (never below draft)."""
         with self._lock:
             return self._record_outcome(flow, ok, reason, kind, run_id)
 
@@ -190,16 +193,17 @@ class Lifecycle:
         if kind == "run":
             self.db.execute("UPDATE flows SET total_runs = total_runs + 1, last_run_at = ? WHERE name = ?", (now, name))
         new = cur
-        if ok:
+        if ok and kind != "run":
+            pass                                   # a passing test is not live evidence: no streak, no transition
+        elif ok:
             streak = row["clean_streak"] + 1
-            self.db.execute("UPDATE flows SET clean_streak = ?, clean_runs = clean_runs + ?, updated_at = ? WHERE name = ?",
-                            (streak, 1 if kind == "run" else 0, now, name))
+            self.db.execute("UPDATE flows SET clean_streak = ?, clean_runs = clean_runs + 1, updated_at = ? WHERE name = ?", (streak, now, name))
             if level(cur) < level(author):
                 need = row["candidate_after"] if cur == "draft" else row["promote_after"]
                 if streak >= need:
                     new = LEVELS[level(cur) + 1]
                     self.db.execute("UPDATE flows SET status = ?, clean_streak = 0, updated_at = ? WHERE name = ?", (new, now, name))
-                    self._event(name, "transition", True, f"{streak} clean {'runs' if kind == 'run' else 'signals'}", run_id, cur, new)
+                    self._event(name, "transition", True, f"{streak} clean live runs", run_id, cur, new)
         else:
             self.db.execute("UPDATE flows SET clean_streak = 0, failed_runs = failed_runs + ?, last_failure = ?, last_failure_at = ?, last_failure_run = ?, updated_at = ? WHERE name = ?",
                             (1 if kind == "run" else 0, (reason or "failure")[:500], now, run_id, now, name))
@@ -223,7 +227,7 @@ def describe(state: dict | None) -> dict[str, Any]:
     hint = ""
     if tripped:
         need = state["candidate_after"] if state["status"] == "draft" else state["promote_after"]
-        hint = f"{state['clean_streak']}/{need} clean runs to re-promote to {LEVELS[level(state['status']) + 1]}"
+        hint = f"{state['clean_streak']}/{need} clean live runs to re-promote to {LEVELS[level(state['status']) + 1]}"
     return {"status": state["status"], "tripped": tripped, "hint": hint}
 
 

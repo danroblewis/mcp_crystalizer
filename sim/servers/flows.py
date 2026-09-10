@@ -7,6 +7,7 @@ servers.yaml / .mcp.json. The recorder hook records mcp__flows__run_flow calls l
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from pathlib import Path
@@ -134,9 +135,11 @@ async def run_flow_tool(name: str, inputs_json: str = "{}") -> str:
     registry = {k: v for k, v in load_registry().items() if k != "flows"}   # never recurse into ourselves
     try:
         async with ServerPool(registry) as pool:
-            record = await FlowRunner(pool).run(flow, inputs, save=True)
+            # saved (the author's expansion needs the run record) but lifecycle=False: an agent's exploratory run,
+            # possibly with made-up inputs, is not live evidence for or against the flow
+            record = await FlowRunner(pool, lifecycle=False).run(flow, inputs, save=True)
     except BaseException as e:  # noqa: BLE001  (anyio raises ExceptionGroup)
-        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+        if isinstance(e, (KeyboardInterrupt, SystemExit, asyncio.CancelledError)):
             raise
         return _text({"error": f"flow failed to run: {_explain(e)}"})
     return _text(summarize_run(record))

@@ -4,8 +4,11 @@ Test cases come from the flow YAML:
   tests:
     - inputs: { key: PAY-101 }
       expect: { slack: { min_hits: 1 }, thread: { min_hits: 1 } }     # optional per-step expectations
-If the flow declares none, one case is built from the inputs' `example` values, and the expectation is simply
-a clean run (no step error, every required step has hits).
+If the flow declares none, one case is built from the inputs' `example` values, and the expectation is a clean run
+(no step error, every required step has hits) in which at least one step found something: a run where every step
+returned zero hits is not evidence that the flow works. The inducer emits `tests:` with `min_hits: 1` for the steps
+that had hits in every traced session, one case per traced input.
+A flow with no cases at all is reported as an error and leaves the lifecycle untouched (nothing failed).
 
 Cassette: traces/cassettes/<flow>.json, seeded from the sessions the flow was induced from. Modes:
   auto (default)  replay recorded calls, go live for misses and record them
@@ -40,6 +43,8 @@ def check_case(record: dict, flow: dict, expect: dict) -> str | None:
     if reason:
         return reason
     steps = {s["id"]: s for s in record["steps"]}
+    if not expect and not any((s.get("hits") or 0) for s in record["steps"] if not s.get("skipped")):
+        return "every step returned zero hits"
     for sid, exp in (expect or {}).items():
         s = steps.get(sid)
         if s is None:
@@ -98,9 +103,9 @@ def regression(flow_or_name, mode: str = "auto", cassette_dir: Path | None = Non
 
     asyncio.run(go())
     report["passed"] = bool(cases) and all(c["passed"] for c in report["cases"])
-    if lifecycle is not False:
+    if lifecycle is not False and cases:      # no cases: nothing ran, nothing failed; the report carries the error
         lc = lifecycle or get_lifecycle()
-        detail = "; ".join(f"{c['inputs']}: {c['reason']}" for c in report["cases"] if not c["passed"]) or report.get("error", "")
+        detail = "; ".join(f"{c['inputs']}: {c['reason']}" for c in report["cases"] if not c["passed"])
         st = lc.record_test(flow, report["passed"], detail)
         report["lifecycle"] = {"status": st["status"], "author_status": st["author_status"], "transition": st.get("transition")}
     return report

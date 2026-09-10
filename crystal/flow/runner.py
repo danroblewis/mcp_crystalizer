@@ -225,12 +225,17 @@ class FlowRunner:
         return record
 
     def _record_lifecycle(self, record: dict, flow: dict) -> None:
-        """Saved runs are live runs: feed the outcome to the circuit breaker. Unsaved runs (tests, dry runs) do not count."""
+        """Saved runs are live runs: feed the outcome to the circuit breaker. Unsaved runs (tests, dry runs) do not count.
+        The shared sqlite store may be locked by another writer (UI, CLI, flows server); that must not lose the run."""
         if self.lifecycle is False:
             return
         from crystal.flow.lifecycle import get_lifecycle
-        lc = self.lifecycle or get_lifecycle()
-        st = lc.record_run(record, flow)
+        try:
+            lc = self.lifecycle or get_lifecycle()
+            st = lc.record_run(record, flow)
+        except Exception as e:  # noqa: BLE001
+            record["lifecycle"] = {"error": f"{type(e).__name__}: {e}"}
+            return
         record["lifecycle"] = {"outcome": st["outcome"], "reason": st["reason"], "status": st["status"],
                                "author_status": st["author_status"], "transition": st.get("transition")}
 

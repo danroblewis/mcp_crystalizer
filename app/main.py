@@ -123,11 +123,15 @@ async def feedback(run_id: str, text: str = Form(""), helpful: str = Form("no"))
                              "inputs": record.get("inputs"), "helpful": helpful == "yes", "text": text}) + "\n")
     if helpful != "yes" and record.get("flow"):
         # a complaint is a failure signal: the circuit breaker demotes the flow one level
+        lc = get_lifecycle()
         try:
             flow = load_flow(record["flow"])
         except Exception:  # noqa: BLE001
-            flow = {"name": record["flow"], "status": "draft"}
-        st = get_lifecycle().record_feedback(flow, run_id, text)
+            # YAML unreadable right now (mid-edit): keep the author status the store already knows rather than
+            # declaring the flow a draft, which would reset its effective state
+            known = lc.get(record["flow"])
+            flow = {"name": record["flow"], "status": known["author_status"] if known else "draft"}
+        st = lc.record_feedback(flow, run_id, text)
         tr = st.get("transition")
         msg = "Recorded.+A+repair+request+is+queued+for+the+flow+author+(crystal+repair)."
         if tr:

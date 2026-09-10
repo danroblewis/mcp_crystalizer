@@ -82,23 +82,11 @@ steps:
       before: 22d
       after: 18d
       round: 1d
-- id: code
-  title: code
-  tool: code.grep
-  args:
-    context: 2
-    glob: '**/*.py'
-    pattern: '{{ issue.error_class }}'
-  optional: true
-  seen_in: 5/16 sessions
 - id: issue
   title: issue
   tool: jira.jira_get_issue
   args:
-    issue_key:
-      ladder:
-      - '{{ thread.jira_keys | first }}'
-      - '{{ issues.jira_keys | first }}'
+    issue_key: '{{ thread.jira_keys | first }}'
   extract:
     trace_id:
       from: fields.description
@@ -112,6 +100,18 @@ steps:
       using: ids:error_class
     jira_key:
       from: key
+- id: jira_get_issue_comments
+  title: jira get issue comments
+  tool: jira.jira_get_issue_comments
+  args:
+    issue_key: '{{ issue.jira_key }}'
+  optional: true
+  seen_in: 1/16 sessions
+  extract:
+    sha_shorts:
+      from: comments[*].body
+      using: ids:sha_short
+      all: true
 - id: confluence
   title: confluence
   tool: confluence.confluence_search
@@ -127,6 +127,15 @@ steps:
     ids:
       from: results[*].id
       all: true
+- id: code
+  title: code
+  tool: code.grep
+  args:
+    context: 2
+    glob: '**/*.py'
+    pattern: '{{ issue.error_class }}'
+  optional: true
+  seen_in: 5/16 sessions
 - id: issues
   title: issues
   tool: jira.jira_search
@@ -138,32 +147,6 @@ steps:
     limit: 5
   optional: true
   seen_in: 6/16 sessions
-  extract:
-    jira_keys:
-      from: issues[*].key
-      all: true
-- id: jira_get_issue_comments
-  title: jira get issue comments
-  tool: jira.jira_get_issue_comments
-  args:
-    issue_key: '{{ issue.jira_key }}'
-  optional: true
-  seen_in: 1/16 sessions
-  extract:
-    sha_shorts:
-      from: comments[*].body
-      using: ids:sha_short
-      all: true
-- id: logs
-  title: logs
-  tool: logz.search_logs
-  args:
-    from_time: '{{ thread.window.start }}'
-    query: trace_id:{{ item }}
-    size: 20
-    to_time: '{{ thread.window.end }}'
-  forEach: ([issue.trace_id] + thread.trace_ids) | unique | list
-  max_items: 5
 - id: runbook
   title: runbook
   tool: confluence.confluence_get_page
@@ -187,6 +170,16 @@ steps:
         {{ catalog.service[thread.service].prom_selector }} }[5m]))
     start: '{{ thread.window.start }}'
     step_seconds: 300
+- id: logs
+  title: logs
+  tool: logz.search_logs
+  args:
+    from_time: '{{ thread.window.start }}'
+    query: trace_id:{{ item }}
+    size: 20
+    to_time: '{{ thread.window.end }}'
+  forEach: ([issue.trace_id] + thread.trace_ids) | unique | list
+  max_items: 5
 - id: logs_2
   title: logs 2
   tool: logz.search_logs
@@ -211,32 +204,6 @@ steps:
   extract:
     ids:
       from: incidents[*].service.id
-      all: true
-- id: commit
-  title: commit
-  tool: git.git_show
-  args:
-    sha: '{{ item }}'
-  forEach: (commits.sha40s + jira_get_issue_comments.sha_shorts) | unique | list
-  max_items: 3
-  optional: true
-  seen_in: 1/16 sessions
-- id: commits
-  title: commits
-  tool: git.git_log
-  args:
-    max_count: 10
-    path:
-      ladder:
-      - '{{ catalog.service[thread.service].repo_path }}'
-      - '{{ source.path }}'
-    since: '{{ thread.window_4d_1d.start }}'
-    until: '{{ thread.window_4d_1d.end }}'
-  optional: true
-  seen_in: 6/16 sessions
-  extract:
-    sha40s:
-      from: commits[*].sha
       all: true
 - id: commits_2
   title: commits 2
@@ -266,6 +233,23 @@ steps:
     until: '{{ thread.window_22d_18d_r1d.end }}'
   optional: true
   seen_in: 1/16 sessions
+- id: commits
+  title: commits
+  tool: git.git_log
+  args:
+    max_count: 10
+    path:
+      ladder:
+      - '{{ catalog.service[thread.service].repo_path }}'
+      - '{{ source.path }}'
+    since: '{{ thread.window_4d_1d.start }}'
+    until: '{{ thread.window_4d_1d.end }}'
+  optional: true
+  seen_in: 6/16 sessions
+  extract:
+    sha40s:
+      from: commits[*].sha
+      all: true
 - id: slack
   title: slack
   tool: slack.conversations_search_messages
@@ -274,3 +258,121 @@ steps:
     search_query: '{{ issue.error_class }} {{ thread.service }}'
   optional: true
   seen_in: 1/16 sessions
+- id: commit
+  title: commit
+  tool: git.git_show
+  args:
+    sha: '{{ item }}'
+  forEach: (commits.sha40s + jira_get_issue_comments.sha_shorts) | unique | list
+  max_items: 3
+  optional: true
+  seen_in: 1/16 sessions
+tests:
+- inputs:
+    channel_id: C542575C5
+    thread_ts: '1787484120.000005'
+  expect:
+    thread:
+      min_hits: 1
+    issue:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+- inputs:
+    channel_id: C542575C5
+    thread_ts: '1786015740.000000'
+  expect:
+    thread:
+      min_hits: 1
+    issue:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+- inputs:
+    channel_id: C542575C5
+    thread_ts: '1786298820.000001'
+  expect:
+    thread:
+      min_hits: 1
+    issue:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+- inputs:
+    channel_id: C542575C5
+    thread_ts: '1786462200.000002'
+  expect:
+    thread:
+      min_hits: 1
+    issue:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+- inputs:
+    channel_id: C542575C5
+    thread_ts: '1786806420.000003'
+  expect:
+    thread:
+      min_hits: 1
+    issue:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    logs_2:
+      min_hits: 1
+- inputs:
+    channel_id: C542575C5
+    thread_ts: '1787164140.000004'
+  expect:
+    thread:
+      min_hits: 1
+    issue:
+      min_hits: 1
+    confluence:
+      min_hits: 1
+    runbook:
+      min_hits: 1
+    metrics:
+      min_hits: 1
+    logs:
+      min_hits: 1
+    logs_2:
+      min_hits: 1

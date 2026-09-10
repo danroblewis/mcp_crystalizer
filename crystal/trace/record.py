@@ -62,16 +62,38 @@ def split_tool_name(name: str) -> tuple[str, str]:
     return "claude-code", name
 
 
-def hook_main() -> int:
-    """PostToolUse hook: stdin carries {session_id, tool_name, tool_input, tool_response, transcript_path, cwd, ...}."""
-    try:
-        payload = json.load(sys.stdin)
-    except json.JSONDecodeError:
-        return 0
+CLAUDE_CODE_TOOLS = ("Read", "Grep", "Glob", "Bash")
+PREVIEW_CHARS = 300
+
+
+def _preview(v: Any, limit: int = PREVIEW_CHARS) -> Any:
+    """Claude Code's own tool results (file contents, grep output) are context for the agent, not evidence a flow
+    could reproduce: keep a short preview of every string so a trace never embeds whole files."""
+    if isinstance(v, str):
+        return v if len(v) <= limit else v[:limit] + f"… ({len(v)} chars)"
+    if isinstance(v, list):
+        return [_preview(x, limit) for x in v[:20]]
+    if isinstance(v, dict):
+        return {k: _preview(x, limit) for k, x in v.items()}
+    return v
+
+
+def hook_main(payload: dict | None = None, trace_dir: Path | None = None) -> int:
+    """PostToolUse hook: stdin carries {session_id, tool_name, tool_input, tool_response, transcript_path, cwd, ...}.
+    Records every MCP call. Claude Code's own Read/Grep/Glob/Bash are recorded only into a session that already
+    has a trace (one launched by the driver, or one that has made an MCP call): a review or dev session in this
+    checkout that never touches an MCP server leaves no trace behind."""
+    if payload is None:
+        try:
+            payload = json.load(sys.stdin)
+        except json.JSONDecodeError:
+            return 0
     name = payload.get("tool_name", "")
     server, tool = split_tool_name(name)
-    if server == "claude-code" and tool not in ("Read", "Grep", "Glob", "Bash"):
-        return 0  # only MCP calls and codebase reads are investigation steps
+    sid = payload.get("session_id", "unknown")
+    if server == "claude-code":
+        if tool not in CLAUDE_CODE_TOOLS or not ((trace_dir or TRACE_DIR) / f"{sid}.jsonl").exists():
+            return 0  # only MCP calls and, inside an investigation, codebase reads are steps
     resp = payload.get("tool_response")
     output_text = ""
     output: Any = resp
@@ -85,7 +107,9 @@ def hook_main() -> int:
             output = json.loads(output_text)
         except json.JSONDecodeError:
             output = output_text
-    rec = Recorder(payload.get("session_id", "unknown"), "claude-code",
+    if server == "claude-code":
+        output, output_text = _preview(output), _preview(output_text)
+    rec = Recorder(sid, "claude-code", trace_dir=trace_dir,
                    meta={"transcript_path": payload.get("transcript_path"), "cwd": payload.get("cwd")})
     # seq continues across hook invocations: count existing call lines
     rec.seq = sum(1 for line in rec.path.open() if '"kind": "call"' in line) if rec.path.exists() else 0
