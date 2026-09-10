@@ -16,6 +16,7 @@ the shared behaviour and binds its arguments the usual way (inputs, extracts, la
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -220,13 +221,31 @@ def bindability(cand: Candidate, catalog: dict | None = None, workspace_meta: di
     # Only arguments that VARY between the supporting episodes say anything: a constant (max_length: 8000) is
     # bound trivially and would flatter the score. A varying argument is either derived (it renders a template)
     # or unresolved (the flow has to hardcode one episode's value).
-    derived = sum(1 for st in flow.get("steps", []) for v in (st.get("args") or {}).values()
-                  if "{{" in json.dumps(v, default=str))
+    derived = authored = 0
+    for st in flow.get("steps", []):
+        for v in (st.get("args") or {}).values():
+            blob = json.dumps(v, default=str)
+            if "{{" in blob:
+                derived += 1
+            elif _is_authored(v):
+                authored += 1
     unresolved = sum(len(args) for args in (report.get("unresolved") or {}).values())
-    varying = derived + unresolved
+    varying = derived + unresolved + authored
     if not varying:
         return None if not flow.get("steps") else 1.0      # every argument is the same in every episode
     return derived / varying
+
+
+AUTHORED_CHARS = 200
+
+
+def _is_authored(value: Any) -> bool:
+    """An argument that is content the agent wrote -- a script for run_python, a shell command, a prose instruction --
+    rather than a parameter. Replaying it verbatim reproduces one past session, not a reusable query, so it counts
+    against a candidate even when every episode passed the same text."""
+    if not isinstance(value, str):
+        return False
+    return "\n" in value.strip() or len(value) > AUTHORED_CHARS
 
 
 def score_bindability(cands: list[Candidate], catalog: dict | None = None, workspace_meta: dict | None = None) -> list[Candidate]:
@@ -260,9 +279,10 @@ def format_candidates(cands: list[Candidate], prompts: bool = True) -> str:
                 lines.append(f"{'':32}  \"{p[:110].replace(chr(10), ' ')}{'…' if len(p) > 110 else ''}\"")
     if scored and cands and all((c.bound or 0) < 0.5 for c in cands[:3]):
         lines.append("")
-        lines.append("Note: `bound` is the share of arguments a program could derive. These are low, so the agent chose most")
-        lines.append("values itself (which page to read, which file to open) rather than deriving them from the request or an")
-        lines.append("earlier result. The sequence repeats, but a flow cannot reproduce the choices; expect a draft full of")
-        lines.append("hardcoded values. Sequences whose arguments come from the prompt or a previous result crystallize well.")
+        lines.append("Note: `bound` is the share of arguments a program could derive. These are low, so the agent supplied most")
+        lines.append("of them itself -- which page to fetch, or a whole script to run -- rather than deriving them from the")
+        lines.append("request or an earlier result. The sequence repeats, but a flow would only replay one past session.")
+        lines.append("Sequences crystallize when the tools are QUERIES with typed parameters (an issue key, a service, a time")
+        lines.append("window) rather than executors that take code, a command or prose.")
     return "\n".join(lines)
 
