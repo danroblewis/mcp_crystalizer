@@ -1,0 +1,183 @@
+name: codebase-python-sdk
+title: codebase python sdk
+status: draft
+version: 1
+induced_from:
+- 054e3b48-a7a5-41f0-8da8-39855a800074
+trigger:
+  type: codebase
+inputs:
+  question:
+    type: string
+    required: true
+    example: How does the streamable HTTP client transport work, which recent pull requests changed it, and what do the docs say about using it?
+steps:
+- id: glob
+  title: glob
+  tool: code.glob
+  args:
+    pattern: src/mcp/client/*http*
+  extract:
+    files_list:
+      from: files[*]
+      all: true
+- id: glob_2
+  title: glob 2
+  tool: code.glob
+  args:
+    pattern: docs/**/*.md
+  extract:
+    files_list:
+      from: files[*]
+      all: true
+- id: owners
+  title: owners
+  tool: code.codeowners
+  args:
+    path: '{{ glob.files_list | first }}'
+  optional: true
+  empty_in_traces: true
+  seen_in: 1/1 sessions
+  extract:
+    path:
+      from: path
+- id: commits
+  title: commits
+  tool: git.git_log
+  args:
+    max_count: 15
+    path: '{{ owners.path }}'
+  extract:
+    sha40s:
+      from: commits[*].sha
+      all: true
+- id: code
+  title: code
+  tool: code.grep
+  args:
+    glob: docs/**/*.md
+    max_results: 60
+    pattern: streamable_http|StreamableHTTP|streamablehttp_client
+- id: search_issues
+  title: search issues
+  tool: github.search_issues
+  args:
+    order: desc
+    per_page: 15
+    q: repo:{{ workspace.repo_owner }}/{{ workspace.name }} is:pr is:merged streamable http client
+    sort: updated
+  optional: true
+  empty_in_traces: true
+  seen_in: 1/1 sessions
+- id: ask_question
+  title: ask question
+  tool: deepwiki.ask_question
+  args:
+    question: 'How does the streamable HTTP client transport ({{ owners.path }}) work: session IDs, GET SSE stream, resumption, and how a Client
+      uses it?'
+    repoName: '{{ workspace.repo_owner }}/{{ workspace.name }}'
+- id: source
+  title: source
+  tool: code.read_file
+  args:
+    path: '{{ item }}'
+  forEach: ([owners.path] + glob_2.files_list) | unique | list
+  max_items: 4
+- id: commit
+  title: commit
+  tool: git.git_show
+  args:
+    sha: '{{ commits.sha40s | first }}'
+  optional: true
+  empty_in_traces: true
+  seen_in: 1/1 sessions
+- id: code_2
+  title: code 2
+  tool: code.grep
+  args:
+    context: 6
+    glob: src/mcp/shared/_httpx_utils.py
+    pattern: ^def (stream_within_origin|sse_within_origin|request_within_origin|redirect_location|create_mcp_http_client)
+- id: glob_3
+  title: glob 3
+  tool: code.glob
+  args:
+    pattern: tests/client/*streamable*
+tests:
+- inputs:
+    question: How does the streamable HTTP client transport work, which recent pull requests changed it, and what do the docs say about using
+      it?
+  expect:
+    glob:
+      min_hits: 1
+    glob_2:
+      min_hits: 1
+    commits:
+      min_hits: 1
+    code:
+      min_hits: 1
+    ask_question:
+      min_hits: 1
+    source:
+      min_hits: 1
+    code_2:
+      min_hits: 1
+    glob_3:
+      min_hits: 1
+card:
+  use_case: 'codebase python sdk. Run it on a codebase (question) to gather: code, owning team, commits, github, deepwiki, suspect commit.'
+  inputs_explained:
+    question: question (string), e.g. How does the streamable HTTP client transport work, which recent pull requests changed it, and what do the
+      docs say about using it?
+  expected_outputs:
+  - name: code
+    steps:
+    - glob
+    - glob_2
+    - code
+    - source
+    - code_2
+    - glob_3
+    description: code.glob (code.glob); extracts files_list; code.glob (code.glob); extracts files_list; source lines that raise or log the error
+      (code.grep); the source file that handles the request (code.read_file, per item of `([owners.path] + glob_2.files_list) | unique | list`,
+      first 4); source lines that raise or log the error (code.grep); code.glob (code.glob)
+    required: true
+  - name: owning team
+    steps:
+    - owners
+    description: CODEOWNERS entries for the matching files (code.codeowners); extracts path
+    required: false
+  - name: commits
+    steps:
+    - commits
+    description: commits touching the service just before (git.git_log); extracts sha40s
+    required: true
+  - name: github
+    steps:
+    - search_issues
+    description: github.search_issues (github.search_issues)
+    required: false
+  - name: deepwiki
+    steps:
+    - ask_question
+    description: deepwiki.ask_question (deepwiki.ask_question)
+    required: true
+  - name: suspect commit
+    steps:
+    - commit
+    description: the diff of a commit named in the evidence (git.git_show)
+    required: false
+  not_covered:
+  - no jira lookups
+  - no slack lookups
+  - no confluence lookups
+  - no chronosphere lookups
+  - no logz lookups
+  - no pagerduty lookups
+  - source looks at the first 4 items of its fan-out only
+  example:
+    inputs:
+      question: How does the streamable HTTP client transport work, which recent pull requests changed it, and what do the docs say about using
+        it?
+    found: 'Every traced run had hits on: ask_question, code, code_2, commits, glob, glob_2, glob_3, source.'
+  authored_by: skeleton

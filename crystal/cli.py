@@ -144,6 +144,10 @@ def cmd_induce(args):
     if not sessions:
         print("no sessions for trigger", trigger)
         return 1
+    from crystal.workspace import current as _ws
+    wmeta = _ws().meta()
+    for sess in sessions:
+        sess.meta.setdefault("workspace_meta", wmeta)   # older traces predate the workspace record
     flow, report = induce(sessions, name)
     out.write_text(dump_flow(flow))
     print(f"induced {name} from {report['sessions']} sessions -> {out}")

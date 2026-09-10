@@ -93,7 +93,7 @@ def run_agent(trigger: str, inputs: dict, prompt: str, budget: str | float = "3"
     trace_dir = ws.namespaced(TRACE_DIR)
     Recorder(sid, "claude-code", trace_dir=trace_dir,
              meta={"trigger": trigger, "inputs": inputs, "model": model or "default", "prompt": prompt,
-                   "workspace": ws.slug, "workspace_root": str(ws.root), **(meta or {})})
+                   "workspace": ws.slug, "workspace_root": str(ws.root), "workspace_meta": ws.meta(), **(meta or {})})
     registry = load_registry(workspace=ws)
     servers = servers or list(registry)
     cfg = to_mcp_json(registry, only=servers)

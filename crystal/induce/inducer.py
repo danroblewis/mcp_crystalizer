@@ -114,6 +114,7 @@ class Binder:
     def __init__(self, session: Session, catalog: dict):
         self.s = session
         self.inputs = session.meta.get("inputs") or {}
+        self.workspace = {k: v for k, v in (session.meta.get("workspace_meta") or {}).items() if isinstance(v, str) and len(v) >= 3 and k not in ("root", "slug", "branch", "head")}
         self.catalog = catalog
         self.gazetteers = {k: Gazetteer(v) for k, v in catalog.items() if isinstance(v, dict)}
         self.step_ids: list[str] = []
@@ -162,6 +163,10 @@ class Binder:
         out: list[dict] = []
         for name, iv in self.inputs.items():
             out.append({"value": str(iv), "template": "{{ inputs.%s }}" % name, "kind": "input", "list_ref": None})
+        for name, wv in self.workspace.items():   # repo owner/name from the git remote: the agent sees these for free
+            out.append({"value": wv, "template": "{{ workspace.%s }}" % name, "kind": "workspace", "list_ref": None})
+            if wv.lower() != wv:
+                out.append({"value": wv.lower(), "template": "{{ workspace.%s | lower }}" % name, "kind": "workspace", "list_ref": None})
         seen_entities: dict[str, tuple[str, str]] = {}
         for j in range(idx):
             step = self.step_ids[j]
@@ -218,8 +223,8 @@ class Binder:
 
     def commit(self, cand: dict) -> dict:
         """Materialise a candidate: create its extract and return {template, kind, list_ref}."""
-        if cand["kind"] == "input":
-            return {"template": cand["template"], "kind": "input", "list_ref": None}
+        if cand["kind"] in ("input", "workspace"):
+            return {"template": cand["template"], "kind": cand["kind"], "list_ref": None}
         if cand["kind"] == "catalog-attr":
             kind, ent, ak = cand["attr"]
             # need the entity extract on that step; find or create from any leaf mentioning the entity
@@ -277,7 +282,7 @@ class Binder:
             return comp
         return {"template": value, "kind": "unresolved", "list_ref": None, "pos_cands": self.position_candidates(value, idx)}
 
-    _ORDER = {"input": 0, "copy": 1, "catalog": 1, "ids": 2, "regex": 2, "catalog-attr": 3}
+    _ORDER = {"input": 0, "workspace": 0, "copy": 1, "catalog": 1, "ids": 2, "regex": 2, "catalog-attr": 3}
 
     def _rank(self, c: dict) -> tuple:
         """Preference among candidates for the same value: kind, scalar before list, earlier step first. A value that is

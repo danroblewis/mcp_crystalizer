@@ -49,6 +49,32 @@ class Workspace:
     def __str__(self) -> str:
         return f"{self.slug} ({self.root})"
 
+    def meta(self) -> dict:
+        """Facts about the workspace an agent gets for free (Claude Code shows it the git remote): name, root,
+        remote_url, repo_owner, repo_name, branch, head. Flows reference them as {{ workspace.repo_owner }}."""
+        import subprocess
+        out = {"name": self.name, "slug": self.slug, "root": str(self.root)}
+
+        def git(*args):
+            try:
+                r = subprocess.run(["git", *args], cwd=self.root, capture_output=True, text=True, timeout=5)
+                return r.stdout.strip() if r.returncode == 0 else ""
+            except Exception:  # noqa: BLE001
+                return ""
+        url = git("config", "--get", "remote.origin.url")
+        if url:
+            out["remote_url"] = url
+            m = re.search(r"[:/]([^/:]+)/([^/]+?)(?:\.git)?/?$", url)
+            if m:
+                out["repo_owner"], out["repo_name"] = m.group(1), m.group(2)
+        branch = git("rev-parse", "--abbrev-ref", "HEAD")
+        if branch:
+            out["branch"] = branch
+        head = git("rev-parse", "HEAD")
+        if head:
+            out["head"] = head
+        return out
+
 
 def resolve_root(path: str | os.PathLike | None = None) -> Path:
     raw = str(path) if path not in (None, "") else os.environ.get(ENV, "").strip()

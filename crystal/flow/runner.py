@@ -177,7 +177,9 @@ class FlowRunner:
 
     async def run(self, flow: dict, inputs: dict, save: bool = True) -> dict:
         run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:6]
-        ctx: dict[str, Any] = {"inputs": self._coerce_inputs(flow, inputs), "catalog": self.catalog}
+        from crystal.workspace import current as _current_workspace
+        ctx: dict[str, Any] = {"inputs": self._coerce_inputs(flow, inputs), "catalog": self.catalog,
+                               "workspace": _current_workspace().meta()}
         record = {"run_id": run_id, "flow": flow["name"], "flow_path": flow.get("_path"), "inputs": ctx["inputs"],
                   "started": datetime.now(timezone.utc).isoformat(), "steps": [], "status": "ok"}
         for step in flow["steps"]:
