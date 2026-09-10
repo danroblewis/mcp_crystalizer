@@ -15,7 +15,7 @@ runtime that runs a flow never calls an LLM.
    holds code, tests, docs and examples only. Anything checked in under `examples/` is test/development data.
 3. **Workspaces are isolated.** The UI, CLI and flow catalog for one workspace never show another workspace's flows,
    runs or traces. A test against another repo must look like a fresh install.
-4. **The runtime never invokes an LLM.** Only explicit commands (`author`, `repair`, `record`) launch Claude Code, they
+4. **The runtime never invokes an LLM.** Only explicit commands (`author`, `repair`, `record`, `refine`) launch Claude Code, they
    require `--yes` or an interactive confirmation, and they print the cost. Running a flow, inducing a flow, testing a
    flow and serving the UI are all AI-free.
 5. **`mcp.json` is the universal config.** The `mcpServers` format used by Claude Code, Claude Desktop and Cursor,

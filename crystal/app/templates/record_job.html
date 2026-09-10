@@ -12,7 +12,25 @@
 <div><dt>Trace</dt><dd id="trace-link">{% if s.trace_url %}<a href="{{ s.trace_url }}">dossier of this session</a> · <a href="/traces/{{ j.session_id }}/json">raw jsonl</a>{% else %}<span class="muted">{{ 'nothing recorded' if s.done else 'no calls yet' }}</span>{% endif %}</dd></div>
 </div>
 {% if j.error %}<div class="notice" style="background:#fdf2f2;border-color:#f3c0c0"><b>Error</b><pre class="excerpt" style="margin:4px 0 0">{{ j.error }}</pre></div>{% endif %}
-{% if s.done %}
+{% if j.kind == 'refine' %}
+{% if s.refine %}{% set rf = s.refine %}
+<div class="flowcard" style="margin-top:16px"><h3>What the agent proposed, and what survived the traces</h3>
+<p class="muted small" style="max-width:80ch">{{ rf.accepted }} of {{ rf.total }} proposals accepted. Every binding was
+replayed against the {{ rf.episodes }} episode(s) <code>{{ rf['from'] }}</code> was induced from: it is kept only if it
+reproduces, exactly, the value that episode really passed. A rejected binding leaves the argument as the draft had it.
+{% if not rf.proposal_found %}<b>The agent's message carried no parseable proposal block.</b>{% endif %}</p>
+<table><tr><th>proposal</th><th>value</th><th>verdict</th><th>why</th></tr>
+{% for r in rf.rows %}<tr><td class="mono small">{{ r.what }}</td><td class="mono small">{{ r.value[:60] }}</td>
+<td>{% if r.verdict == 'accepted' %}<span class="pill ok">accepted</span>{% elif r.verdict == 'unfixable' %}<span class="pill">unfixable</span>{% else %}<span class="pill bad">{{ r.verdict }}</span>{% endif %}</td>
+<td class="small muted">{{ r.why }}</td></tr>{% endfor %}</table>
+<p class="small">bindability {{ '-' if rf.bindability.before is none else (rf.bindability.before * 100) | round | int ~ '%' }}
+&rarr; {{ '-' if rf.bindability.after is none else (rf.bindability.after * 100) | round | int ~ '%' }}
+{% if rf.flow %}· wrote <a href="/flows/{{ rf.flow }}"><b>{{ rf.flow }}</b></a> (draft, v{{ rf.version }}, refined from
+<a href="/flows/{{ rf['from'] }}">{{ rf['from'] }}</a>) · <a href="/flows/{{ rf.flow }}/yaml">YAML</a>{% endif %}</p>
+</div>
+{% elif s.done %}<div class="flowcard" style="margin-top:16px"><p class="muted">The refine job produced no report.{% if j.error %} {{ j.error }}{% endif %}</p></div>
+{% endif %}
+{% elif s.done %}
 <div class="flowcard" style="margin-top:16px"><h3>Induce a flow from this session</h3>
 {% if j.induced %}<p>Induced <a href="/flows/{{ j.induced.flow }}"><b>{{ j.induced.flow }}</b></a> from {{ j.induced.sessions }} session(s) of trigger <code>{{ j.trigger }}</code> as a draft{% if j.induced.unresolved %} ({{ j.induced.unresolved }} unresolved){% endif %}. <a href="/flows/{{ j.induced.flow }}/yaml">YAML</a></p>
 <form method="post" action="/record/{{ j.job }}/induce" style="display:inline"><button type="submit" class="secondary">Induce again (new version)</button></form>

@@ -33,15 +33,16 @@ Commands (`mcp-explorer [--workspace <dir>] <command>`):
 | `flows`, `run <flow> k=v ...`, `card <flow>` | list flows, run one, show its card |
 | `test <flow> [--live\|--offline]`, `status` | regression through recorded responses; promotion state |
 | `author ... --yes`, `repair ... --yes` | agent-assisted authoring and repair (**cost money**) |
+| `refine <flow> --yes [--budget 2] [--name n]` | the agent proposes a name, card, titles, inputs and argument bindings for an induced draft; every binding is replayed against the traces before it is kept (**costs money**) |
 | `servers`, `tools`, `mcp-config [--write]` | the effective MCP servers, their tools, the merged mcp.json |
 | `seed --from <dir>`, `workspaces` | copy starting data into a workspace's state; list known workspaces |
 | `import [--all] [--dry-run]` | import past Claude Code sessions (their transcripts) as traces, for free |
 | `candidates [induce <n> --name f]` | recurring tool sequences across the workspace's episodes; compile one into a flow |
 | `hook` | the hook entry point Claude Code calls (reads JSON on stdin) |
 
-Only `record`, `author` and `repair` launch Claude Code; they ask for confirmation (or `--yes`), are capped with
-`--budget`, and print the cost. Everything else, including serving the UI, running, inducing and testing flows, never
-calls an LLM.
+Only `record`, `author`, `repair` and `refine` launch Claude Code; they ask for confirmation (or `--yes`), are capped
+with `--budget`, and print the cost. Everything else, including serving the UI, running, inducing and testing flows,
+never calls an LLM.
 
 ## The loop
 
@@ -76,9 +77,51 @@ calls an LLM.
    effective state with a circuit breaker (a step error, a required step with zero hits, a failed `test`, or a
    "this didn't help" from the UI demotes one level; N clean live runs climb back). `mcp-explorer test <flow>` replays
    the flow's cases through a cassette seeded from the sessions it was induced from.
-5. **Author / repair** (optional, cost money): `author` runs the agent with the instruction to run the best existing
+5. **Refine** (optional, costs money): `mcp-explorer refine <flow> --yes` hands a draft to the agent for a name, a
+   card, step titles, inputs and a binding per unresolved argument. Every binding is replayed against the recorded
+   episodes and kept only if it reproduces what they actually sent. See below.
+6. **Author / repair** (optional, cost money): `author` runs the agent with the instruction to run the best existing
    flow first through the built-in `flows` MCP server and explore only for what it lacked; `repair` does the same for
    each queued complaint. Each produces `<flow>.v<N>.yaml`, never overwriting anything.
+
+## Refining a draft with an agent
+
+An induced flow is mechanically correct and unusable as a product: it is called `mined-code-git-3`, its steps are
+called `run_python_3`, its inputs are whatever identifier happened to appear in the traces, and the arguments the
+compiler could not derive are frozen at the first value one session used.
+
+```bash
+mcp-explorer refine induced-jira-ticket --yes --budget 2      # or the "Refine with an agent" button on the flow page
+```
+
+`refine` builds a prompt from the traces alone (no LLM): the draft YAML, the prompts that led to it, each step's
+tool `inputSchema` from `tools/list`, the distinct values every supporting episode passed for each unresolved
+argument and which episode passed which, which arguments are the same in every episode, the extracts each step
+already makes, and the flow's current bindability. The agent answers with one YAML block proposing a `name`, a
+`card`, `step_titles`, `inputs`, and one `binding` per unresolved argument (`input`, `derive`, `constant`, or
+`unfixable` with a reason).
+
+**The agent only proposes. Nothing it says is trusted.** Every proposal is decided here, deterministically:
+
+* the **name** must be kebab-case and not already a flow in the workspace, else the draft keeps its own;
+* the **card** goes through the same `validate_card` as everywhere else — an expected output naming a step that
+  does not exist means the agent described a different flow, and the card is dropped;
+* each proposed **input** is kept only when an accepted binding actually references it, and an input whose value is
+  identical in every recorded episode is rejected: that is a constant, not a parameter;
+* every **binding is replayed against the traces**. For each supporting episode we take the value that episode
+  really passed for `(step, arg)`, rebuild that episode's context from its own recorded calls (its inputs, and the
+  results of the calls before that step run through the flow's extracts plus any the agent proposed — no server is
+  contacted), render the proposed template in it, and require the rendered string to equal the recorded value. A
+  binding is kept only if it reproduces the recorded value in **every** episode the argument appears in; the first
+  mismatch rejects it, naming the episode, the expected value and what the template rendered. A rejected binding
+  leaves the argument exactly as the draft had it;
+* an honest `unfixable` is recorded with its reason and the argument is left alone — a better outcome than an
+  invented template.
+
+The result is a new version, `<name>.v<N>.yaml`, status `draft`, carrying `refined_from:`; nothing is overwritten.
+The command prints one row per proposal (accepted or rejected, and why), the bindability before and after, and the
+cost. `refine` refuses under `$CRYSTAL_NO_AGENT`, without `claude` on PATH, without `--yes` (or an interactive
+confirmation), and while another agent run holds the workspace lock.
 
 ## Recording from the UI
 

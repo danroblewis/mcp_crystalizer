@@ -858,6 +858,44 @@ def _topo(steps: list[dict], cuts: dict | None = None) -> list[dict]:
     return steps
 
 
+def global_ids(groups: list[dict]) -> list[str]:
+    """The flow's step ids: each group takes its members' majority local id, larger groups claiming names first (a
+    collision gets a _2 suffix). Deterministic, so re-aligning the same sessions reproduces the same ids."""
+    gids: list[str] = [""] * len(groups)
+    taken: set[str] = set()
+    for gi in sorted(range(len(groups)), key=lambda i: (-len({si for si, _, _ in groups[i]["members"]}), groups[i]["mean_pos"])):
+        base = Counter(st["id"] for _, _, st in groups[gi]["members"]).most_common(1)[0][0]
+        gid, i = base, 2
+        while gid in taken:
+            gid, i = f"{base}_{i}", i + 1
+        taken.add(gid)
+        gids[gi] = gid
+    return gids
+
+
+def align_steps(sessions: list[Session], catalog: dict | None = None) -> dict[str, list[dict]]:
+    """Which recorded calls each step of an induced flow came from: {step id: [{session, step, calls}, ...]}, using
+    the same binding, grouping and naming `induce` uses, so a flow's step ids map back to what each session actually
+    passed (`step["raw_args"]`) and to the raw calls themselves (a fan-out or ladder step covers several).
+
+    `crystal.refine` needs this to replay a proposed argument binding against the traces without calling a server.
+    """
+    catalog = catalog if catalog is not None else load_catalog()
+    bound = [{"session": s, "steps": Binder(s, catalog).bind_session()} for s in sessions]
+    groups = align(bound)
+    spans: dict[tuple[str, int], list[dict]] = {}
+    for b in bound:
+        sess = b["session"]
+        edges = [st["idx"] for st in b["steps"]] + [len(sess.calls)]
+        for i, st in enumerate(b["steps"]):
+            spans[(sess.session_id, st["idx"])] = sess.calls[edges[i]:edges[i + 1]]
+    out: dict[str, list[dict]] = {}
+    for g, gid in zip(groups, global_ids(groups)):
+        out[gid] = [{"session": bound[si]["session"].session_id, "step": st,
+                     "calls": spans[(bound[si]["session"].session_id, st["idx"])]} for si, _, st in g["members"]]
+    return out
+
+
 def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> tuple[dict, dict]:
     catalog = catalog if catalog is not None else load_catalog()
     bound = []
@@ -867,16 +905,7 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
         bound.append({"session": s.session_id, "steps": steps, "extracts": {k: dict(v) for k, v in b.extracts.items()}})
     n = len(bound)
     groups = align(bound)
-    # global step ids: the members' majority local id; larger groups claim names first
-    gids: list[str | None] = [None] * len(groups)
-    taken: set[str] = set()
-    for gi in sorted(range(len(groups)), key=lambda i: (-len({si for si, _, _ in groups[i]["members"]}), groups[i]["mean_pos"])):
-        base = Counter(st["id"] for _, _, st in groups[gi]["members"]).most_common(1)[0][0]
-        gid, i = base, 2
-        while gid in taken:
-            gid, i = f"{base}_{i}", i + 1
-        taken.add(gid)
-        gids[gi] = gid
+    gids = global_ids(groups)      # the flow's step ids; crystal.refine re-derives them with align_steps()
     extracts = canonicalize(bound, groups, gids)
     position_solved = solve_positions(groups, gids, extracts, n)
     merged, window_alts, kinds_report, dropped_rungs = [], {}, {}, {}

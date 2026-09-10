@@ -129,12 +129,19 @@ def _trace_count() -> int:
 
 
 @app.get("/flows/{name}", response_class=HTMLResponse)
-async def flow_form(request: Request, name: str):
+async def flow_form(request: Request, name: str, msg: str = ""):
     flow = load_flow(name, _state().flows)
     flow["lifecycle"] = _lifecycle(flow)
     events = get_lifecycle().events(name, limit=12)
     prefill = {k: v for k, v in request.query_params.items() if k in (flow.get("inputs") or {})}
-    return TEMPLATES.TemplateResponse(request, "flow.html", {"flow": flow, "events": events, "prefill": prefill,
+    unresolved = sum(len(s.get("unresolved") or {}) for s in flow.get("steps") or [])
+    from crystal.refine import flow_bindability
+    refine_state = {"claude": routes_record.driver.claude_path(), "install_hint": routes_record.driver.INSTALL_HINT,
+                    "running": routes_record.running_job(_workspace()), "episodes": len(flow.get("induced_from") or []),
+                    "unresolved": unresolved, "bindability": flow_bindability(flow),
+                    "default_budget": routes_record.DEFAULT_BUDGET}
+    return TEMPLATES.TemplateResponse(request, "flow.html", {"flow": flow, "events": events, "prefill": prefill, "msg": msg,
+                                                            "refine": refine_state,
                                                             "runs": [r for r in _runs(100) if r["flow"] == name][:10]})
 
 
