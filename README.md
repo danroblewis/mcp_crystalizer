@@ -137,6 +137,20 @@ exactly the shared behaviour with its arguments bound the usual way. The UI has 
 the importable transcripts of the workspace with an Import button, `/candidates` the mined behaviours with an
 "Induce as flow" button. No LLM is involved anywhere in import, mining or induction.
 
+## Replaying Claude Code's own tools
+
+A recorded session is mostly `Read`, `Grep`, `Glob` and `Bash` -- Claude Code's own tools, not MCP ones -- so a flow
+induced from it has nowhere to send them. Two things make those steps run:
+
+* **Import maps what the built-in servers already do.** `Read`, `Grep`, `Glob` and read-only `git` commands are
+  recorded as `code.read_file`, `code.grep`, `code.glob` and `git.git_log` / `git_show` / `git_grep` / `git_blame`.
+* **A built-in `claude-code` server answers the rest**, under the names and argument shapes the transcripts use, so
+  older drafts and anything that did not map keep working. Its `Bash` is **read-only**: a command is replayed only
+  when its program is on the allowlist (`ls`, `cat`, `grep`, `find`, `git log`, `python3 -c`, ...), it does not
+  redirect or chain, and package/VCS tools are limited to their read-only subcommands. Everything else is refused
+  with an explanation rather than run, because a flow runs unattended and a session's `rm -rf build` must never be
+  replayed. `CRYSTAL_ALLOW_SHELL=1` lifts the check; it is never the default.
+
 ## mcp.json
 
 The servers a workspace sees are the `mcpServers` format Claude Code, Claude Desktop and Cursor read, layered:

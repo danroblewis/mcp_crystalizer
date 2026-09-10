@@ -36,7 +36,7 @@ from typing import Any, Iterator
 
 from crystal import state as state_mod
 from crystal.extract import ids
-from crystal.trace.builtin_map import map_call
+from crystal.trace.builtin_map import map_call, normalise_args
 from crystal.trace.record import CLAUDE_CODE_TOOLS, Recorder, _preview, split_tool_name
 
 TRANSCRIPTS_ENV = "MCP_EXPLORER_TRANSCRIPTS"
@@ -242,6 +242,8 @@ class _Parser:
                 args = use["input"]
                 if use.get("mapped"):
                     server, tool, args = use["mapped"]      # recorded as the built-in server that can replay it
+                elif server == "claude-code":
+                    args = normalise_args(tool, args)       # our own claude-code server declares plain names
                 is_err = bool(b.get("is_error"))
                 output, output_text = parse_result(b.get("content"))
                 if server == "claude-code":

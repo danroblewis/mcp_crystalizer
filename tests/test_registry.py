@@ -121,7 +121,7 @@ def test_normalize_remote_entries(repo, monkeypatch):
 
 def test_builtins_point_at_the_workspace(repo):
     reg = effective_registry()
-    assert set(reg) == {"code", "git", "flows"}
+    assert set(reg) == {"code", "git", "flows", "claude-code"}
     for name in ("code", "git"):
         assert reg[name]["_source"] == BUILTIN_SOURCE and reg[name]["module"] == f"crystal.servers.{name}"
         assert reg[name]["command"] == sys.executable and reg[name]["args"][:2] == ["-m", f"crystal.servers.{name}"]
@@ -161,7 +161,7 @@ def test_the_sim_workspace_overrides_code_and_git(monkeypatch):
     assert reg["code"]["command"] == sys.executable and "module" not in reg["code"]
     assert inprocess_target(reg["code"]) == SIM / "servers" / "code.py" and inprocess_target(reg["jira"]) == SIM / "servers" / "jira.py"
     assert reg["flows"]["_source"] == BUILTIN_SOURCE
-    assert set(reg) == {"code", "git", "flows", "jira", "slack", "confluence", "logz", "chronosphere", "pagerduty"}
+    assert set(reg) == {"code", "git", "flows", "claude-code", "jira", "slack", "confluence", "logz", "chronosphere", "pagerduty"}
 
 
 def test_override_with_same_command_keeps_explicit_module(home, repo):

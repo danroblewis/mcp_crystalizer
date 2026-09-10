@@ -57,6 +57,9 @@ def builtin_servers(ws: Workspace) -> dict[str, dict]:
         "code": {"command": py, "args": ["-m", "crystal.servers.code", "--root", str(ws.root)], "module": "crystal.servers.code"},
         "git": {"command": py, "args": ["-m", "crystal.servers.git", "--root", str(ws.root)], "module": "crystal.servers.git"},
         "flows": {"command": py, "args": ["-m", "crystal.servers.flows"], "module": "crystal.servers.flows"},
+        # Claude Code's own Read/Grep/Glob/Bash, so a flow induced from a recorded session has somewhere to send them.
+        "claude-code": {"command": py, "args": ["-m", "crystal.servers.claude_code", "--root", str(ws.root)],
+                        "module": "crystal.servers.claude_code"},
     }
 
 

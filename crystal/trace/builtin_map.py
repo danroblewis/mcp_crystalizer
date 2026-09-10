@@ -127,6 +127,28 @@ def map_call(name: str, inp: dict | None) -> tuple[str, str, dict] | None:
         return None
 
 
+# Claude Code's own argument names for tools we answer ourselves (crystal/servers/claude_code.py): its dashed
+# flags are not valid parameter names, so a recorded call is normalised to the ones our server declares.
+FLAG_RENAMES = {"-i": "ignore_case", "-n": None, "-C": "context", "-A": "context", "-B": "context",
+                "multiline": None, "output_mode": "output_mode", "head_limit": "head_limit"}
+
+
+def normalise_args(tool: str, inp: dict | None) -> dict:
+    """A recorded `claude-code.<tool>` call in the vocabulary our own server declares."""
+    out: dict[str, Any] = {}
+    for k, v in (inp or {}).items():
+        if k in FLAG_RENAMES:
+            key = FLAG_RENAMES[k]
+            if key is None:
+                continue                       # a display flag (-n, multiline): nothing to replay
+            out.setdefault(key, v if not isinstance(v, bool) or key == "ignore_case" else v)
+        else:
+            out[k] = v
+    if tool == "Grep" and isinstance(out.get("context"), bool):
+        out.pop("context")
+    return out
+
+
 def is_replayable(server: str) -> bool:
     """A step a flow can actually execute: anything but the tools that only existed inside the agent's session."""
     return server != "claude-code"
