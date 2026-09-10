@@ -19,6 +19,11 @@
   record <trigger> k=v ... --yes  run Claude Code headless here with recording (COSTS MONEY; --budget caps it)
   author <trigger> k=v ... --yes  run the agent (costs money): tries existing flows first, explores, induces a new version
   repair [--all | <run_id>] --yes  hand queued "this didn't help" complaints to the agent (costs money)
+  refine <flow> --yes [--budget 2] [--model m] [--name new-name]
+                                the agent PROPOSES a name, a card, step titles, inputs and a binding for each
+                                unresolved argument of an induced draft (costs money); every binding is replayed
+                                against the recorded episodes here and kept only if it reproduces what they sent.
+                                Writes <name>.v<N>.yaml (draft), never overwrites
   hook                          the Claude Code hook entry (reads the hook JSON on stdin); not for humans
   install-hook [--uninstall] [--settings p] [--status]   add the recording hooks to ~/.claude/settings.json
   seed --from <dir> [--overwrite]  copy <dir>/flows, traces, catalog.yaml into the workspace's state dir
@@ -252,6 +257,11 @@ def cmd_repair(args):
     return repair_main(args)
 
 
+def cmd_refine(args):
+    from crystal.refine import refine_main
+    return refine_main(args)
+
+
 def cmd_record(args):
     from crystal.trace.driver import main as driver_main
     return driver_main(args)
@@ -394,7 +404,7 @@ def cmd_candidates(args):
 
 COMMANDS = {"serve": cmd_serve, "flows": cmd_flows, "run": cmd_run, "test": cmd_test, "status": cmd_status, "card": cmd_card,
             "servers": cmd_servers, "tools": cmd_tools, "mcp-config": cmd_mcp_config, "induce": cmd_induce,
-            "record": cmd_record, "author": cmd_author, "repair": cmd_repair, "hook": cmd_hook,
+            "record": cmd_record, "author": cmd_author, "repair": cmd_repair, "refine": cmd_refine, "hook": cmd_hook,
             "install-hook": cmd_install_hook, "seed": cmd_seed, "workspaces": cmd_workspaces,
             "import": cmd_import, "candidates": cmd_candidates}
 NO_WORKSPACE = {"hook", "install-hook", "workspaces"}     # commands that do not act on the current workspace

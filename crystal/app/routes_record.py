@@ -1,4 +1,4 @@
-"""Recording from the UI: /record launches one headless Claude Code session in the workspace and follows it.
+"""Agent launches from the UI: /record (one recorded Claude Code session) and /flows/<f>/refine (refine a draft).
 
 The page is the web form of `mcp-explorer record`: a question, a trigger name, a budget cap, a model, and an
 explicit confirmation ("this launches Claude Code and costs money"). The launch runs crystal.trace.driver.run_agent
@@ -11,6 +11,12 @@ trigger -> <trigger>.v<N>.yaml, status draft; no LLM).
 Guardrails, in the order they are checked: the checkbox, `claude` on PATH, a positive budget (passed to the driver
 as --max-budget-usd), one run at a time per workspace (records/.lock in the state dir, stale locks recovered), and
 every job persisted as records/<job>.json so a server restart keeps the history.
+
+The **Refine with an agent** button on a flow page posts to /flows/<flow>/refine and reuses all of that: the same
+lock, the same background thread, the same job records and the same job page. That job runs `crystal.refine.refine`,
+which asks the agent for a name, a card, step titles, inputs and argument bindings and then DECIDES each proposal
+deterministically -- every binding is replayed against the episodes the flow was induced from and kept only when it
+reproduces what they actually sent. The job page shows that accepted/rejected table and links to the new version.
 
 Nothing here runs without a POST from the form, and the UI never calls an LLM on its own (invariant 4).
 """
@@ -203,6 +209,73 @@ def start_job(ws: ws_mod.Workspace, question: str, trigger: str, budget: float, 
     return rec
 
 
+def start_refine_job(ws: ws_mod.Workspace, flow_name: str, budget: float, model: str | None,
+                     new_name: str | None) -> dict:
+    """The same job machinery as a recording, running `crystal.refine.refine` instead. Raises Busy."""
+    job = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:6]
+    sid = str(uuid.uuid4())
+    acquire_lock(ws, job)
+    rec = {"job": job, "kind": "refine", "session_id": sid, "trigger": "refine", "flow": flow_name,
+           "new_name": new_name, "question": f"refine the draft flow {flow_name}", "prompt": "",
+           "budget": budget, "model": model, "status": "running", "started": _now(), "finished": None,
+           "server_pid": os.getpid(), "pid": None, "cost_usd": None, "num_turns": None, "duration_ms": None,
+           "is_error": None, "result": None, "error": None, "trace_path": str(ws.state.traces / f"{sid}.jsonl"),
+           "workspace": ws.slug, "induced": None, "refine": None}
+    save_job(ws, rec)
+    t = threading.Thread(target=_run_refine, args=(ws, rec), name=f"refine-{job}", daemon=True)
+    _THREADS[job] = t
+    t.start()
+    return rec
+
+
+def _run_refine(ws: ws_mod.Workspace, rec: dict) -> None:
+    """The refine job: the agent proposes, crystal.refine decides, a new version is written. Costs money."""
+    from crystal import refine as refine_mod
+    job = rec["job"]
+    try:
+        def driver_fn(trigger, inputs, prompt, budget=None, model=None, meta=None, **kw):
+            _update(ws, job, prompt=prompt)
+            return driver.run_agent(trigger, inputs, prompt, budget=budget, model=model, meta=meta,
+                                    session_id=rec["session_id"], quiet=True, workspace=ws.root,
+                                    on_start=lambda i: _update(ws, job, pid=i.get("pid")))
+        report = refine_mod.refine(rec["flow"], budget=rec["budget"], model=rec["model"], name=rec["new_name"],
+                                   driver_fn=driver_fn, flow_dir=ws.state.flows, trace_dir=ws.state.traces,
+                                   workspace=ws.root, lock=False)     # the job already holds the workspace lock
+        info = report.get("agent") or {}
+        _update(ws, job, status="done", finished=_now(), cost_usd=report.get("cost_usd"), num_turns=info.get("num_turns"),
+                duration_ms=info.get("duration_ms"), is_error=bool(info.get("is_error")), result=info.get("result") or "",
+                refine=refine_view(report))
+    except Exception as e:  # noqa: BLE001
+        _update(ws, job, status="error", finished=_now(), error=f"{type(e).__name__}: {e}")
+    finally:
+        release_lock(ws, job)
+        _THREADS.pop(job, None)
+
+
+def refine_view(report: dict) -> dict:
+    """The accepted/rejected table the job page shows: one row per proposal, plus the bindability and the new flow."""
+    rows = [{"what": "name", "value": str(report["name"].get("proposed") or "(none)"),
+             "verdict": "accepted" if report["name"]["accepted"] else "rejected",
+             "why": report["name"]["reason"] or f"using {report['name']['used']}"},
+            {"what": "card", "value": "agent prose",
+             "verdict": "accepted" if report["card"]["accepted"] else "rejected", "why": report["card"]["reason"]}]
+    for t in report["step_titles"]:
+        rows.append({"what": f"title {t['step']}", "value": t["title"],
+                     "verdict": "accepted" if t["accepted"] else "rejected", "why": t["reason"]})
+    for i in report["inputs"]:
+        rows.append({"what": f"input {i['name']}", "value": str(i["spec"].get("type") or "string"),
+                     "verdict": "accepted" if i["accepted"] else "dropped", "why": i["reason"]})
+    for b in report["bindings"]:
+        rows.append({"what": f"bind {b['step']}.{b['arg']}", "value": str(b.get("template") or ""),
+                     "verdict": "accepted" if b.get("accepted") else ("unfixable" if b.get("unfixable") else "rejected"),
+                     "why": b.get("reason", "")})
+    flow = report.get("flow") or {}
+    return {"rows": rows, "bindability": report["bindability"], "path": report.get("path"),
+            "flow": flow.get("name"), "version": flow.get("version"), "from": flow.get("refined_from"),
+            "episodes": len(report.get("episodes") or []), "proposal_found": report.get("proposal_found"),
+            "accepted": sum(1 for r in rows if r["verdict"] == "accepted"), "total": len(rows)}
+
+
 def _run(ws: ws_mod.Workspace, rec: dict) -> None:
     job = rec["job"]
     try:
@@ -251,7 +324,7 @@ def status_view(rec: dict) -> dict:
             "calls": tv["calls"], "n_calls": tv["n_calls"], "cost_usd": rec.get("cost_usd"), "num_turns": rec.get("num_turns"),
             "is_error": rec.get("is_error"), "error": rec.get("error"), "result": rec.get("result") or tv["result"],
             "trace_url": f"/traces/{rec['session_id']}" if tv["n_calls"] else None,
-            "induced": rec.get("induced"), "done": rec.get("status") in TERMINAL}
+            "induced": rec.get("induced"), "refine": rec.get("refine"), "done": rec.get("status") in TERMINAL}
 
 
 def _page_state(ws: ws_mod.Workspace) -> dict:
@@ -326,6 +399,45 @@ async def record_status(request: Request, job: str):
     if rec is None:
         return JSONResponse({"error": "job not found"}, status_code=404)
     return JSONResponse(status_view(rec))
+
+
+@router.post("/flows/{name}/refine")
+async def flow_refine(request: Request, name: str):
+    """Hand a draft flow to the agent for a name, a card, titles, inputs and argument bindings. COSTS MONEY: the
+    checkbox, `claude` on PATH and the workspace lock all have to agree first. Every proposal is decided by
+    crystal.refine against the traces, not by the agent."""
+    from urllib.parse import quote_plus
+
+    from crystal.flow.runner import load_flow
+    ws = _workspace(request)
+    form = await request.form()
+
+    def refuse(msg: str):
+        return RedirectResponse(f"/flows/{name}?msg={quote_plus(msg)}", status_code=303)
+
+    try:
+        flow = load_flow(name, ws.state.flows)
+    except Exception:  # noqa: BLE001
+        return HTMLResponse("flow not found", status_code=404)
+    if form.get("confirm") != "yes":
+        return refuse("Not started: tick the box. Refining launches Claude Code in this workspace and costs money.")
+    if not driver.claude_path():
+        return refuse(driver.INSTALL_HINT)
+    if not flow.get("induced_from"):
+        return refuse("Not started: this flow was not induced from recorded episodes, so no proposal could be "
+                      "replayed against anything. Refine only works on induced drafts.")
+    try:
+        budget = float((form.get("budget") or "").strip() or DEFAULT_BUDGET)
+    except ValueError:
+        return refuse("Not started: the budget must be a number of US dollars.")
+    if not 0 < budget <= 1000:
+        return refuse("Not started: the budget must be between 0 and 1000 USD.")
+    new_name = (form.get("new_name") or "").strip() or None
+    try:
+        rec = start_refine_job(ws, flow["name"], budget, (form.get("model") or "").strip() or None, new_name)
+    except Busy as e:
+        return refuse(f"Not started: a run is already in progress in this workspace (job {e.job}).")
+    return RedirectResponse(f"/record/{rec['job']}", status_code=303)
 
 
 @router.post("/record/{job}/induce")
