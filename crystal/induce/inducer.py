@@ -492,6 +492,13 @@ class Binder:
         for st in steps:
             prev = out[-1] if out else None
             if prev and prev["tool"] == st["tool"]:
+                if prev["raw_args"] == st["raw_args"]:
+                    # The same call with the same arguments, again. In the session those were separated by time and
+                    # the world had moved on; a flow runs them back to back, so repeating it just asks one question
+                    # several times. Keep one step and record how often the agent repeated it.
+                    prev["repeated"] = prev.get("repeated", 1) + 1
+                    prev["hits"] = max(prev["hits"], st["hits"])
+                    continue
                 diff = [k for k in set(prev["args"]) | set(st["args"]) if prev["args"].get(k) != st["args"].get(k)]
                 raw_diff = [k for k in set(prev["raw_args"]) | set(st["raw_args"]) if prev["raw_args"].get(k) != st["raw_args"].get(k)]
                 if len(raw_diff) == 1 and len(diff) <= 1:
@@ -991,6 +998,10 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
             step["optional"] = True
             step["empty_in_traces"] = True   # the agent's call errored or returned nothing every time it was traced
             step.setdefault("seen_in", f"{n_sess}/{n} sessions")
+        reps = [int(st.get("repeated") or 1) for st in items]
+        if max(reps, default=1) > 1:
+            # The agent asked this repeatedly while time passed; the flow asks once and says how often it recurred.
+            step["repeated_in_traces"] = {"max": max(reps), "median": sorted(reps)[len(reps) // 2]}
         if n_sess < n:
             step["optional"] = True
             step["seen_in"] = f"{n_sess}/{n} sessions"

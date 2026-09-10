@@ -425,6 +425,8 @@ def prompt_inputs(text: str | None, calls: list[dict] | None = None) -> dict:
     for name, value in _whole_arg_values(args):
         if len(value) < MIN_INPUT_CHARS or value not in text:
             continue
+        if ids.is_secret(ids.type_of(value) or ""):
+            continue                      # a credential is never a parameter, and never stored as an example
         if any(value == v for v in out.values()):
             continue
         out.setdefault(name, value)

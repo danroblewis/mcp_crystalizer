@@ -351,3 +351,27 @@ def test_same_shaped_rungs_are_an_unresolved_argument_not_a_ladder():
     assert len({_rung_templates(r) for r in strategy}) == 3         # genuinely different derivations
     two_sources = ["{{ thread.sha_shorts | first }}", "{{ comments.sha_shorts | first }}"]
     assert len({_rung_templates(r) for r in two_sources}) == 2      # a real fallback, not an enumeration
+
+
+def test_identical_repeated_calls_collapse_to_one_step():
+    """An agent polling one tool while the world changes becomes many identical calls. A flow runs them back to
+    back, so repeating the call just asks the same question several times: keep one step, record the repetition."""
+    from crystal.induce.inducer import Binder, induce
+    from crystal.trace.store import Session
+
+    def session(sid):
+        calls = [{"seq": i, "server": "arena", "tool": "observe", "input": {"agent_id": "a1"},
+                  "output": {"players": ["x"]}, "is_error": False} for i in range(4)]
+        calls.append({"seq": 9, "server": "arena", "tool": "say", "input": {"agent_id": "a1", "text": "hello"},
+                      "output": {"ok": True}, "is_error": False})
+        return Session(session_id=sid, source="transcript",
+                       meta={"trigger": "prompt", "inputs": {"prompt": "go", "agent_id": "a1"}}, calls=calls)
+
+    steps = Binder(session("s"), {}).bind_session()
+    assert [st["tool"] for st in steps] == ["arena.observe", "arena.say"]
+    assert steps[0]["repeated"] == 4
+
+    flow, _ = induce([session("s1"), session("s2")], "polled")
+    observe = next(st for st in flow["steps"] if st["tool"] == "arena.observe")
+    assert observe["repeated_in_traces"]["max"] == 4
+    assert sum(1 for st in flow["steps"] if st["tool"] == "arena.observe") == 1
