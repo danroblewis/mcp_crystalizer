@@ -442,17 +442,44 @@ def headline_for(flow: dict | None, record: dict) -> dict:
             h = _headline(flow, record) or {}
         except Exception:  # noqa: BLE001
             h = {}
+        own_created = ((base.get("when") or {}).get("started")) or ""
         for k, v in h.items():
             if v in (None, "", [], {}):
                 continue
             if k in ("team_owners", "people", "trace_ids", "pods"):
                 base[k] = list(dict.fromkeys(_as_list(v) + _as_list(base.get(k))))
-            elif k == "when" and not isinstance(v, dict):
-                base["when"] = {"started": str(v), "started_fmt": _fmt_ts(str(v)) or str(v), "resolved": None, "resolved_fmt": None, "duration": None}
-            elif k == "status" and not isinstance(v, dict):
-                base["status"] = {"incident": str(v)}
-            elif k == "changed_before" and not (isinstance(v, list) and v and isinstance(v[0], dict)):
-                base["changed_before"] = [{"sha": "", "subject": str(x), "author": None, "date": None} for x in _as_list(v)]
+            elif k == "when":
+                # cards.headline gives {anchor, start, end}; the fallback's {started, resolved, duration} is richer, so only fill a gap
+                anchor = v.get("anchor") if isinstance(v, dict) else str(v)
+                if not base.get("when") and anchor:
+                    base["when"] = {"started": anchor, "started_fmt": _fmt_ts(anchor) or anchor, "resolved": None, "resolved_fmt": None, "duration": None}
+            elif k == "status":
+                st = dict(base.get("status") or {})
+                if isinstance(v, dict):
+                    if v.get("jira"):
+                        st.setdefault("ticket", v["jira"])
+                    if v.get("pagerduty"):
+                        st.setdefault("incident", v["pagerduty"])
+                else:
+                    st.setdefault("incident", str(v))
+                base["status"] = st
+            elif k == "changed_before":
+                # cards.headline gives {commits: [...], suspect_sha}; the lede wants a list of commit dicts
+                commits = v.get("commits") if isinstance(v, dict) else v
+                if isinstance(commits, list) and commits and isinstance(commits[0], dict) and not base.get("changed_before"):
+                    base["changed_before"] = commits
+                elif isinstance(commits, list) and commits and not isinstance(commits[0], dict) and not base.get("changed_before"):
+                    base["changed_before"] = [{"sha": "", "subject": str(x), "author": None, "date": None} for x in commits]
+                if isinstance(v, dict) and v.get("suspect_sha"):
+                    base.setdefault("suspect_sha", v["suspect_sha"])
+            elif k == "repeat_of":
+                # cards.headline lists every same-error ticket (not date-restricted); a repeat is an EARLIER one
+                if not base.get("repeat_of") and isinstance(v, list):
+                    earlier = [r for r in v if isinstance(r, dict) and r.get("key") and (not own_created or str(r.get("created") or "") < own_created)]
+                    if earlier:
+                        base["repeat_of"] = sorted(earlier, key=lambda r: str(r.get("created") or ""))[0]["key"]
+                elif not base.get("repeat_of") and isinstance(v, str):
+                    base["repeat_of"] = v
             else:
                 base[k] = v
     return base
