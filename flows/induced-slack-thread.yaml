@@ -376,3 +376,90 @@ tests:
       min_hits: 1
     logs_2:
       min_hits: 1
+card:
+  use_case: 'induced slack thread. Run it on a slack thread (channel_id, thread_ts) to gather: thread, ticket, ticket comments, runbook, code,
+    related tickets, metrics, logs, pagerduty incident, commits, slack discussion, suspect commit.'
+  inputs_explained:
+    channel_id: channel_id (slack_channel_id), e.g. C542575C5
+    thread_ts: thread_ts (slack_ts), e.g. 1787484120.000005
+  expected_outputs:
+  - name: thread
+    steps:
+    - thread
+    description: the replies of the Slack thread (slack.conversations_replies); extracts service, trace_ids, window, jira_keys, error_class_list,
+      window_4d_1d, window_1d_1d_r1d, window_3d_1d_r1d, window_22d_18d_r1d
+    required: true
+  - name: ticket
+    steps:
+    - issue
+    description: the Jira ticket (jira.jira_get_issue); extracts trace_id, error, error_class, jira_key
+    required: true
+  - name: ticket comments
+    steps:
+    - jira_get_issue_comments
+    description: the comments on the ticket (jira.jira_get_issue_comments); extracts sha_shorts
+    required: false
+  - name: runbook
+    steps:
+    - confluence
+    - runbook
+    description: Confluence pages found by search (confluence.confluence_search, 4-rung ladder on query); extracts ids; the runbook page body
+      (confluence.confluence_get_page); extracts chronosphere
+    required: true
+  - name: code
+    steps:
+    - code
+    - source
+    description: source lines that raise or log the error (code.grep); the source file that handles the request (code.read_file); extracts path
+    required: false
+  - name: related tickets
+    steps:
+    - issues
+    description: Jira tickets found by search (jira.jira_search, 2-rung ladder on jql)
+    required: false
+  - name: metrics
+    steps:
+    - metrics
+    description: a metric series over the window (chronosphere.query_prometheus_range, 3-rung ladder on query)
+    required: true
+  - name: logs
+    steps:
+    - logs
+    - logs_2
+    description: log lines (logz.search_logs, per item of `([issue.trace_id] + thread.trace_ids) | unique | list`, first 5); log lines (logz.search_logs,
+      2-rung ladder on query)
+    required: true
+  - name: pagerduty incident
+    steps:
+    - pagerduty
+    - pagerduty_2
+    description: PagerDuty incidents on the service in the window (pagerduty.list_incidents); extracts ids; PagerDuty incidents on the service
+      in the window (pagerduty.list_incidents)
+    required: false
+  - name: commits
+    steps:
+    - commits_2
+    - commits
+    description: commits touching the service just before (git.git_log); commits touching the service just before (git.git_log, 2-rung ladder
+      on path); extracts sha40s
+    required: false
+  - name: slack discussion
+    steps:
+    - slack
+    description: Slack messages found by search (slack.conversations_search_messages)
+    required: false
+  - name: suspect commit
+    steps:
+    - commit
+    description: the diff of a commit named in the evidence (git.git_show, per item of `(commits.sha40s + jira_get_issue_comments.sha_shorts)
+      | unique | list`, first 3)
+    required: false
+  not_covered:
+  - logs looks at the first 5 items of its fan-out only
+  - commit looks at the first 3 items of its fan-out only
+  example:
+    inputs:
+      channel_id: C542575C5
+      thread_ts: '1787484120.000005'
+    found: 'Every traced run had hits on: confluence, issue, logs, logs_2, metrics, runbook, thread.'
+  authored_by: skeleton

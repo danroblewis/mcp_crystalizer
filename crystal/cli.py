@@ -9,6 +9,7 @@
   test <flow> [--live|--offline]  run the flow's regression (cassette + live fallback); records the result
   author <trigger> k=v ... --yes  run the agent (costs money): tries existing flows first, explores, induces a new version
   repair [--all | <run_id>] --yes  hand queued "this didn't help" complaints to the agent (costs money); induces new versions
+  card <flow> [--write]         print the flow card (a skeleton if the YAML has none); --write appends the skeleton to the YAML
 """
 from __future__ import annotations
 
@@ -161,8 +162,38 @@ def cmd_repair(args):
     return repair_main(args)
 
 
+def cmd_card(args):
+    """card <flow> [--write]: the flow's card, or a deterministic skeleton when the YAML has none; --write appends
+    that skeleton to the YAML (as a trailing `card:` block, so hand-written comments stay) unless a card exists."""
+    from crystal.flow.cards import card_yaml, format_card, skeleton_card, validate_card
+    from crystal.flow.runner import load_flow
+    if not args or args[0].startswith("--"):
+        print("usage: card <flow> [--write]")
+        return 1
+    flow = load_flow(args[0])
+    card = flow.get("card")
+    if card:
+        problems = validate_card(flow, card)
+        print(format_card(card, flow))
+        for p in problems:
+            print("problem:", p)
+        if "--write" in args:
+            print(f"{flow['_path']} already has a card (authored_by: {card.get('authored_by')}); nothing written")
+        return 1 if problems else 0
+    card = skeleton_card(flow)
+    print(format_card(card, flow))
+    if "--write" in args:
+        p = Path(flow["_path"])
+        text = p.read_text()
+        p.write_text(text + ("" if text.endswith("\n") else "\n") + "\n" + card_yaml(card))
+        print(f"wrote skeleton card to {p}")
+    else:
+        print("(skeleton; not in the YAML. `card <flow> --write` stores it)")
+    return 0
+
+
 COMMANDS = {"flows": cmd_flows, "induce": cmd_induce, "run": cmd_run, "mcp-config": cmd_mcp_config, "tools": cmd_tools,
-            "status": cmd_status, "test": cmd_test, "author": cmd_author, "repair": cmd_repair}
+            "status": cmd_status, "test": cmd_test, "author": cmd_author, "repair": cmd_repair, "card": cmd_card}
 
 
 def main(argv=None):

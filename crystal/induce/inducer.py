@@ -32,6 +32,7 @@ import yaml
 from crystal.extract import ids, positions
 from crystal.extract.catalog import Gazetteer, load_catalog
 from crystal.extract.extractors import parse_duration, round_down
+from crystal.flow.cards import skeleton_card
 from crystal.flow.runner import count_hits
 from crystal.trace.store import Session
 
@@ -969,6 +970,8 @@ def induce(sessions: list[Session], name: str, catalog: dict | None = None) -> t
               "tests": {"cases": len(tests), "min_hits": sorted(expect)},
               "alignment": alignment,
               "kinds": {sid: {k: dict(c) for k, c in ks.items()} for sid, ks in kinds_report.items()}}
+    # every draft carries a deterministic flow card (crystal/flow/cards.py); `crystal author` overlays the agent's prose
+    flow["card"] = skeleton_card(flow, report)
     return flow, report
 
 

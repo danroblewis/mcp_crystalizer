@@ -167,3 +167,96 @@ steps:
       since: "{{ issue.window.start }}"
       until: "{{ issue.window.end }}"
       limit: 5
+
+  - id: repeats
+    title: Earlier tickets with the same error on this service
+    tool: jira.jira_search
+    when: "{{ issue.error_class and issue.service }}"
+    hits: issues
+    args:
+      jql: 'text ~ "{{ issue.error_class }}" AND component = {{ issue.service }} AND key != {{ inputs.key }} ORDER BY updated DESC'
+      limit: 5
+    extract:
+      jira_keys: { from: "issues[*].key", all: true }
+      statuses:  { from: "issues[*].fields.status.name", all: true }
+      summaries: { from: "issues[*].fields.summary", all: true }
+      dates:     { from: "issues[*].fields.created", all: true }
+
+# Flow card: what the catalog and the top of the dossier show; expected_outputs are the acceptance criteria a run is
+# judged against ("found N of M"). Hand-written from what the flow does and what the real agent runs found.
+card:
+  use_case: >-
+    You have the Jira key of a production incident (PAY-101, AUTH-122) and want the whole picture before touching
+    anything: what broke and when, where the team discussed it, the code that raises the error, who owns it, the
+    runbook, the error-rate curve, the log lines behind every trace id anyone mentioned, what shipped just before, the
+    PagerDuty incident, and whether the same error has hit this service before.
+  inputs_explained:
+    key: >-
+      The Jira issue key, e.g. PAY-101. The ticket's components field names the service, its description carries the
+      error signature, a sample trace id and the affected pod, and its created time anchors every window (-1h..+6h for
+      logs, metrics and PagerDuty; -4d..+1d for commits).
+  expected_outputs:
+    - name: ticket
+      steps: [issue]
+      description: >-
+        The ticket itself: summary, status, the service (from components), the error signature and class, the trace
+        ids and pods in the description, and the time windows derived from created. Everything else keys off this.
+      required: true
+    - name: slack discussion
+      steps: [slack, thread]
+      description: >-
+        The incident thread in the service's incident channel (found by error signature and date, falling back to the
+        key and then the error class) and its replies: who was in it, the trace ids they pasted, the short commit shas
+        they named.
+      required: true
+    - name: code
+      steps: [code, owners]
+      description: The source lines that raise or log the error class, and the CODEOWNERS team for those files.
+      required: false
+    - name: runbook
+      steps: [confluence, runbook]
+      description: >-
+        The service's runbook in the team's Confluence space (and, for a repeat, the postmortem that mentions the error
+        class), with the Remediation line pulled out.
+      required: false
+    - name: metrics
+      steps: [metrics]
+      description: The service's 5xx rate from an hour before the ticket was filed to six hours after.
+      required: false
+    - name: logs
+      steps: [logs, logs_by_error]
+      description: >-
+        Log lines per trace id (from the ticket, the search hits and the thread; the first 6) with their pods, then
+        every line carrying the error signature on the service in the window.
+      required: true
+    - name: commits
+      steps: [commits, suspect_commit]
+      description: >-
+        Commits touching the service's directory in the four days before the ticket, and the diff of every commit the
+        thread named (a pod hash that looks like a sha shows up here as a git error; known false extract).
+      required: false
+    - name: pagerduty incident
+      steps: [pagerduty]
+      description: The PagerDuty incident on the service in the window, with its status, urgency and assignee.
+      required: false
+    - name: repeats
+      steps: [repeats]
+      description: >-
+        Other tickets on the same component with the same error class (up to 5, newest first), so "this looks like
+        AUTH-117 again" is visible up front. Empty for a first occurrence; not date-restricted, so later tickets show
+        too.
+      required: false
+  not_covered:
+    - Jira comments and issue links (a cascade's "is caused by" links, the postmortem-style comments); the real agent read them.
+    - Deploy announcements in #deploys; what shipped is inferred from git log alone.
+    - Whether it is still happening now; every window is anchored on the ticket, nothing looks at the last few hours.
+    - Upstream or downstream services of a cascade; only the ticket's own component is queried.
+    - Only the first 6 trace ids, 3 threads, 2 named commits and 2 runbook pages are followed.
+  example:
+    inputs: { key: PAY-101 }
+    found: >-
+      The #incidents thread (alice, bob) and 16 log lines across two trace ids on two payments-api pods, @payments as
+      owner, the runbook's remediation (roll back the latest deploy), commit b4d28f39 "tighten validation in charge" from
+      the day before as the suspect, a resolved PagerDuty incident, and PAY-102 and PAY-108 as other PaymentGatewayTimeout
+      tickets on payments-api.
+  authored_by: human

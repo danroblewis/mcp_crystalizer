@@ -551,3 +551,107 @@ tests:
       min_hits: 1
     logs:
       min_hits: 1
+card:
+  use_case: 'induced slack dm. Run it on a slack dm (text) to gather: slack discussion, conversation, logs, pagerduty incident, metrics, thread,
+    runbook, commits, code, owning team, related tickets, ticket, ticket comments, suspect commit.'
+  inputs_explained:
+    text: text (string), e.g. hey, are you seeing notification service failures? customers report RateLimited since about 10am
+  expected_outputs:
+  - name: slack discussion
+    steps:
+    - slack
+    - slack_2_2
+    - slack_2
+    description: Slack messages found by search (slack.conversations_search_messages); extracts slack_dm_ids, window, service, error_class_list,
+      jira_keys, slack_ts_list; Slack messages found by search (slack.conversations_search_messages); extracts service, slack_channel_ids, slack_ts_list,
+      error_class_list, window, window_237h_r1h, window_8d_r1d, window_1d_2d_r1d, window_0s_1d_r1d, window_5d_1d_r1d; Slack messages found by
+      search (slack.conversations_search_messages, 4-rung ladder on search_query); extracts slack_channel_ids, slack_ts_list, jira_keys, error_class_list,
+      trace_ids
+    required: true
+  - name: conversation
+    steps:
+    - history
+    description: the channel or DM history (slack.conversations_history); extracts trace_ids
+    required: false
+  - name: logs
+    steps:
+    - logs_3
+    - logs_2
+    - logs
+    - logs_4
+    description: log lines (logz.search_logs); log lines (logz.search_logs, 7-rung ladder on query); log lines (logz.search_logs, per item of
+      `(history.trace_ids + issues.trace_ids + slack_2.trace_ids + thread.trace_ids) | unique | list`, first 6); log lines (logz.search_logs)
+    required: true
+  - name: pagerduty incident
+    steps:
+    - pagerduty
+    - pagerduty_2
+    description: PagerDuty incidents on the service in the window (pagerduty.list_incidents); PagerDuty incidents on the service in the window
+      (pagerduty.list_incidents)
+    required: false
+  - name: metrics
+    steps:
+    - metrics_2
+    - metrics
+    - metrics_3
+    description: a metric series over the window (chronosphere.query_prometheus_range); a metric series over the window (chronosphere.query_prometheus_range,
+      3-rung ladder on query); extracts http_requests_totals; a metric series over the window (chronosphere.query_prometheus_range)
+    required: true
+  - name: thread
+    steps:
+    - thread
+    description: the replies of the Slack thread (slack.conversations_replies, 3-rung ladder on channel_id, 3-rung ladder on thread_ts); extracts
+      trace_ids, error_class_list, jira_keys
+    required: true
+  - name: runbook
+    steps:
+    - confluence
+    - runbook
+    description: Confluence pages found by search (confluence.confluence_search, 8-rung ladder on query); extracts ids; the runbook page body
+      (confluence.confluence_get_page); extracts error_class
+    required: true
+  - name: commits
+    steps:
+    - commits
+    - commits_2
+    description: commits touching the service just before (git.git_log); commits touching the service just before (git.git_log); extracts sha40s
+    required: false
+  - name: code
+    steps:
+    - code
+    - source
+    description: source lines that raise or log the error (code.grep, 5-rung ladder on pattern); extracts files; the source file that handles
+      the request (code.read_file); extracts error_class
+    required: true
+  - name: owning team
+    steps:
+    - owners
+    description: CODEOWNERS entries for the matching files (code.codeowners)
+    required: false
+  - name: related tickets
+    steps:
+    - issues
+    description: Jira tickets found by search (jira.jira_search, 3-rung ladder on jql); extracts jira_keys, trace_ids
+    required: false
+  - name: ticket
+    steps:
+    - issue
+    description: the Jira ticket (jira.jira_get_issue, 3-rung ladder on issue_key)
+    required: false
+  - name: ticket comments
+    steps:
+    - jira_get_issue_comments
+    description: the comments on the ticket (jira.jira_get_issue_comments)
+    required: false
+  - name: suspect commit
+    steps:
+    - commit
+    description: the diff of a commit named in the evidence (git.git_show)
+    required: false
+  not_covered:
+  - logs looks at the first 6 items of its fan-out only
+  example:
+    inputs:
+      text: hey, are you seeing notification service failures? customers report RateLimited since about 10am
+    found: 'Every traced run had hits on: code, confluence, logs, logs_2, metrics, runbook, slack, thread.'
+  authored_by: skeleton
