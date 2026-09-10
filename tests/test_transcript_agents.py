@@ -11,6 +11,7 @@ from crystal.induce.mining import episodes
 from crystal.trace.record import Recorder
 from crystal.trace.store import load_session, load_sessions
 from crystal.trace.transcripts import hook_trace_of, import_transcripts, parse_transcript, write_episodes, write_session
+from tests.conftest import SIM
 
 AG1, AG2 = "a1111111111111111", "a2222222222222222"
 SID = "agent-session-0001"
@@ -118,6 +119,7 @@ def test_two_sidechains_become_separate_episodes(tmp_path, monkeypatch):
 
 def test_import_reattributes_a_hook_trace_instead_of_importing_twice(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("MCP_EXPLORER_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("CRYSTAL_WORKSPACE", str(SIM))   # main() activates a workspace via os.environ; restore it
     ws = tmp_path / "acme-api"
     ws.mkdir()
     base = tmp_path / "transcripts"

@@ -604,7 +604,7 @@ def format_table(rep: dict, verbose: bool = False) -> str:
     hdr = f"{'session':14} {'prompts':>7} {'mcp':>5} {'agents':>6} {'episodes':>8}  {'status':30} {'servers':30} cwd"
     lines.append(hdr)
     for r in rep["rows"]:
-        if not verbose and r.get("status") in ("no MCP calls", "no cwd"):
+        if not verbose and r.get("status") in ("no MCP calls", "no cwd", "other workspace"):
             continue
         servers = ", ".join(f"{s}={n}" for s, n in (r.get("servers") or {}).items())
         cwd = (r.get("cwd") or "?") + ("" if r.get("cwd_exists", True) else "  (directory missing)")

@@ -129,6 +129,7 @@ def test_import_writes_hook_format_episodes_and_is_idempotent(tmp_path, monkeypa
 
 def test_cli_import_table(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("MCP_EXPLORER_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("CRYSTAL_WORKSPACE", str(SIM))   # main() activates a workspace via os.environ; restore it
     ws = tmp_path / "acme-api"
     ws.mkdir()
     base = _transcripts_dir(tmp_path, ws)

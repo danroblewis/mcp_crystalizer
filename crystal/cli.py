@@ -23,7 +23,7 @@
   install-hook [--uninstall] [--settings p] [--status]   add the recording hooks to ~/.claude/settings.json
   seed --from <dir> [--overwrite]  copy <dir>/flows, traces, catalog.yaml into the workspace's state dir
   workspaces                    list the workspaces this tool has state for
-  import [--all | --workspace-only] [--transcripts DIR] [--dry-run] [--force] [--reattribute] [--verbose]
+  import [--all] [--transcripts DIR] [--dry-run] [--force] [--reattribute] [--verbose]
                                 import past Claude Code sessions (~/.claude/projects transcripts) as traces, for free:
                                 only sessions that made MCP calls; default = this workspace's, --all = every project;
                                 a session the hook already recorded gets its subagent calls attributed instead
@@ -330,7 +330,7 @@ def _opt(args: list[str], flag: str, default=None):
 
 
 def cmd_import(args):
-    """import [--all | --workspace-only] [--transcripts DIR] [--dry-run] [--force] [--verbose]: read past Claude Code
+    """import [--all] [--transcripts DIR] [--dry-run] [--force] [--reattribute] [--verbose]: read past Claude Code
     session transcripts and write the ones with MCP calls into the workspace's trace dir (crystal/trace/transcripts.py).
     Default: transcripts whose cwd is this workspace; --all: every project, each into its own workspace."""
     from crystal.trace.transcripts import format_table, import_transcripts, transcripts_dir
