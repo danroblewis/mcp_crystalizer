@@ -1,21 +1,24 @@
 {% extends "base.html" %}{% block title %}Common behaviours{% endblock %}{% block body %}
 {% set ws = workspace() %}
 <h1>Common behaviours <span class="muted small" style="font-weight:400">in {{ ws.name }}</span></h1>
-<p class="muted" style="max-width:76ch">Tool-call sequences that recur across the recorded episodes of this workspace (hook, <code>record</code>, <a href="/import">imported sessions</a>), ranked by how many episodes share them times how long they are. Consecutive calls to one tool count as one fan-out step (<span class="mono">tool*</span>). Each can be compiled into a draft flow from the episodes that contain it, with no AI.</p>
+<p class="muted" style="max-width:76ch">{% if sequences %}Tool-call sequences that recur across the recorded episodes of this workspace, ranked by how many episodes share them times how long they are. Consecutive calls to one tool count as one fan-out step (<span class="mono">tool*</span>).{% else %}How information moved in the recorded episodes of this workspace (hook, <code>record</code>, <a href="/import">imported sessions</a>): a value came out of one tool's result and went into another tool's parameter. A pattern here is bindable by construction, so an argument the agent chose itself never forms one. Graphs rooted at the request (<span class="mono">prompt&nbsp;→</span>) come first: that root is the flow's real input.{% endif %} Each can be compiled into a draft flow, with no AI.</p>
+<p class="small muted">{% if sequences %}<a href="/candidates">← information flow</a>{% else %}<a href="/candidates?miner=sequences">tool-call sequences instead →</a>{% endif %}</p>
 {% if msg %}<div class="notice">{{ msg }}</div>{% endif %}
-{% if not cands %}<p class="muted">No recurring sequences yet: mining needs at least two episodes that share two or more consecutive MCP calls. <a href="/import">Import past sessions</a>, or record a few with the hook.</p>{% endif %}
+{% if not cands %}<p class="muted">{% if sequences %}No recurring sequences yet: mining needs at least two episodes that share two or more consecutive MCP calls.{% else %}No shared information flow yet: this needs at least two episodes where a value from one tool's result was passed into another tool. If the sessions here chose their arguments themselves (a URL to read, a script to run), there is nothing a flow could reproduce.{% endif %} <a href="/import">Import past sessions</a>, or record a few with the hook.</p>{% endif %}
 {% for c in cands %}
 <div class="flowcard" id="c{{ c.rank }}">
 <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><b>#{{ c.rank }}</b>
 <span class="pill ok" title="episodes containing this sequence">{{ c.support }} episodes</span>
-<span class="pill" title="steps in the sequence">{{ c.length }} steps</span>
+{% if sequences %}<span class="pill" title="steps in the sequence">{{ c.length }} steps</span>{% else %}<span class="pill" title="values passed from one tool's result into another's parameter">{{ c.length }} links</span>{% if c.rooted %}<span class="pill ok" title="the flow's input">rooted at {{ c.root_value_type }}</span>{% endif %}{% if c.bound is not none %}<span class="pill" title="share of varying arguments a program can derive">{{ (c.bound * 100) | round | int }}% bound</span>{% endif %}{% endif %}
 <span class="pill" title="calls the flow would replay: calls covered, summed over the episodes">saves ~{{ c.saving }} calls</span>
 <span class="muted small">score {{ c.score }}</span></div>
-<div class="mono small" style="margin:8px 0;overflow-wrap:anywhere">{% for t in c.sequence %}<span style="display:inline-block;background:#eef2fb;border:1px solid #d4dcf3;color:#24408a;border-radius:4px;padding:0 6px;margin:2px 4px 2px 0">{{ t }}</span>{% if not loop.last %}<span class="muted">→</span> {% endif %}{% endfor %}</div>
+{% if sequences %}<div class="mono small" style="margin:8px 0;overflow-wrap:anywhere">{% for t in c.sequence %}<span style="display:inline-block;background:#eef2fb;border:1px solid #d4dcf3;color:#24408a;border-radius:4px;padding:0 6px;margin:2px 4px 2px 0">{{ t }}</span>{% if not loop.last %}<span class="muted">→</span> {% endif %}{% endfor %}</div>
+{% else %}<div class="mono small" style="margin:8px 0;overflow-wrap:anywhere">{% for line in c.dataflow %}<div style="padding:1px 0">{{ line }}</div>{% endfor %}</div>{% endif %}
 {% if c.prompts %}<details class="more"><summary>{{ c.prompts | length }} prompt{{ '' if c.prompts | length == 1 else 's' }}</summary>
 <ul class="small" style="margin:6px 0 0;padding-left:18px">{% for p in c.prompts %}<li>{{ p | truncate(240) }}</li>{% endfor %}</ul></details>{% endif %}
 <details class="more"><summary>episodes</summary><div class="mono small" style="margin-top:4px">{% for e in c.episodes %}<a href="/traces/{{ e }}">{{ e }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</div></details>
 <form method="post" action="/candidates/{{ c.rank }}/induce" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<input type="hidden" name="miner" value="{{ miner }}">
 <input type="text" name="name" value="{{ c.default_name }}" aria-label="flow name">
 <button type="submit">Induce as flow</button>
 {% if c.default_name in flows %}<span class="small muted">exists: <a href="/flows/{{ c.default_name }}">{{ c.default_name }}</a> (will be overwritten)</span>{% endif %}

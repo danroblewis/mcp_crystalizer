@@ -161,3 +161,19 @@ def test_a_versioned_flow_opens_from_the_catalog_and_by_its_own_name(tmp_path):
     slugs = sorted(f["slug"] for f in list_flows(d))
     assert slugs == ["probe.v1", "probe.v2"]                       # each version addressable on its own
     assert load_flow("probe.v1", d)["title"] == "Probe v1"
+
+
+def test_candidates_page_shows_the_dataflow_and_can_fall_back_to_sequences(tmp_path, monkeypatch):
+    """The page must show how information moved, not the old tool-chain list, and induce with the same miner."""
+    from starlette.testclient import TestClient
+    from crystal.app.main import app
+    from crystal import state as state_mod
+
+    with TestClient(app) as client:
+        page = client.get("/candidates")
+        assert page.status_code == 200
+        body = page.text
+        assert "How information moved" in body and 'name="miner" value="dataflow"' in body
+        seq = client.get("/candidates?miner=sequences")
+        assert seq.status_code == 200 and "Tool-call sequences" in seq.text
+        assert 'name="miner" value="sequences"' in seq.text

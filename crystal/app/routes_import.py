@@ -13,7 +13,8 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from crystal import workspace as ws_mod
-from crystal.induce.mining import candidates as mine_candidates
+from crystal.induce.dataflow import candidates as mine_dataflow
+from crystal.induce.mining import candidates as mine_sequences
 from crystal.induce.mining import induce_candidate
 from crystal.trace.transcripts import import_transcripts, importable, transcripts_dir
 
@@ -62,29 +63,34 @@ async def import_run(request: Request, force: str = Form("")):
 
 
 @router.get("/candidates", response_class=HTMLResponse)
-async def candidates_page(request: Request, msg: str = ""):
+async def candidates_page(request: Request, msg: str = "", miner: str = "dataflow"):
     ws = _workspace(request)
     st = ws.state
-    cands = mine_candidates(st.traces, limit=TOP)
+    sequences = miner == "sequences"
+    cands = (mine_sequences(st.traces, limit=TOP) if sequences
+             else mine_dataflow(st.traces, limit=TOP, workspace_meta=ws.meta()))
     views = []
     for c in cands:
         v = c.view()
-        v["default_name"] = f"mined-{c.servers[0]}-{c.servers[-1]}-{c.rank}"
+        v["default_name"] = f"mined-{c.servers[0]}-{c.servers[-1]}-{c.rank}" if c.servers else f"mined-{c.rank}"
         views.append(v)
-    return _templates().TemplateResponse(request, "candidates.html", {"cands": views, "msg": msg, "flows": sorted(_flow_names(st.flows)),
-                                                                       "episodes": len({e for c in cands for e in c.episode_ids})})
+    return _templates().TemplateResponse(request, "candidates.html",
+                                         {"cands": views, "msg": msg, "miner": miner, "sequences": sequences,
+                                          "flows": sorted(_flow_names(st.flows)),
+                                          "episodes": len({e for c in cands for e in c.episode_ids})})
 
 
 @router.post("/candidates/{rank}/induce")
-async def candidates_induce(request: Request, rank: int, name: str = Form("")):
+async def candidates_induce(request: Request, rank: int, name: str = Form(""), miner: str = Form("dataflow")):
     from crystal.induce.inducer import dump_flow
     ws = _workspace(request)
     st = ws.state
-    cands = mine_candidates(st.traces)
+    cands = (mine_sequences(st.traces) if miner == "sequences"
+             else mine_dataflow(st.traces, workspace_meta=ws.meta()))
     if rank < 1 or rank > len(cands):
         return RedirectResponse("/candidates?msg=" + quote(f"no candidate #{rank}"), status_code=303)
     cand = cands[rank - 1]
-    name = re.sub(r"[^a-z0-9]+", "-", (name or "").strip().lower()).strip("-") or f"mined-{cand.servers[0]}-{cand.servers[-1]}-{rank}"
+    name = re.sub(r"[^a-z0-9]+", "-", (name or "").strip().lower()).strip("-") or (f"mined-{cand.servers[0]}-{cand.servers[-1]}-{rank}" if cand.servers else f"mined-{rank}")
     flow, _report = induce_candidate(cand, name, workspace_meta=ws.meta())
     st.flows.mkdir(parents=True, exist_ok=True)
     (st.flows / f"{name}.yaml").write_text(dump_flow(flow))
