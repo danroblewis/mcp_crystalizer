@@ -220,3 +220,22 @@ def test_cli_servers_and_mcp_config(repo, capsys):
     written = json.loads((repo / ".mcp.json").read_text())
     assert written["mcpServers"]["code"]["args"][-1] == "." and "flows" in written["mcpServers"]
     assert main(["tools", "--workspace", str(repo / "missing")]) == 1
+
+
+def test_claude_config_project_scoped_servers(tmp_path, monkeypatch):
+    """`claude mcp add` for a project stores servers under projects[<root>].mcpServers in ~/.claude.json."""
+    import json
+    from crystal import registry
+    root = tmp_path / "proj"
+    root.mkdir()
+    cfg = tmp_path / "claude.json"
+    cfg.write_text(json.dumps({
+        "mcpServers": {"shared": {"command": "echo", "args": ["user"]}},
+        "projects": {str(root): {"mcpServers": {"kicad": {"command": "uv", "args": ["run", "kicad-mcp"]},
+                                                "shared": {"command": "echo", "args": ["project"]}}},
+                     str(tmp_path / "other"): {"mcpServers": {"nope": {"command": "false"}}}},
+    }))
+    servers = registry.read_claude_config(cfg, root)
+    assert set(servers) == {"shared", "kicad"}
+    assert servers["shared"]["args"] == ["project"] and servers["kicad"]["command"] == "uv"
+    assert set(registry.read_claude_config(cfg)) == {"shared"}

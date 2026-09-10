@@ -238,15 +238,27 @@ def read_mcp_json(path: Path) -> dict[str, dict]:
     return servers
 
 
-def read_claude_config(path: Path) -> dict[str, dict]:
-    """Claude Code's ~/.claude.json: only its top-level `mcpServers` (user scope). Anything else in the file, and a
-    file that is not what we expect, is ignored rather than an error: it is not ours."""
+def read_claude_config(path: Path, workspace_root: Path | None = None) -> dict[str, dict]:
+    """Claude Code's ~/.claude.json: its top-level `mcpServers` (user scope) plus, when `workspace_root` is given,
+    the servers Claude Code stored for that project under `projects[<root>].mcpServers` (what `claude mcp add`
+    writes for a project). Project entries win over user ones. Anything else in the file, and a file that is not
+    what we expect, is ignored rather than an error: it is not ours."""
     try:
         doc = json.loads(path.read_text())
     except (json.JSONDecodeError, OSError):
         return {}
-    servers = doc.get("mcpServers") if isinstance(doc, dict) else None
-    return servers if isinstance(servers, dict) else {}
+    if not isinstance(doc, dict):
+        return {}
+    servers = doc.get("mcpServers")
+    out = dict(servers) if isinstance(servers, dict) else {}
+    if workspace_root is not None:
+        projects = doc.get("projects")
+        if isinstance(projects, dict):
+            wanted = {str(workspace_root), str(Path(workspace_root).resolve())}
+            for proj_path, proj in projects.items():
+                if str(proj_path) in wanted and isinstance(proj, dict) and isinstance(proj.get("mcpServers"), dict):
+                    out.update(proj["mcpServers"])
+    return out
 
 
 def layers(ws: Workspace | None = None) -> list[tuple[Path | str, Path, dict[str, dict]]]:
@@ -255,7 +267,7 @@ def layers(ws: Workspace | None = None) -> list[tuple[Path | str, Path, dict[str
     out: list[tuple[Path | str, Path, dict[str, dict]]] = [(BUILTIN_SOURCE, ws.root, builtin_servers(ws))]
     claude = claude_user_config()
     if claude.is_file():
-        servers = read_claude_config(claude)
+        servers = read_claude_config(claude, ws.root)
         if servers:
             out.append((claude, ws.root, servers))
     seen = set()
