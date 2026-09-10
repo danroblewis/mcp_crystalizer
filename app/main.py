@@ -1,4 +1,4 @@
-"""mcp_explorer web UI: pick a crystallized flow, enter starting parameters, get the evidence. No AI at runtime.
+"""mcp_explorer web UI: pick a crystallized flow, enter starting parameters, get a dossier. No AI at runtime.
 
   uv run uvicorn app.main:app --reload --port 8765
 """
@@ -9,18 +9,20 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-import yaml
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from app.render import cards
+from app import dossier
 from crystal import PROJECT_ROOT
 from crystal.flow.lifecycle import describe, get_lifecycle
 from crystal.flow.runner import FlowRunner, RUN_DIR, list_flows, load_flow
 from crystal.mcp_client import ServerPool
+from crystal.trace.record import TRACE_DIR
+from crystal.trace.store import load_session
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+TEMPLATES.env.globals["sparkline"] = dossier.sparkline
 FEEDBACK = PROJECT_ROOT / "traces" / "feedback.jsonl"
 
 
@@ -37,10 +39,19 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="mcp_explorer", lifespan=lifespan)
 
 
+def _run_dir() -> Path:
+    return app.state.run_dir if hasattr(app.state, "run_dir") else RUN_DIR
+
+
+def _trace_dir() -> Path:
+    return app.state.trace_dir if hasattr(app.state, "trace_dir") else TRACE_DIR
+
+
 def _runs(limit: int = 50) -> list[dict]:
     out = []
-    if RUN_DIR.exists():
-        for p in sorted(RUN_DIR.glob("*.json"), reverse=True)[:limit]:
+    d = _run_dir()
+    if d.exists():
+        for p in sorted(d.glob("*.json"), reverse=True)[:limit]:
             try:
                 r = json.loads(p.read_text())
                 out.append({"run_id": r["run_id"], "flow": r["flow"], "inputs": r["inputs"], "started": r["started"],
@@ -57,6 +68,18 @@ def _lifecycle(flow: dict) -> dict:
     return {**st, **describe(st)}
 
 
+def _load_flow_quiet(name: str | None, path: str | None = None) -> dict | None:
+    """The flow a run was made from, for the diagram edges and the card; None if the YAML is gone or unreadable."""
+    for cand in (path, name):
+        if not cand:
+            continue
+        try:
+            return load_flow(cand)
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     flows = [f for f in list_flows() if f.get("status") != "broken"]
@@ -70,7 +93,8 @@ async def flow_form(request: Request, name: str):
     flow = load_flow(name)
     flow["lifecycle"] = _lifecycle(flow)
     events = get_lifecycle().events(name, limit=12)
-    return TEMPLATES.TemplateResponse(request, "flow.html", {"flow": flow, "events": events,
+    prefill = {k: v for k, v in request.query_params.items() if k in (flow.get("inputs") or {})}
+    return TEMPLATES.TemplateResponse(request, "flow.html", {"flow": flow, "events": events, "prefill": prefill,
                                                             "runs": [r for r in _runs(100) if r["flow"] == name][:10]})
 
 
@@ -95,27 +119,60 @@ async def runs(request: Request):
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
 async def run_view(request: Request, run_id: str, msg: str = ""):
-    p = RUN_DIR / f"{run_id}.json"
+    p = _run_dir() / f"{run_id}.json"
     if not p.exists():
         return HTMLResponse("run not found", status_code=404)
     record = json.loads(p.read_text())
-    for s in record["steps"]:
-        if "items" in s:
-            for it in s["items"]:
-                it["cards"] = cards(s["tool"], it.get("result"))
-        elif "result" in s:
-            s["cards"] = cards(s["tool"], s.get("result"))
-    return TEMPLATES.TemplateResponse(request, "run.html", {"r": record, "msg": msg})
+    flow = _load_flow_quiet(record.get("flow"), record.get("flow_path"))
+    view = dossier.build(record, flow)
+    return TEMPLATES.TemplateResponse(request, "dossier.html", {"r": record, "flow": flow, "msg": msg, "trace": False, **view})
 
 
 @app.get("/runs/{run_id}/json", response_class=PlainTextResponse)
 async def run_json(run_id: str):
-    return (RUN_DIR / f"{run_id}.json").read_text()
+    p = _run_dir() / f"{run_id}.json"
+    if not p.exists():
+        return PlainTextResponse("run not found", status_code=404)
+    return p.read_text()
+
+
+@app.get("/traces", response_class=HTMLResponse)
+async def traces(request: Request):
+    out = []
+    for p in sorted(_trace_dir().glob("*.jsonl")):
+        try:
+            s = load_session(p)
+        except Exception:  # noqa: BLE001
+            continue
+        if not s.calls:
+            continue
+        out.append({"session_id": s.session_id, "source": s.source, "trigger": s.meta.get("trigger"), "inputs": s.meta.get("inputs") or {},
+                    "calls": len(s.calls), "ts": s.calls[0].get("ts")})
+    out.sort(key=lambda t: t["ts"] or "", reverse=True)
+    return TEMPLATES.TemplateResponse(request, "traces.html", {"traces": out})
+
+
+@app.get("/traces/{session}", response_class=HTMLResponse)
+async def trace_view(request: Request, session: str):
+    p = _trace_dir() / f"{session}.jsonl"
+    if not p.exists() or "/" in session or ".." in session:
+        return HTMLResponse("trace not found", status_code=404)
+    record = dossier.session_record(load_session(p))
+    view = dossier.build(record, None)
+    return TEMPLATES.TemplateResponse(request, "dossier.html", {"r": record, "flow": None, "msg": "", "trace": True, **view})
+
+
+@app.get("/traces/{session}/json", response_class=PlainTextResponse)
+async def trace_json(session: str):
+    p = _trace_dir() / f"{session}.jsonl"
+    if not p.exists() or "/" in session or ".." in session:
+        return PlainTextResponse("trace not found", status_code=404)
+    return p.read_text()
 
 
 @app.post("/runs/{run_id}/feedback")
 async def feedback(run_id: str, text: str = Form(""), helpful: str = Form("no")):
-    p = RUN_DIR / f"{run_id}.json"
+    p = _run_dir() / f"{run_id}.json"
     record = json.loads(p.read_text()) if p.exists() else {}
     FEEDBACK.parent.mkdir(exist_ok=True)
     with FEEDBACK.open("a") as fh:

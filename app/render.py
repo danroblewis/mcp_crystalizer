@@ -45,7 +45,7 @@ def slack_messages(r):
     if isinstance(msgs, dict):
         msgs = msgs.get("matches", [])
     return [{"kind": "message", "user": m.get("username") or m.get("user"), "channel": (m.get("channel") or {}).get("name"),
-             "ts": m.get("ts"), "text": m.get("text"), "permalink": m.get("permalink"), "replies": m.get("reply_count")}
+             "ts": m.get("ts"), "time": m.get("time"), "text": m.get("text"), "permalink": m.get("permalink"), "replies": m.get("reply_count")}
             for m in msgs or []]
 
 
@@ -79,7 +79,7 @@ def prom_range(r):
         mx = max(ys) or 1.0
         pts = " ".join(f"{pad + i * (w - 2 * pad) / max(1, len(ys) - 1):.1f},{h - pad - (y / mx) * (h - 2 * pad):.1f}" for i, y in enumerate(ys))
         out.append({"kind": "series", "labels": series.get("metric", {}), "points": pts, "w": w, "h": h,
-                    "min": min(ys), "max": max(ys), "n": len(ys)})
+                    "min": min(ys), "max": max(ys), "n": len(ys), "values": vals})
     return out
 
 

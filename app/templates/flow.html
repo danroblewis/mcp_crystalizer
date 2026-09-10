@@ -1,26 +1,39 @@
 {% extends "base.html" %}{% block title %}{{ flow.title or flow.name }}{% endblock %}{% block body %}
 <h1>{{ flow.title or flow.name }} <span class="pill {{ 'ok' if flow.status == 'promoted' else 'draft' }}" title="author intent (flow YAML)">author: {{ flow.status }}</span>
 {% if flow.lifecycle %}<span class="pill {{ 'bad' if flow.lifecycle.tripped else ('ok' if flow.lifecycle.status == 'promoted' else 'draft') }}" title="effective runtime state">effective: {{ flow.lifecycle.status }}{{ ' (tripped)' if flow.lifecycle.tripped }}</span>{% endif %}</h1>
+{% set card = flow.card or {} %}
+{% if card.use_case %}<p style="font-size:16px;max-width:70ch">{{ card.use_case }}</p>{% endif %}
 <p class="muted">{{ flow.description or '' }} <a href="/flows/{{ flow.name }}/yaml" class="small">view yaml</a></p>
-{% if flow.lifecycle %}<div class="card small">
-<div><strong>Lifecycle</strong> · {{ flow.lifecycle.clean_runs }} clean runs · {{ flow.lifecycle.failed_runs }} failed · current streak {{ flow.lifecycle.clean_streak }}
- · tests {{ flow.lifecycle.tests_passed }} passed / {{ flow.lifecycle.tests_failed }} failed · {{ flow.lifecycle.complaints }} complaints
- {% if flow.lifecycle.hint %}· <span class="muted">{{ flow.lifecycle.hint }}</span>{% endif %}
- {% if flow.lifecycle.status != flow.status and not flow.lifecycle.tripped %}· <span class="muted">effective state differs from author intent</span>{% endif %}</div>
-{% if flow.lifecycle.last_failure %}<div style="color:var(--bad)">last failure {{ (flow.lifecycle.last_failure_at or '')[:19] }}{% if flow.lifecycle.last_failure_run %} (<a href="/runs/{{ flow.lifecycle.last_failure_run }}" class="mono">{{ flow.lifecycle.last_failure_run }}</a>){% endif %}: {{ flow.lifecycle.last_failure }}</div>{% endif %}
-{% if events %}<details><summary>recent lifecycle events</summary><table>{% for e in events %}<tr><td class="mono">{{ e.ts[:19] }}</td><td>{{ e.kind }}</td><td>{{ 'ok' if e.ok else ('fail' if e.ok == 0 else '') }}</td><td>{% if e.to_status %}{{ e.from_status }} → {{ e.to_status }}{% endif %}</td><td class="muted">{{ (e.detail or '')[:100] }}</td></tr>{% endfor %}</table></details>{% endif %}
-</div>{% endif %}
-<form method="post" action="/flows/{{ flow.name }}/run" class="card">
+
+<form method="post" action="/flows/{{ flow.name }}/run" class="flowcard">
 {% for k, v in (flow.inputs or {}).items() %}
-<label><div class="small muted">{{ v.label or k }} <span class="mono">({{ v.type }})</span></div>
-<input type="text" name="{{ k }}" placeholder="{{ v.example or '' }}" value="{{ v.default or '' }}" {% if v.required %}required{% endif %}></label>
+<label><div class="small muted">{{ v.label or k }} <span class="mono">({{ v.type }})</span>{% if card.inputs_explained and card.inputs_explained[k] %} — {{ card.inputs_explained[k] }}{% endif %}</div>
+<input type="text" name="{{ k }}" placeholder="{{ v.example or '' }}" value="{{ prefill.get(k) or v.default or '' }}" {% if v.required %}required{% endif %}></label>
 {% endfor %}
 <div style="margin-top:10px"><button type="submit">Run flow</button></div>
 </form>
+
+{% if card %}<div class="flowcard"><h3>Flow card</h3>
+{% if card.expected_outputs %}<table><tr><th>expected output</th><th>from steps</th><th>what it is</th><th></th></tr>
+{% for e in card.expected_outputs %}<tr><td>{{ e.name }}</td><td class="mono small">{{ e.steps | join(', ') if e.steps is iterable and e.steps is not string else e.steps }}</td><td class="small">{{ e.description or '' }}</td><td>{% if e.required %}<span class="pill">required</span>{% endif %}</td></tr>{% endfor %}</table>{% endif %}
+<dl>{% if card.not_covered %}<dt>Not covered</dt><dd>{{ card.not_covered }}</dd>{% endif %}
+{% if card.example %}<dt>Example</dt><dd class="mono">{{ card.example }}</dd>{% endif %}
+{% if card.authored_by %}<dt>Authored by</dt><dd>{{ card.authored_by }}</dd>{% endif %}</dl>
+</div>{% endif %}
+
+{% if flow.lifecycle %}<div class="flowcard small">
+<div><strong>Lifecycle</strong>: {{ flow.lifecycle.clean_runs }} clean runs, {{ flow.lifecycle.failed_runs }} failed, current streak {{ flow.lifecycle.clean_streak }},
+ tests {{ flow.lifecycle.tests_passed }} passed / {{ flow.lifecycle.tests_failed }} failed, {{ flow.lifecycle.complaints }} complaints
+ {% if flow.lifecycle.hint %}<span class="muted">({{ flow.lifecycle.hint }})</span>{% endif %}
+ {% if flow.lifecycle.status != flow.status and not flow.lifecycle.tripped %}<span class="muted">effective state differs from author intent</span>{% endif %}</div>
+{% if flow.lifecycle.last_failure %}<div style="color:var(--bad)">last failure {{ (flow.lifecycle.last_failure_at or '')[:19] }}{% if flow.lifecycle.last_failure_run %} (<a href="/runs/{{ flow.lifecycle.last_failure_run }}" class="mono">{{ flow.lifecycle.last_failure_run }}</a>){% endif %}: {{ flow.lifecycle.last_failure }}</div>{% endif %}
+{% if events %}<details><summary>recent lifecycle events</summary><table>{% for e in events %}<tr><td class="mono">{{ e.ts[:19] }}</td><td>{{ e.kind }}</td><td>{{ 'ok' if e.ok else ('fail' if e.ok == 0 else '') }}</td><td>{% if e.to_status %}{{ e.from_status }} → {{ e.to_status }}{% endif %}</td><td class="muted">{{ (e.detail or '')[:100] }}</td></tr>{% endfor %}</table></details>{% endif %}
+</div>{% endif %}
+
 <h2>Steps</h2>
 <table><tr><th>#</th><th>step</th><th>tool</th><th>fan-out / ladder</th></tr>
 {% for s in flow.steps %}<tr><td>{{ loop.index }}</td><td>{{ s.title or s.id }}</td><td class="mono">{{ s.tool }}</td>
 <td class="small muted">{% if s.forEach %}for each {{ s.forEach }}{% endif %}
 {% for k, v in s.args.items() if v is mapping and v.ladder %}ladder on {{ k }} ({{ v.ladder | length }} rungs){% endfor %}</td></tr>{% endfor %}</table>
-{% if runs %}<h2>Previous runs</h2><table>{% for r in runs %}<tr><td><a href="/runs/{{ r.run_id }}" class="mono">{{ r.run_id }}</a></td><td class="mono">{{ r.inputs }}</td><td>{{ r.hits }} hits</td></tr>{% endfor %}</table>{% endif %}
+{% if runs %}<h2>Previous runs</h2><table>{% for r in runs %}<tr><td><a href="/runs/{{ r.run_id }}" class="mono">{{ r.run_id }}</a></td><td class="mono">{{ r.inputs }}</td><td>{{ r.hits }} results</td></tr>{% endfor %}</table>{% endif %}
 {% endblock %}

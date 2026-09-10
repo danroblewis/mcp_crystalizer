@@ -276,7 +276,9 @@ What remains:
 - Flow cards (below) are not produced yet; `author` ends with prose. Content-based list selection (the runbook whose
   title matched) still binds as `| first`. Recurrence analysis (the real thread agent's Jira/Slack searches for the
   same error class) is not in any candidate flow.
-- The UI still lists steps in order; the dossier layout (below) is not built. The `flows` MCP server starts the
+- The dossier layout (below) is built (`app/dossier.py`, `app/diagram.py`, `app/templates/dossier.html`; the same
+  view renders recorded agent traces at `/traces/<session>`); the flow-card `coverage`/`headline` interface is used
+  when `crystal/flow/cards.py` exists and computed from extracts otherwise. The `flows` MCP server starts the
   other sim servers as subprocesses on every `run_flow`.
 - No `--offline` guard exists for `author`/`repair` beyond `--budget` and `--yes`; each real run costs money.
 

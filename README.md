@@ -18,7 +18,7 @@ Design: `docs/PLAN.md`. Research behind it: `docs/research/`.
 | `crystal/induce/` | Trace → flow inducer (no LLM) |
 | `crystal/replay/` | Cassette record/replay so regression tests need no servers; `regression.py` runs a flow's test cases |
 | `crystal/author.py` | Agent-assisted authoring and repair (`crystal author`, `crystal repair`); the only code that launches the agent |
-| `app/` | FastAPI web UI |
+| `app/` | FastAPI web UI: flow catalog, run dossier (`app/dossier.py`: headline, evidence by type, highlights; `app/diagram.py`: research-flow SVG), the same dossier for recorded agent traces at `/traces` |
 | `flows/` | Crystallized flows: `investigate-jira-ticket`, `investigate-slack-thread`, `investigate-slack-dm` (candidates), `<name>.v<N>.yaml` versions induced by `crystal author`, and the raw `induced-*` drafts |
 | `traces/` | Recorded sessions (JSONL), `runs/` run records referenced by recorded agent sessions, cassettes (gitignored); `feedback.jsonl` is the repair queue |
 | `state/` | `lifecycle.sqlite`, the per-flow runtime state (gitignored) |

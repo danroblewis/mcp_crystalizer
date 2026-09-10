@@ -1,0 +1,133 @@
+{% extends "base.html" %}{% block title %}{{ headline.key or headline.service or r.run_id }}{% if headline.error_class %}: {{ headline.error_class }}{% endif %}{% endblock %}{% block body %}
+{% if msg %}<div class="notice">{{ msg }}</div>{% endif %}
+{% set m = marker %}
+
+<div class="kicker">
+{% if trace %}<span>Agent trace</span><span class="sub">{{ r.trigger or r.source }}</span><span class="mono">{{ r.run_id }}</span><span>{{ r.source }}</span>
+{% else %}<a href="/flows/{{ r.flow }}">{{ flow.title if flow else r.flow }}</a>{% if card.use_case %}<span class="sub">{{ card.use_case }}</span>{% endif %}<span class="mono">{{ r.run_id }}</span>{% endif %}
+<span>{{ (r.started or '')[:16] | replace('T', ' ') }}</span>
+{% if r.status != 'ok' %}<span class="pill bad">{{ r.status }}</span>{% endif %}
+{% if not trace %}<a href="/runs/{{ r.run_id }}/json">json</a>{% else %}<a href="/traces/{{ r.run_id }}/json">jsonl</a>{% endif %}
+</div>
+
+{% if lede %}<p class="lede">{{ lede | join(' ') }}</p>{% else %}<p class="lede muted">Nothing conclusive was found for {{ r.inputs }}.</p>{% endif %}
+
+<dl class="facts" id="facts">
+{% set h = headline %}
+{% if h.key %}<div><dt>Ticket</dt><dd>{{ m.mark(h.key) }}{% if h.status.ticket %} <span class="pill">{{ h.status.ticket }}</span>{% endif %}</dd></div>{% endif %}
+{% if h.when %}<div><dt>When</dt><dd>{{ h.when.started_fmt }}{% if h.when.resolved_fmt %}, resolved {{ h.when.resolved_fmt }}{% if h.when.duration %} ({{ h.when.duration }}){% endif %}{% endif %}</dd></div>{% endif %}
+{% if h.service %}<div><dt>Service</dt><dd>{{ m.mark(h.service) }}{% if h.error_class %}, error class {{ m.mark(h.error_class) }}{% endif %}</dd></div>{% endif %}
+{% if h.team_owners or h.people %}<div><dt>Owners</dt><dd>{% if h.team_owners %}{{ m.mark(h.team_owners | join(', ')) }}{% endif %}{% if h.people %}{{ ' — ' if h.team_owners }}{{ h.people | join(', ') }}{% endif %}</dd></div>{% endif %}
+{% if h.status.incident %}<div><dt>Incident</dt><dd><span class="pill {{ 'ok' if h.status.incident == 'resolved' else 'bad' }}">{{ h.status.incident }}</span></dd></div>{% endif %}
+{% if h.changed_before %}<div><dt>Changed before</dt><dd>{% for c in h.changed_before %}<div><span class="mono">{{ m.mark(c.sha) }}</span> {{ c.subject }}{% if c.author %} <span class="muted small">{{ c.author }}{% if c.date %}, {{ c.date }}{% endif %}</span>{% endif %}</div>{% endfor %}</dd></div>{% endif %}
+{% if h.repeat_of or h.caused_by or h.related %}<div><dt>History</dt><dd>{% if h.repeat_of %}Repeat of <a href="/flows/{{ r.flow }}?key={{ h.repeat_of }}">{{ m.mark(h.repeat_of) }}</a>. {% endif %}{% if h.caused_by %}Caused by {{ m.mark(h.caused_by) }}. {% endif %}{% for x in h.related %}{{ x.kind | capitalize }}: {{ x.title }}. {% endfor %}</dd></div>{% endif %}
+{% if h.remediation %}<div><dt>Runbook says</dt><dd>{{ h.remediation }}</dd></div>{% endif %}
+{% if h.trace_ids %}<div><dt>Trace ids</dt><dd class="idlist">{% for t in h.trace_ids %}<span>{{ m.mark(t) }}</span>{% endfor %}</dd></div>{% endif %}
+{% if h.pods %}<div><dt>Pods</dt><dd class="idlist">{% for p in h.pods %}<span>{{ m.mark(p) }}</span>{% endfor %}</dd></div>{% endif %}
+{% if not h.key and not h.when and not h.service %}<div><dt>Inputs</dt><dd class="mono">{{ r.inputs }}</dd></div>{% endif %}
+</dl>
+
+<div class="coverage">
+{% if trace %}<span class="n">{{ coverage.found }} of {{ coverage.total }} calls</span><span class="muted">returned results</span>
+{% else %}<span class="n">Found {{ coverage.found }} of {{ coverage.total }}</span><span class="muted">expected things</span>
+<span class="meter" aria-hidden="true"><i style="width:{{ (100 * coverage.found / coverage.total) if coverage.total else 0 }}%"></i></span>
+{% if coverage.missing %}<span class="miss">Missing: {% for n in coverage.missing %}<b class="{{ 'req' if n in coverage.required_missing }}">{{ n }}</b>{{ ', ' if not loop.last }}{% endfor %}</span>{% else %}<span class="muted">nothing missing</span>{% endif %}
+{% endif %}
+</div>
+
+<h2>How the research flowed</h2>
+<div class="dagwrap">{{ svg }}</div>
+<div class="legend">{% for t, c, l in types %}<span><i style="background:{{ c }}"></i>{{ l }}</span>{% endfor %}<span><i style="background:#fff;border:1px dashed #999"></i>nothing found</span><span>stacked = fan-out, one call per item</span></div>
+
+{% if trace and r.prompt %}<details style="margin-top:12px"><summary>The prompt the agent was given</summary><div class="excerpt">{{ r.prompt }}</div></details>{% endif %}
+
+{% macro evcard(c, g, b) %}
+{% if c.kind == 'issue' %}<div class="ev"><span class="who">{{ m.mark(c.key) }}</span> {{ m.mark(c.summary) }} <span class="pill">{{ c.status }}</span> <span class="pill">{{ c.priority }}</span>
+<div class="meta">{{ c.assignee }}, created {{ (c.created or '')[:16] | replace('T', ' ') }}{% if c.components %}, {{ m.mark(c.components | join(', ')) }}{% endif %}</div>
+{% if c.description %}<div class="excerpt">{{ m.excerpt(c.description) }}</div>{% endif %}</div>
+{% elif c.kind == 'message' %}<div class="msg"><span class="who">{{ c.user }}</span><span class="meta">#{{ c.channel }}{% if c.time %}, {{ c.time[:16] | replace('T', ' ') }}{% endif %}{% if c.replies %}, {{ c.replies }} replies{% endif %}</span><div class="text">{{ m.mark(c.text) }}</div></div>
+{% elif c.kind == 'page' %}<div class="ev"><span class="who">{{ c.title }}</span><span class="meta">{{ c.space }}{% if c.modified %}, updated {{ c.modified[:10] }}{% endif %}</span>
+{% if c.body %}<div class="excerpt">{{ m.excerpt(c.body) }}</div>{% elif c.excerpt %}<div class="small">{{ m.mark(c.excerpt) }}</div>{% endif %}</div>
+{% elif c.kind == 'log' %}<div class="logline"><span class="muted">{{ (c.ts or '')[:19] | replace('T', ' ') }}</span><span class="lvl {{ c.level }}">{{ c.level }}</span><span class="m">{{ m.mark(c.message) }}</span></div>
+{% elif c.kind == 'series' %}<div class="ev">{{ sparkline(c, headline.when.started if headline.when else none) }}
+<div class="spark-meta"><span>{{ c.labels.get('__name__') or c.labels }}{% if c.labels.get('service') %}, service {{ m.mark(c.labels.service) }}{% endif %}</span><span>{{ c.n }} points</span><span>peak {{ '%.2f' % c.max }}</span><span>low {{ '%.2f' % c.min }}</span></div></div>
+{% elif c.kind == 'code' %}<div class="ev"><span class="mono muted">{{ m.mark(c.file) }}:{{ c.line }}</span>{% if c.context %}<div class="excerpt">{{ m.excerpt(c.context | join('\n')) }}</div>{% else %}<div class="excerpt">{{ m.mark(c.text) }}</div>{% endif %}</div>
+{% elif c.kind == 'commit' %}<div class="commit"><span class="sha">{{ m.mark((c.sha or '')[:10]) }}</span><span class="muted">{{ (c.date or '')[:10] }}</span><span><b>{{ c.author }}</b> {{ m.mark(c.subject) }}</span></div>
+{% elif c.kind == 'diff' %}<div class="excerpt">{{ m.excerpt(c.text) }}</div>
+{% elif c.kind == 'incident' %}<div class="ev"><span class="who">#{{ c.number }}</span> {{ m.mark(c.title) }} <span class="pill {{ 'ok' if c.status == 'resolved' else 'bad' }}">{{ c.status }}</span> <span class="pill">{{ c.urgency }}</span>
+<div class="meta">{{ c.assignee }}, {{ (c.created or '')[:16] | replace('T', ' ') }}{% if c.resolved %} to {{ (c.resolved or '')[11:16] }}{% endif %}</div>{% if c.details %}<div class="excerpt">{{ m.excerpt(c.details) }}</div>{% endif %}</div>
+{% elif c.kind == 'owners' %}<div class="owner"><span class="mono">{{ m.mark(c.path) }}</span> is owned by <b>{{ m.mark(c.owners | join(', ')) }}</b></div>
+{% elif c.kind == 'source' %}<details><summary>{{ c.path }}</summary><div class="excerpt">{{ m.excerpt(c.content) }}</div></details>
+{% elif c.kind == 'error' %}<div class="ev"><span class="pill bad">error</span> <span class="mono">{{ c.text[:300] }}</span></div>
+{% else %}<details><summary>raw result</summary><div class="excerpt">{{ m.excerpt(c.text) }}</div></details>{% endif %}
+{% endmacro %}
+
+<h2>Evidence</h2>
+<div class="egrid">
+{% for g in groups %}
+<article class="group {{ 'wide' if g.wide }}" id="g-{{ g.type }}" style="--c:var(--{{ g.type }})" data-steps="{{ g.steps | join(' ') }}">
+<h2>{{ g.label }} <span class="count">{{ g.hits }}</span></h2>
+{% if g.summary and g.summary.rows | length > 1 %}
+<table class="logsum"><tr><th>searched for</th><th class="n">lines</th><th>levels</th><th>pods</th><th>from</th><th>to</th></tr>
+{% for row in g.summary.rows %}<tr><td class="mono">{{ m.mark(row.item) if row.item else row.query }}</td><td class="n">{{ row.n }}</td>
+<td class="small">{% for k, v in row.levels.items() %}{{ k }} {{ v }}{{ ', ' if not loop.last }}{% endfor %}</td>
+<td class="mono small">{% for p in row.pods %}{{ m.mark(p) }}{{ ', ' if not loop.last }}{% endfor %}</td><td class="small">{{ (row.first or '')[11:19] }}</td><td class="small">{{ (row.last or '')[11:19] }}</td></tr>{% endfor %}
+<tr><td class="muted">all</td><td class="n">{{ g.summary.n }}</td><td class="small">{% for k, v in g.summary.levels.items() %}{{ k }} {{ v }}{{ ', ' if not loop.last }}{% endfor %}</td><td class="small muted">{{ g.summary.pods | length }} distinct pods</td><td></td><td></td></tr></table>
+{% endif %}
+{% for b in g.sources %}
+<div class="src" {% if b.anchor %}id="s-{{ b.step }}"{% endif %} data-step="{{ b.step }}">
+<div class="srchead">{{ b.title }}{% if b.item is not none %} for <code>{{ m.mark(b.item) }}</code>{% endif %}{% if b.error %} <span class="pill bad">error</span>{% endif %}</div>
+{% set cards = b.cards %}
+{% set fold = 6 if g.type == 'log' else (12 if g.type in ('message', 'commit') else 40) %}
+{% for c in cards[:fold] %}{{ evcard(c, g, b) }}{% endfor %}
+{% if cards | length > fold %}<details class="more"><summary>show {{ cards | length - fold }} more {{ 'lines' if g.type == 'log' else 'items' }}</summary>{% for c in cards[fold:] %}{{ evcard(c, g, b) }}{% endfor %}</details>{% endif %}
+</div>
+{% endfor %}
+</article>
+{% endfor %}
+</div>
+
+
+<details class="how"><summary>How this was gathered ({{ calls }} tool calls{% if not trace %}, hidden by default{% endif %})</summary>
+<table><tr><th>#</th><th>step</th><th>tool call</th><th class="n">results</th><th class="n">ms</th></tr>
+{% for s in r.steps %}
+{% if s.skipped %}<tr><td class="muted">{{ loop.index }}</td><td>{{ s.title }}</td><td class="muted">skipped ({{ s.skipped }})</td><td></td><td></td></tr>
+{% elif 'items' in s %}
+{% set n = loop.index %}
+{% for it in s['items'] %}<tr><td class="muted">{{ n if loop.first else '' }}</td><td>{% if loop.first %}{{ s.title }} <span class="muted small">for each of {{ s['items'] | length }}</span>{% endif %}</td>
+<td><div class="q">{{ s.tool }} {{ it.args | tojson }}</div>{% if it.error %}<div class="att miss">{{ it.error[:200] }}</div>{% endif %}</td><td class="n">{{ it.hits }}</td><td class="n">{{ it.duration_ms or '' }}</td></tr>{% endfor %}
+{% if not s['items'] %}<tr><td class="muted">{{ loop.index }}</td><td>{{ s.title }}</td><td class="muted">nothing to fan out over</td><td></td><td></td></tr>{% endif %}
+{% else %}<tr><td class="muted">{{ loop.index }}</td><td>{{ s.title }}</td>
+<td><div class="q">{{ s.tool }} {{ s.args | tojson }}</div>
+{% if s.attempts %}<div class="att">ladder: {% for a in s.attempts %}<span class="{{ 'hit' if a.hits else 'miss' }}">rung {{ a.rung + 1 }}. {{ a.value if a.value else '(blank, skipped)' }} → {{ (a.hits ~ ' results') if a.hits is defined else a.skipped }}</span>{{ '; ' if not loop.last }}{% endfor %}</div>{% endif %}
+{% if s.error %}<div class="att miss">{{ s.error[:200] }}</div>{% endif %}
+{% if s.extracts %}<div class="att">extracted: {% for k, v in s.extracts.items() if v %}{{ k }}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+{% if s.carried %}<div class="att">carried: {% for v, src in s.carried.items() %}{{ v[:40] }} ← {{ src }}{{ '; ' if not loop.last }}{% endfor %}</div>{% endif %}</td>
+<td class="n">{{ s.hits if s.hits is not none else '' }}</td><td class="n">{{ s.duration_ms or '' }}</td></tr>{% endif %}
+{% endfor %}</table>
+{% if r.notes %}<div class="small muted" style="margin-top:8px">agent notes: {{ r.notes | join(' / ') }}</div>{% endif %}
+</details>
+
+{% if not trace %}
+<div class="feedback"><form method="post" action="/runs/{{ r.run_id }}/feedback">
+<h2 style="margin-top:0">What was missing?</h2>
+<p class="muted small">Say what this dossier should have found. The complaint is queued for the flow author (an agent run you start explicitly) and demotes the flow one level.</p>
+{% if coverage.missing %}<div class="missing">Not found this run: {% for n in coverage.missing %}<span>{{ n }}</span>{% endfor %}</div>{% endif %}
+<textarea name="text" rows="2" placeholder="{{ 'e.g. the ' ~ coverage.missing[0] if coverage.missing else 'e.g. the deploy that shipped right before' }}"></textarea>
+<div style="margin-top:8px"><button name="helpful" value="no" type="submit">Report what was missing</button> <button name="helpful" value="yes" class="secondary" type="submit">This answered it</button></div>
+</form></div>
+{% endif %}
+
+<script>
+// enhancement only: clicking a diagram node outlines the evidence group(s) that step fed
+document.querySelectorAll('svg.dag a.node-link').forEach(function (a) {
+  a.addEventListener('click', function () {
+    var id = a.getAttribute('data-step');
+    document.querySelectorAll('.group.hl').forEach(function (g) { g.classList.remove('hl'); });
+    document.querySelectorAll('.group').forEach(function (g) {
+      if ((g.getAttribute('data-steps') || '').split(' ').indexOf(id) >= 0) g.classList.add('hl');
+    });
+  });
+});
+</script>
+{% endblock %}
