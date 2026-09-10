@@ -33,9 +33,24 @@ flow.
 
 Each episode's edges are cached under the state dir (`dataflow/<trace-stem>.json`), keyed by the trace file's size
 and mtime plus a fingerprint of the catalog and workspace metadata, because the binder has to run over EVERY
-episode -- a real machine has ~9,000 -- not just the ones that get induced. Measured on this laptop: the sim's 52
-episodes take 3.4s cold and 0.04s warm; 5,000 sim-sized episodes (380 MB of traces) take 423s cold and 4.5s warm,
-for a 16 MB cache. The mining itself is 0.5s at that size; it is the binder that costs.
+episode -- a real machine has ~9,000 -- not just the ones that get induced.
+
+That cache removes the binder's cost but not the READING: listing candidates used to parse every trace JSONL in the
+workspace, 1.9 GB of them, on every single run. So mining does not read traces at all. One file per workspace,
+`dataflow/index.json`, holds what mining actually needs of each trace -- its size and mtime, the session id, the
+prompt, and one `<server>.<tool>` node per call, in order -- and is rebuilt incrementally: a trace is re-parsed only
+when its size or mtime moved, an entry whose file disappeared is dropped, and the file is rewritten only when
+something changed. Mining then runs over `LiteGraph`s (the index entry plus the cached edges), and a trace is read
+back in full only when a candidate is induced, for that candidate's episodes alone (`DataflowCandidate.slice_sessions`).
+`cache_status` likewise answers from the index plus the presence of each edge file, so `/candidates` decides in
+milliseconds whether to show progress.
+
+Measured on this laptop (`candidates()` end to end, page cache hot): the sim's 52 episodes take 3.4s cold, and 0.05s
+warm before the index / 0.03s after. 9,000 sim-sized episodes -- 685 MB of traces -- take 656s cold before the index
+and 668s after (the binder dominates; the index adds one extra pass the first time), and 6.5s warm before / 1.8s
+after, of which the index is 0.10s, reading 9,000 cached edge files 0.76s and the mining itself 0.94s.
+`cache_status`, which `/candidates` polls, goes from 4.8s to 0.29s. The index is 7.0 MB beside a 30 MB edge cache.
+It is no longer the reading that costs.
 
 A `DataflowCandidate` is induced like any other: each supporting episode is sliced to the calls that participate,
 in their recorded order (with the calls they bind to pulled in, so the slice is self-contained), and the existing
@@ -45,14 +60,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import threading
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
 from crystal.extract import ids
-from crystal.induce.mining import (Episode, PROMPTS_PER_CANDIDATE, _is_authored, load_episodes, slice_calls)
+from crystal.induce.mining import (Episode, PROMPTS_PER_CANDIDATE, _is_authored, load_episodes,  # noqa: F401
+                                   normalise, slice_calls)                # load_episodes: re-exported for build_graphs
 from crystal.trace.store import Session
 
 PROMPT, WORKSPACE, CATALOG, CONSTANT = "prompt", "workspace", "catalog", "constant"
@@ -60,6 +78,8 @@ PSEUDO_SOURCES = (PROMPT, WORKSPACE, CATALOG, CONSTANT)
 
 MIN_SUPPORT = 2
 CACHE_VERSION = 1
+INDEX_VERSION = 1
+INDEX_NAME = "index.json"       # ONE file per workspace, beside the per-episode edge files
 MAX_FREQUENT_EDGES = 400        # the mining context: the most frequent edges, so a huge machine stays responsive
 MAX_CONCEPTS = 20000            # closed edge sets enumerated before the search stops (deterministically)
 MAX_CANDIDATE_EDGES = 60
@@ -108,13 +128,15 @@ class CallEdge:
         return cls(row[0], row[1], row[2], row[3], row[4], row[5])
 
 
-@dataclass(eq=False)        # identity, so a graph can key a dict of its own occurrences
-class EpisodeGraph:
-    """An episode as a set of edges plus the calls behind them."""
-    episode: Episode
+class _Graph:
+    """What `mine()` needs of an episode: its edges, and which of its calls carry them.
+
+    Everything here is derived from the cached `call_edges` alone -- no trace content -- which is what lets the
+    miner run over a whole workspace from the index (`LiteGraph`) and only load a trace when a candidate is
+    actually induced. `EpisodeGraph` is the same thing over an Episode that is already in memory."""
     call_edges: list[CallEdge]
 
-    def __post_init__(self) -> None:
+    def _index_edges(self) -> None:
         self.uses: dict[Edge, list[CallEdge]] = defaultdict(list)
         for ce in self.call_edges:
             self.uses[ce.edge].append(ce)
@@ -131,18 +153,6 @@ class EpisodeGraph:
     def minable(self) -> set[Edge]:
         """Edges that may seed or extend a candidate: everything but the constants."""
         return {e for e in self.uses if e.source != CONSTANT}
-
-    @property
-    def session_id(self) -> str:
-        return self.episode.session_id
-
-    @property
-    def prompt(self) -> str:
-        return self.episode.prompt
-
-    def node_of(self, i: int) -> str:
-        c = self.episode.calls[i]
-        return f"{c['server']}.{c['tool']}"
 
     def calls_for(self, edges: Iterable[Edge]) -> tuple[int, ...]:
         """The calls that participate in these edges, in recorded order, closed over what they bind to: an
@@ -161,6 +171,76 @@ class EpisodeGraph:
                     out.add(j)
                     frontier.append(j)
         return tuple(sorted(out))
+
+
+@dataclass(eq=False)        # identity, so a graph can key a dict of its own occurrences
+class EpisodeGraph(_Graph):
+    """An episode as a set of edges plus the calls behind them. The episode is already loaded."""
+    episode: Episode
+    call_edges: list[CallEdge]
+
+    def __post_init__(self) -> None:
+        self._index_edges()
+
+    @property
+    def session_id(self) -> str:
+        return self.episode.session_id
+
+    @property
+    def prompt(self) -> str:
+        return self.episode.prompt
+
+    def node_of(self, i: int) -> str:
+        c = self.episode.calls[i]
+        return f"{c['server']}.{c['tool']}"
+
+    def load_episode(self) -> Episode:
+        return self.episode
+
+
+@dataclass(eq=False)
+class LiteGraph(_Graph):
+    """The same graph built from the trace index: the cached edges plus the few facts mining reads off an episode
+    (session id, prompt, one node name per call). The trace itself is parsed only if this graph ends up supporting
+    a candidate somebody induces -- `load_episode()` is where that happens."""
+    entry: "IndexEntry"
+    call_edges: list[CallEdge]
+    episode: Episode | None = None      # parsed on the first induce, and kept only for the induces that follow
+
+    def __post_init__(self) -> None:
+        self._index_edges()
+
+    @property
+    def session_id(self) -> str:
+        return self.entry.session_id
+
+    @property
+    def prompt(self) -> str:
+        return self.entry.prompt
+
+    @property
+    def nodes(self) -> list[str]:
+        return self.entry.nodes
+
+    def node_of(self, i: int) -> str:
+        return self.entry.nodes[i]
+
+    def load_episode(self) -> Episode:
+        if self.episode is None:
+            self.episode = load_trace_episode(Path(self.entry.path))
+        return self.episode
+
+
+Graph = EpisodeGraph | LiteGraph        # what mine() takes: either kind answers the same handful of members
+
+
+def load_trace_episode(path: Path) -> Episode:
+    """One trace file back as an Episode -- the same normalisation `crystal.induce.mining.episodes` applies, so a
+    call index recorded in the index or the edge cache means the same thing here."""
+    from crystal.trace import store as trace_store
+    sess = trace_store.load_session(path)
+    tokens, spans, fan, calls = normalise(sess)
+    return Episode(session=sess, tokens=tokens, spans=spans, fanout=fan, calls=calls)
 
 
 # ---------------------------------------------------------------- extraction
@@ -275,22 +355,172 @@ def _node_of(b, j: int) -> str:
     return f"{c['server']}.{c['tool']}"
 
 
+# ---------------------------------------------------------------- the trace index
+@dataclass
+class IndexEntry:
+    """One trace file, reduced to what mining reads off it: which tools it called, in order, plus the session id
+    and prompt a candidate reports. Everything else -- arguments, results, thousands of lines of JSON -- stays on
+    disk until the episode actually supports a candidate somebody induces."""
+    stem: str
+    path: str
+    size: int
+    mtime: float
+    session_id: str
+    prompt: str
+    nodes: list[str]                 # "<server>.<tool>" per MCP call, in order (Claude Code's own tools excluded)
+    n_calls: int
+    parent: str | None = None        # meta.parent_session: an imported session is represented by its episodes
+    raw: int | None = None           # recorded calls including Claude Code's own, when it differs from n_calls
+
+    @property
+    def recorded_calls(self) -> int:
+        return self.n_calls if self.raw is None else self.raw
+
+    def as_row(self) -> dict:
+        row = {"path": self.path, "size": self.size, "mtime": self.mtime, "session_id": self.session_id,
+               "prompt": self.prompt, "nodes": self.nodes, "n_calls": self.n_calls}
+        if self.parent:
+            row["parent"] = self.parent
+        if self.raw is not None and self.raw != self.n_calls:
+            row["raw"] = self.raw
+        return row
+
+    @classmethod
+    def from_row(cls, stem: str, row: dict) -> "IndexEntry":
+        nodes = list(row.get("nodes") or [])
+        return cls(stem=stem, path=row["path"], size=row["size"], mtime=row["mtime"],
+                   session_id=row.get("session_id") or stem, prompt=row.get("prompt") or "", nodes=nodes,
+                   n_calls=row.get("n_calls", len(nodes)), parent=row.get("parent"), raw=row.get("raw"))
+
+
+@dataclass
+class TraceIndex:
+    """The workspace's traces as one file (`<state>/dataflow/index.json`), rebuilt incrementally.
+
+    A trace is re-parsed only when its size or mtime moved; an entry whose file disappeared is dropped. A cold
+    index costs one full pass over the traces (what every run used to cost); a warm one costs a stat per file."""
+    dir: Path                                   # the trace directory this index describes
+    entries: dict[str, IndexEntry] = field(default_factory=dict)
+    path: Path | None = None
+    parsed: int = 0
+    reused: int = 0
+    dropped: int = 0
+    changed: bool = False
+
+    def episodes(self) -> list[IndexEntry]:
+        """The entries `crystal.induce.mining.episodes` would have produced, in the same order: traces with at
+        least one MCP call, minus a session that is represented by its own `-e<N>` episodes."""
+        rows = [e for e in self.entries.values() if e.recorded_calls]
+        parents = {e.parent for e in rows if e.parent}
+        return [e for e in rows if e.n_calls and e.session_id not in parents]
+
+    def write(self) -> None:
+        if self.path is None:
+            return
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            blob = {"v": INDEX_VERSION, "dir": str(self.dir),
+                    "traces": {e.stem: e.as_row() for e in self.entries.values()}}
+            # atomic, and per-process: /candidates polls `cache_status` while a background thread mines
+            tmp = self.path.with_name(f"{self.path.name}.{os.getpid()}.{threading.get_ident():x}.tmp")
+            tmp.write_text(json.dumps(blob))
+            tmp.replace(self.path)
+            self.changed = False
+        except OSError:
+            pass
+
+
+def index_path(state_dir: Path | None = None) -> Path:
+    return cache_dir(state_dir) / INDEX_NAME
+
+
+def _load_index(path: Path | None, trace_dir: Path) -> dict[str, IndexEntry]:
+    if path is None or not path.exists():
+        return {}
+    try:
+        blob = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if blob.get("v") != INDEX_VERSION or blob.get("dir") != str(trace_dir):
+        return {}          # a different workspace's traces, or an older layout: rebuild
+    out: dict[str, IndexEntry] = {}
+    for stem, row in (blob.get("traces") or {}).items():
+        try:
+            out[stem] = IndexEntry.from_row(stem, row)
+        except (KeyError, TypeError):
+            continue
+    return out
+
+
+def _scan_trace(path: Path, size: int, mtime: float) -> IndexEntry:
+    ep = load_trace_episode(path)
+    return IndexEntry(stem=path.stem, path=str(path), size=size, mtime=mtime, session_id=ep.session_id,
+                      prompt=ep.prompt or "", nodes=[f"{c['server']}.{c['tool']}" for c in ep.calls],
+                      n_calls=len(ep.calls), parent=ep.session.meta.get("parent_session"),
+                      raw=len(ep.session.calls))
+
+
+def build_index(trace_dir: Path | None = None, path: Path | None = None, write: bool = True) -> TraceIndex:
+    """Load the index, bring it up to date against the trace directory, write it back if anything moved."""
+    from crystal.trace.record import current_trace_dir
+    d = trace_dir or current_trace_dir()
+    if path is None:
+        path = index_path()
+    idx = TraceIndex(dir=d, path=path)
+    old = _load_index(path, d)
+    if not d.is_dir():
+        idx.dropped = len(old)
+        idx.changed = bool(old)
+        if idx.changed and write:
+            idx.write()
+        return idx
+    seen: set[str] = set()
+    for p in sorted(d.glob("*.jsonl")):
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        seen.add(p.stem)
+        prev = old.get(p.stem)
+        if prev is not None and prev.size == st.st_size and prev.mtime == st.st_mtime and prev.path == str(p):
+            idx.entries[p.stem] = prev
+            idx.reused += 1
+            continue
+        try:
+            idx.entries[p.stem] = _scan_trace(p, st.st_size, st.st_mtime)
+        except (OSError, json.JSONDecodeError, KeyError):
+            continue        # an unreadable or half-written trace is simply not an episode this round
+        idx.parsed += 1
+        idx.changed = True
+    idx.dropped = len(set(old) - seen)
+    idx.changed = idx.changed or bool(idx.dropped)
+    if idx.changed and write:
+        idx.write()
+    return idx
+
+
 # ---------------------------------------------------------------- cache
 @dataclass
 class EdgeCache:
     """Per-episode edge sets on disk, keyed by the trace file's size and mtime (plus a fingerprint of the catalog
-    and workspace metadata, which also decide what the binder can explain)."""
+    and workspace metadata, which also decide what the binder can explain).
+
+    The on-disk format is unchanged (CACHE_VERSION 1): a warm cache built before the trace index stays valid."""
     dir: Path | None
     fingerprint: str = ""
     hits: int = 0
     misses: int = 0
     writes: int = 0
 
+    # -------------------------------------------------- addressing
+    def path_of(self, stem: str) -> Path | None:
+        if self.dir is None:
+            return None
+        return self.dir / (re.sub(r"[^A-Za-z0-9_.-]", "_", stem) + ".json")
+
     def path_for(self, ep: Episode) -> Path | None:
         p = ep.session.path
-        if self.dir is None or p is None:
-            return None
-        return self.dir / (re.sub(r"[^A-Za-z0-9_.-]", "_", p.stem) + ".json")
+        return None if p is None else self.path_of(p.stem)
 
     @staticmethod
     def key_of(ep: Episode) -> tuple[int, float] | None:
@@ -303,9 +533,10 @@ class EdgeCache:
             return None
         return (st.st_size, st.st_mtime)
 
-    def get(self, ep: Episode) -> list[CallEdge] | None:
-        path, key = self.path_for(ep), self.key_of(ep)
-        if path is None or key is None or not path.exists():
+    # -------------------------------------------------- by trace (stem + size/mtime), what the index knows
+    def read(self, stem: str, size: int, mtime: float) -> list[CallEdge] | None:
+        path = self.path_of(stem)
+        if path is None:
             return None
         try:
             blob = json.loads(path.read_text())
@@ -313,23 +544,70 @@ class EdgeCache:
             return None
         if blob.get("v") != CACHE_VERSION or blob.get("fp") != self.fingerprint:
             return None
-        if blob.get("size") != key[0] or blob.get("mtime") != key[1]:
+        if blob.get("size") != size or blob.get("mtime") != mtime:
             return None
         self.hits += 1
         return [CallEdge.from_row(r) for r in blob.get("edges", [])]
 
-    def put(self, ep: Episode, call_edges: list[CallEdge]) -> None:
-        path, key = self.path_for(ep), self.key_of(ep)
+    def write(self, stem: str, size: int, mtime: float, call_edges: list[CallEdge]) -> None:
+        path = self.path_of(stem)
         self.misses += 1
-        if path is None or key is None:
+        if path is None:
             return
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps({"v": CACHE_VERSION, "fp": self.fingerprint, "size": key[0], "mtime": key[1],
+            path.write_text(json.dumps({"v": CACHE_VERSION, "fp": self.fingerprint, "size": size, "mtime": mtime,
                                         "edges": [ce.as_row() for ce in call_edges]}))
             self.writes += 1
         except OSError:
             pass
+
+    def fresh(self, stem: str, size: int, mtime: float) -> bool:
+        """Is this trace's edge file present and current -- WITHOUT reading the edges back.
+
+        `cache_status` asks this once per episode on a machine with thousands of them, so it reads only the header
+        of each file (version, fingerprint, size, mtime, in the order `write` emits them) and falls back to a full
+        read only if that header cannot be recognised."""
+        path = self.path_of(stem)
+        if path is None:
+            return False
+        try:
+            with path.open("rb") as fh:
+                head = fh.read(_HEAD_BYTES)
+        except OSError:
+            return False
+        m = _HEAD_RX.match(head)
+        if m is None:
+            return self.read(stem, size, mtime) is not None
+        return (int(m.group(1)) == CACHE_VERSION and m.group(2).decode() == self.fingerprint
+                and int(m.group(3)) == size and float(m.group(4)) == mtime)
+
+    def get_entry(self, entry: IndexEntry) -> list[CallEdge] | None:
+        return self.read(entry.stem, entry.size, entry.mtime)
+
+    def put_entry(self, entry: IndexEntry, call_edges: list[CallEdge]) -> None:
+        self.write(entry.stem, entry.size, entry.mtime, call_edges)
+
+    def fresh_entry(self, entry: IndexEntry) -> bool:
+        return self.fresh(entry.stem, entry.size, entry.mtime)
+
+    # -------------------------------------------------- by episode (the trace is already parsed)
+    def get(self, ep: Episode) -> list[CallEdge] | None:
+        p, key = ep.session.path, self.key_of(ep)
+        if p is None or key is None:
+            return None
+        return self.read(p.stem, key[0], key[1])
+
+    def put(self, ep: Episode, call_edges: list[CallEdge]) -> None:
+        p, key = ep.session.path, self.key_of(ep)
+        if p is None or key is None:
+            self.misses += 1
+            return
+        self.write(p.stem, key[0], key[1], call_edges)
+
+
+_HEAD_BYTES = 256
+_HEAD_RX = re.compile(rb'^\{"v": (\d+), "fp": "([^"]*)", "size": (\d+), "mtime": ([-0-9.eE+]+),')
 
 
 def cache_dir(state_dir: Path | None = None) -> Path:
@@ -355,28 +633,51 @@ def build_graphs(eps: list[Episode], catalog: dict | None = None, workspace_meta
     return out
 
 
+def build_lite_graphs(entries: list[IndexEntry], catalog: dict | None = None, workspace_meta: dict | None = None,
+                      cache: EdgeCache | None = None) -> list[LiteGraph]:
+    """The same graphs, built from the index: a trace is parsed only when its edges are not already cached, and
+    then released again -- even a cold pass over a 1.9 GB workspace holds one episode at a time, not all of them."""
+    out = []
+    for e in entries:
+        got = cache.get_entry(e) if cache else None
+        if got is None:
+            try:
+                ep = load_trace_episode(Path(e.path))
+            except (OSError, json.JSONDecodeError, KeyError):
+                continue
+            got = extract_call_edges(ep, catalog or {}, workspace_meta)
+            if cache:
+                cache.put_entry(e, got)
+        out.append(LiteGraph(entry=e, call_edges=got))
+    return out
+
+
 def cache_status(trace_dir: Path | None = None, catalog: dict | None = None,
                  workspace_meta: dict | None = None) -> dict:
     """How much of the edge analysis is already on disk: {episodes, cached, missing}. Building it is the whole cost
     of mining (the binder runs per episode), so a caller with thousands of episodes can decide to do it in the
-    background rather than inside a request."""
+    background rather than inside a request.
+
+    This answers from the trace index and the presence of each edge file: no trace is parsed unless the index
+    itself is out of date, so `/candidates` can decide in milliseconds whether to show progress."""
     if catalog is None:
         from crystal.extract.catalog import load_catalog
         catalog = load_catalog()
     cache = EdgeCache(dir=cache_dir(), fingerprint=fingerprint(catalog, workspace_meta))
-    eps = load_episodes(trace_dir)
-    cached = sum(1 for ep in eps if cache.get(ep) is not None)
+    eps = build_index(trace_dir).episodes()
+    cached = sum(1 for e in eps if cache.fresh_entry(e))
     return {"episodes": len(eps), "cached": cached, "missing": len(eps) - cached}
 
 
 def episode_graphs(trace_dir: Path | None = None, catalog: dict | None = None, workspace_meta: dict | None = None,
-                   use_cache: bool = True, cache: EdgeCache | None = None) -> list[EpisodeGraph]:
+                   use_cache: bool = True, cache: EdgeCache | None = None) -> list[LiteGraph]:
+    """Every episode of the workspace as a graph, mined from the index rather than from the traces themselves."""
     if catalog is None:
         from crystal.extract.catalog import load_catalog
         catalog = load_catalog()
     if cache is None and use_cache:
         cache = EdgeCache(dir=cache_dir(), fingerprint=fingerprint(catalog, workspace_meta))
-    return build_graphs(load_episodes(trace_dir), catalog, workspace_meta, cache)
+    return build_lite_graphs(build_index(trace_dir).episodes(), catalog, workspace_meta, cache)
 
 
 # ---------------------------------------------------------------- candidate
@@ -384,7 +685,7 @@ def episode_graphs(trace_dir: Path | None = None, catalog: dict | None = None, w
 class DataflowCandidate:
     edges: tuple[Edge, ...]
     support: int
-    occurrences: list[tuple[EpisodeGraph, tuple[int, ...]]]     # (episode graph, participating call indices)
+    occurrences: list[tuple["Graph", tuple[int, ...]]]          # (episode graph, participating call indices)
     saving: int
     prompts: list[str] = field(default_factory=list)
     rank: int = 0
@@ -452,8 +753,11 @@ class DataflowCandidate:
                                  saving=sum(len(i) for _, i in occ), prompts=self.prompts, rank=self.rank)
 
     def slice_sessions(self) -> list[Session]:
-        """Each supporting episode restricted to its participating calls, in their recorded order."""
-        return [slice_calls(g.episode, idx) for g, idx in self.occurrences]
+        """Each supporting episode restricted to its participating calls, in their recorded order.
+
+        This is where a trace is read: mining ran off the index, so only the episodes of the candidate actually
+        being induced (a handful, after `sample()`) ever get parsed."""
+        return [slice_calls(g.load_episode(), idx) for g, idx in self.occurrences]
 
 
 def render_edges(edges: Iterable[Edge]) -> list[str]:
@@ -495,7 +799,7 @@ def render_edges(edges: Iterable[Edge]) -> list[str]:
 
 
 # ---------------------------------------------------------------- mining
-def mine(graphs: list[EpisodeGraph], min_support: int = MIN_SUPPORT, limit: int | None = None,
+def mine(graphs: list["Graph"], min_support: int = MIN_SUPPORT, limit: int | None = None,
          max_concepts: int = MAX_CONCEPTS) -> list[DataflowCandidate]:
     """Frequent, connected, closed edge sets over the episodes' dataflow graphs.
 
@@ -582,7 +886,7 @@ def _rank_key(c: DataflowCandidate):
     return (not c.rooted, -c.score, -c.support, -c.saving, sorted(str(e) for e in c.edges))
 
 
-def _candidate(edges: frozenset[Edge], per_edge: dict[Edge, set[int]], graphs: list[EpisodeGraph]) -> DataflowCandidate:
+def _candidate(edges: frozenset[Edge], per_edge: dict[Edge, set[int]], graphs: list["Graph"]) -> DataflowCandidate:
     eps = sorted(set.intersection(*(per_edge[e] for e in edges)))
     occ = [(graphs[i], graphs[i].calls_for(edges)) for i in eps]
     prompts: list[str] = []
