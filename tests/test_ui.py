@@ -177,3 +177,24 @@ def test_candidates_page_shows_the_dataflow_and_can_fall_back_to_sequences(tmp_p
         seq = client.get("/candidates?miner=sequences")
         assert seq.status_code == 200 and "Tool-call sequences" in seq.text
         assert 'name="miner" value="sequences"' in seq.text
+
+
+def test_candidates_page_analyses_in_the_background_instead_of_holding_the_request(tmp_path, monkeypatch):
+    """A workspace with thousands of episodes must not mine inside the request: behind a tunnel that just times
+    out (a real 524). The page shows progress and a JSON endpoint reports it."""
+    from starlette.testclient import TestClient
+    from crystal.app import routes_import
+    from crystal.app.main import app
+
+    monkeypatch.setattr(routes_import, "cache_status",
+                        lambda *a, **k: {"episodes": 900, "cached": 120, "missing": 780})
+    called = []
+    monkeypatch.setattr(routes_import, "mine_dataflow", lambda *a, **k: called.append(1) or [])
+    with TestClient(app) as client:
+        page = client.get("/candidates")
+        assert page.status_code == 200
+        assert "Analysing this workspace" in page.text and "120" in page.text and "900" in page.text
+        status = client.get("/candidates/analysis").json()
+        assert status["episodes"] == 900 and status["missing"] == 780
+        # the sequence view needs no analysis and stays available
+        assert "Tool-call sequences" in client.get("/candidates?miner=sequences").text

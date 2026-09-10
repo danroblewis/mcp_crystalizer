@@ -355,6 +355,20 @@ def build_graphs(eps: list[Episode], catalog: dict | None = None, workspace_meta
     return out
 
 
+def cache_status(trace_dir: Path | None = None, catalog: dict | None = None,
+                 workspace_meta: dict | None = None) -> dict:
+    """How much of the edge analysis is already on disk: {episodes, cached, missing}. Building it is the whole cost
+    of mining (the binder runs per episode), so a caller with thousands of episodes can decide to do it in the
+    background rather than inside a request."""
+    if catalog is None:
+        from crystal.extract.catalog import load_catalog
+        catalog = load_catalog()
+    cache = EdgeCache(dir=cache_dir(), fingerprint=fingerprint(catalog, workspace_meta))
+    eps = load_episodes(trace_dir)
+    cached = sum(1 for ep in eps if cache.get(ep) is not None)
+    return {"episodes": len(eps), "cached": cached, "missing": len(eps) - cached}
+
+
 def episode_graphs(trace_dir: Path | None = None, catalog: dict | None = None, workspace_meta: dict | None = None,
                    use_cache: bool = True, cache: EdgeCache | None = None) -> list[EpisodeGraph]:
     if catalog is None:

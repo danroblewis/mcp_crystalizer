@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Analysing episodes{% endblock %}
+{% block body %}
+{% if msg %}<div class="notice">{{ msg }}</div>{% endif %}
+<h1>Analysing this workspace's episodes</h1>
+<p class="muted" style="max-width:76ch">Finding how information moved means working out, for every argument of every
+recorded call, where its value came from. That runs once per episode and is cached, so this wait happens only after
+new sessions are imported. Big workspaces take a while: roughly a minute per 800 episodes.</p>
+
+<div class="flowcard">
+  <div id="line"><b id="done">{{ job.cached }}</b> of <b>{{ job.episodes }}</b> episodes analysed</div>
+  <div style="background:var(--rule2);border-radius:6px;height:10px;margin:10px 0;overflow:hidden">
+    <div id="bar" style="height:100%;background:var(--acc);width:{{ (100 * job.cached / job.episodes) | round(1) if job.episodes else 0 }}%"></div>
+  </div>
+  <div class="small muted" id="note">{% if job.error %}Analysis failed: {{ job.error }}{% elif job.running %}Working. This page refreshes itself.{% else %}Starting.{% endif %}</div>
+</div>
+
+<p class="small muted">You can leave this page; the work continues. Or run
+<span class="mono">mcp-explorer candidates</span> in a terminal to watch it there.
+Meanwhile you can look at <a href="/candidates?miner=sequences">tool-call sequences</a>, which need no analysis.</p>
+
+<noscript><meta http-equiv="refresh" content="10"></noscript>
+<script>
+(function () {
+  var done = document.getElementById('done'), bar = document.getElementById('bar'), note = document.getElementById('note');
+  function poll() {
+    fetch('/candidates/analysis').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.episodes) return;
+      done.textContent = j.cached;
+      bar.style.width = (100 * j.cached / j.episodes).toFixed(1) + '%';
+      if (j.error) { note.textContent = 'Analysis failed: ' + j.error; return; }
+      if (!j.running && !j.missing) { location.reload(); return; }
+      setTimeout(poll, 3000);
+    }).catch(function () { setTimeout(poll, 5000); });
+  }
+  setTimeout(poll, 2000);
+})();
+</script>
+{% endblock %}
