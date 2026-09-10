@@ -14,6 +14,10 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import re
+
+import scenarios
+
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
 REPO = ROOT / "repo"
@@ -294,7 +298,7 @@ def build_world(seed: int = 7) -> dict:
             d["messages"].append({"user": u["id"], "user_name": who, "ts": slack_ts(at, 700 + i), "text": rnd.choice(DM_NOISE) if who == n else "sure, later today"})
         d["messages"].sort(key=lambda m: float(m["ts"]))
 
-    return {
+    data = {
         "generated_from_seed": seed,
         "me": me,
         "dms": dms,
@@ -307,6 +311,13 @@ def build_world(seed: int = 7) -> dict:
         "noise": {"jira": noise_jira, "slack": noise_slack},
         "confluence_pages": pages,
     }
+    # Additive scenario data (cascades, repeats, escalations, deploys, still-open incidents, on-call
+    # rotations, cross-referencing comments, an architecture/postmortem web, noise): appended with its
+    # own seeded RNG stream, after everything above. See sim/scenarios.py and docs/sim-world.md.
+    # ERRORS is mutated so build_repo()'s handler-stub loop below picks up the new services' error
+    # classes automatically.
+    scenarios.extend(data, ERRORS, seed=seed)
+    return data
 
 
 # ---------------------------------------------------------------- git repo
@@ -338,6 +349,54 @@ def git(args, cwd, env=None):
     subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, env=env)
 
 
+ORIGINAL_SERVICE_NAMES = [n for n, *_ in SERVICES]
+
+
+def _write_service_files(world: dict, name: str) -> None:
+    svc = world["services"][name]
+    d = REPO / svc["repo_path"]
+    d.mkdir(parents=True)
+    (d / "__init__.py").write_text("")
+    parts = []
+    for cls, msg, func in ERRORS[name]:
+        parts.append(HANDLER_TEMPLATE.format(service=name, logger=svc["repo_path"].replace("/", ".") + ".handler", cls=cls, msg=msg, func=func))
+    (d / "handler.py").write_text("\n\n".join(parts))
+    (d / "config.py").write_text(f"SERVICE = {name!r}\nTEAM = {svc['team']!r}\nTIMEOUT_S = 30\n")
+
+
+def _write_codeowners(world: dict, names) -> None:
+    (REPO / "CODEOWNERS").write_text("".join(f"services/{n.replace('-', '_')}/ @{world['services'][n]['team']}\n" for n in names))
+
+
+def _commit_incident(world: dict, inc: dict) -> None:
+    """One commit touching the handler of the incident's function, dated the day before. Sets inc['commit']
+    to the real sha and fixes up any Slack message that named a placeholder sha (the 'Suspect <sha>...'
+    guess, or a scenario overlay's now-real-but-wrong sha from another incident)."""
+    svc = world["services"][inc["service"]]
+    f = REPO / svc["repo_path"] / "handler.py"
+    src = f.read_text()
+    marker = f"def _do_{inc['function']}(request):\n    raise NotImplementedError\n"
+    new = f"def _do_{inc['function']}(request):\n    # {inc['id']}: tightened validation\n    raise NotImplementedError\n"
+    src = src.replace(marker, new, 1) if marker in src else src + f"\n# touched for {inc['id']}\n"
+    f.write_text(src)
+    when = datetime.fromisoformat(inc["started_at"].replace("Z", "+00:00")) - timedelta(days=1)
+    env = {**os.environ, "GIT_AUTHOR_DATE": ts(when), "GIT_COMMITTER_DATE": ts(when),
+           "GIT_AUTHOR_NAME": inc["jira"]["assignee"], "GIT_AUTHOR_EMAIL": f"{inc['jira']['assignee']}@example.com"}
+    git(["add", "-A"], REPO)
+    git(["commit", "-q", "-m", f"{inc['service']}: tighten validation in {inc['function']}"], REPO, env)
+    sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True, check=True).stdout.strip()
+    inc["commit"] = sha
+    for m in inc["slack"]["messages"]:
+        if "Suspect " in m["text"]:
+            m["text"] = f"Suspect {sha[:10]} touched {inc['function']}() yesterday. Rolling back."
+    # deploy-preceded incidents (sim/scenarios.py): the deploy announcement names this same commit
+    dep_id = inc.get("deploy_id")
+    if dep_id:
+        for d in world.get("deploys", []):
+            if d["id"] == dep_id:
+                d["sha"] = sha
+
+
 def build_repo(world: dict) -> None:
     if REPO.exists():
         subprocess.run(["rm", "-rf", str(REPO)], check=True)
@@ -346,39 +405,62 @@ def build_repo(world: dict) -> None:
     git(["config", "user.email", "bot@example.com"], REPO)
     git(["config", "user.name", "sim bot"], REPO)
     (REPO / "README.md").write_text("# sim monorepo\n\nSynthetic services for mcp_explorer.\n")
-    (REPO / "CODEOWNERS").write_text("".join(f"services/{n.replace('-', '_')}/ @{v['team']}\n" for n, v in world["services"].items()))
-    for name, svc in world["services"].items():
-        d = REPO / svc["repo_path"]
-        d.mkdir(parents=True)
-        (d / "__init__.py").write_text("")
-        parts = []
-        for cls, msg, func in ERRORS[name]:
-            parts.append(HANDLER_TEMPLATE.format(service=name, logger=svc["repo_path"].replace("/", ".") + ".handler", cls=cls, msg=msg, func=func))
-        (d / "handler.py").write_text("\n\n".join(parts))
-        (d / "config.py").write_text(f"SERVICE = {name!r}\nTEAM = {svc['team']!r}\nTIMEOUT_S = 30\n")
+    # Tree of the initial commit must stay byte-identical (it fixes the first 11 SHAs), so it is built
+    # from exactly the original 4 services, in their original order -- never from world["services"],
+    # which by now also holds sim/scenarios.py's new services.
+    _write_codeowners(world, ORIGINAL_SERVICE_NAMES)
+    for name in ORIGINAL_SERVICE_NAMES:
+        _write_service_files(world, name)
     env = {**os.environ, "GIT_AUTHOR_DATE": world["base_time"], "GIT_COMMITTER_DATE": world["base_time"]}
     git(["add", "-A"], REPO)
     git(["commit", "-q", "-m", "initial services"], REPO, env)
-    # one commit per incident, dated the day before, touching the handler of the incident's function
-    for inc in world["incidents"]:
-        svc = world["services"][inc["service"]]
-        f = REPO / svc["repo_path"] / "handler.py"
-        src = f.read_text()
-        marker = f"def _do_{inc['function']}(request):\n    raise NotImplementedError\n"
-        new = f"def _do_{inc['function']}(request):\n    # {inc['id']}: tightened validation\n    raise NotImplementedError\n"
-        src = src.replace(marker, new, 1) if marker in src else src + f"\n# touched for {inc['id']}\n"
-        f.write_text(src)
-        when = datetime.fromisoformat(inc["started_at"].replace("Z", "+00:00")) - timedelta(days=1)
-        env = {**os.environ, "GIT_AUTHOR_DATE": ts(when), "GIT_COMMITTER_DATE": ts(when),
-               "GIT_AUTHOR_NAME": inc["jira"]["assignee"], "GIT_AUTHOR_EMAIL": f"{inc['jira']['assignee']}@example.com"}
+
+    original_incidents = [i for i in world["incidents"] if i["service"] in ORIGINAL_SERVICE_NAMES]
+    scenario_incidents = [i for i in world["incidents"] if i["service"] not in ORIGINAL_SERVICE_NAMES]
+    for inc in original_incidents:
+        _commit_incident(world, inc)
+
+    new_service_names = [n for n in world["services"] if n not in ORIGINAL_SERVICE_NAMES]
+    if new_service_names:
+        # sim/scenarios.py's services: their own commit, after the first 11, so earlier SHAs are untouched.
+        # Dated the day before the first scenario incident's own commit -- strictly after every original
+        # incident commit's date -- so `git log --since/--until` (which assumes date order) never has to
+        # skip over an out-of-order commit while walking a service's path history.
+        earliest = min(i["started_at"] for i in scenario_incidents)
+        new_commit_when = datetime.fromisoformat(earliest.replace("Z", "+00:00")) - timedelta(days=2)
+        new_env = {**os.environ, "GIT_AUTHOR_DATE": ts(new_commit_when), "GIT_COMMITTER_DATE": ts(new_commit_when)}
+        for name in new_service_names:
+            _write_service_files(world, name)
+        _write_codeowners(world, ORIGINAL_SERVICE_NAMES + new_service_names)
         git(["add", "-A"], REPO)
-        git(["commit", "-q", "-m", f"{inc['service']}: tighten validation in {inc['function']}"], REPO, env)
-        sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True, check=True).stdout.strip()
-        inc["commit"] = sha
-        # update slack message mentioning sha
-        for m in inc["slack"]["messages"]:
-            if "Suspect " in m["text"]:
-                m["text"] = f"Suspect {sha[:10]} touched {inc['function']}() yesterday. Rolling back."
+        git(["commit", "-q", "-m", "add new services"], REPO, new_env)
+    # Committed in chronological order (not necessarily INC-id order -- a repeat pair's second incident can
+    # land after the next pair's first) so `git log --since/--until`'s date-order assumption never breaks.
+    for inc in sorted(scenario_incidents, key=lambda i: i["started_at"]):
+        _commit_incident(world, inc)
+
+    # sim/scenarios.py defers every commit-sha reference it cannot know yet (its own incident's commit is
+    # still a placeholder when it runs, let alone another incident's) as a {{SHA:ID}}/{{SHA10:ID}}/
+    # {{WRONG_SHA:ID}} token, in Slack text, Jira comments, and confluence page bodies/links alike. Now
+    # that every incident's commit is final, resolve them everywhere in one generic pass.
+    sha_by_id = {i["id"]: i["commit"] for i in world["incidents"]}
+
+    def _resolve_sha_placeholders(obj):
+        if isinstance(obj, str):
+            obj = re.sub(r"\{\{SHA10:(INC-\d+)\}\}", lambda mo: sha_by_id[mo.group(1)][:10], obj)
+            obj = re.sub(r"\{\{WRONG_SHA:(INC-\d+)\}\}", lambda mo: sha_by_id[mo.group(1)][:10], obj)
+            obj = re.sub(r"\{\{SHA:(INC-\d+)\}\}", lambda mo: sha_by_id[mo.group(1)], obj)
+            return obj
+        if isinstance(obj, list):
+            return [_resolve_sha_placeholders(x) for x in obj]
+        if isinstance(obj, dict):
+            return {k: _resolve_sha_placeholders(v) for k, v in obj.items()}
+        return obj
+
+    world["incidents"] = _resolve_sha_placeholders(world["incidents"])
+    world["confluence_pages"] = _resolve_sha_placeholders(world["confluence_pages"])
+    if world.get("deploys"):
+        world["deploys"] = _resolve_sha_placeholders(world["deploys"])
 
 
 def main() -> None:

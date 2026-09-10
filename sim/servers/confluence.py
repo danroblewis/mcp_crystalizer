@@ -7,7 +7,8 @@ mcp = MCPServer("sim-confluence", instructions="Simulated Confluence. confluence
 
 def _fmt(p: dict, body: bool = False) -> dict:
     out = {"id": p["id"], "title": p["title"], "space": {"key": p["space"]}, "labels": p["labels"],
-           "created": p["created"], "last_modified": p["last_modified"], "url": f"https://sim.atlassian.net/wiki/pages/{p['id']}"}
+           "created": p["created"], "last_modified": p["last_modified"], "url": f"https://sim.atlassian.net/wiki/pages/{p['id']}",
+           "links": p.get("links", []), "parent_id": p.get("parent_id")}
     if body:
         out["body"] = p["body"]
     else:

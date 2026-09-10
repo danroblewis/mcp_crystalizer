@@ -69,6 +69,202 @@ service:
     prom_selector: service="notifier"
     logz_type: notifier
     confluence_space: PLATFORM
+  auth-service:
+    aliases:
+    - auth_service
+    - auth
+    - authentication service
+    team: identity
+    owners:
+    - ivan
+    - judy
+    - mallory
+    jira_project: AUTH
+    slack_channel: identity-alerts
+    incident_channel: incidents
+    pagerduty_service_id: P072A81
+    repo_path: services/auth_service
+    prom_selector: service="auth-service"
+    logz_type: auth-service
+    confluence_space: IDENTITY
+  sso-gateway:
+    aliases:
+    - sso_gateway
+    - sso
+    - single sign-on
+    team: identity
+    owners:
+    - ivan
+    - judy
+    - mallory
+    jira_project: SSO
+    slack_channel: identity-alerts
+    incident_channel: incidents
+    pagerduty_service_id: P711A83
+    repo_path: services/sso_gateway
+    prom_selector: service="sso-gateway"
+    logz_type: sso-gateway
+    confluence_space: IDENTITY
+  directory-service:
+    aliases:
+    - directory_service
+    - directory
+    - user directory
+    team: identity
+    owners:
+    - ivan
+    - judy
+    - mallory
+    jira_project: DIR
+    slack_channel: identity-alerts
+    incident_channel: incidents
+    pagerduty_service_id: PBDDD11
+    repo_path: services/directory_service
+    prom_selector: service="directory-service"
+    logz_type: directory-service
+    confluence_space: IDENTITY
+  event-bus:
+    aliases:
+    - event_bus
+    - event bus
+    - eventing
+    team: eventbus
+    owners:
+    - ursula
+    - victor
+    - wendy
+    jira_project: EVT
+    slack_channel: eventbus-alerts
+    incident_channel: incidents
+    pagerduty_service_id: PC897EA
+    repo_path: services/event_bus
+    prom_selector: service="event-bus"
+    logz_type: event-bus
+    confluence_space: EVENTBUS
+  webhook-dispatcher:
+    aliases:
+    - webhook_dispatcher
+    - webhooks
+    - webhook service
+    team: eventbus
+    owners:
+    - ursula
+    - victor
+    - wendy
+    jira_project: WHK
+    slack_channel: eventbus-alerts
+    incident_channel: incidents
+    pagerduty_service_id: P1E61A8
+    repo_path: services/webhook_dispatcher
+    prom_selector: service="webhook-dispatcher"
+    logz_type: webhook-dispatcher
+    confluence_space: EVENTBUS
+  stream-processor:
+    aliases:
+    - stream_processor
+    - stream processor
+    - stream processing
+    team: eventbus
+    owners:
+    - ursula
+    - victor
+    - wendy
+    jira_project: STRM
+    slack_channel: eventbus-alerts
+    incident_channel: incidents
+    pagerduty_service_id: PEA6789
+    repo_path: services/stream_processor
+    prom_selector: service="stream-processor"
+    logz_type: stream-processor
+    confluence_space: EVENTBUS
+  search-api:
+    aliases:
+    - search_api
+    - search
+    - search service
+    team: search
+    owners:
+    - elena
+    - felix
+    - gina
+    jira_project: SRCH
+    slack_channel: search-alerts
+    incident_channel: incidents
+    pagerduty_service_id: P90BB78
+    repo_path: services/search_api
+    prom_selector: service="search-api"
+    logz_type: search-api
+    confluence_space: SEARCH
+  indexer:
+    aliases:
+    - indexer
+    - search indexer
+    team: search
+    owners:
+    - elena
+    - felix
+    - gina
+    jira_project: IDX
+    slack_channel: search-alerts
+    incident_channel: incidents
+    pagerduty_service_id: PDFB694
+    repo_path: services/indexer
+    prom_selector: service="indexer"
+    logz_type: indexer
+    confluence_space: SEARCH
+  autocomplete-service:
+    aliases:
+    - autocomplete_service
+    - autocomplete
+    - typeahead
+    team: search
+    owners:
+    - elena
+    - felix
+    - gina
+    jira_project: ACS
+    slack_channel: search-alerts
+    incident_channel: incidents
+    pagerduty_service_id: PE78B52
+    repo_path: services/autocomplete_service
+    prom_selector: service="autocomplete-service"
+    logz_type: autocomplete-service
+    confluence_space: SEARCH
+  billing-service:
+    aliases:
+    - billing_service
+    - billing
+    - billing service
+    team: billing
+    owners:
+    - opal
+    - priya
+    - quinn
+    jira_project: BILL
+    slack_channel: billing-alerts
+    incident_channel: incidents
+    pagerduty_service_id: P98521F
+    repo_path: services/billing_service
+    prom_selector: service="billing-service"
+    logz_type: billing-service
+    confluence_space: BILLING
+  invoicing:
+    aliases:
+    - invoicing
+    - invoice service
+    team: billing
+    owners:
+    - opal
+    - priya
+    - quinn
+    jira_project: INVC
+    slack_channel: billing-alerts
+    incident_channel: incidents
+    pagerduty_service_id: P1F19A5
+    repo_path: services/invoicing
+    prom_selector: service="invoicing"
+    logz_type: invoicing
+    confluence_space: BILLING
 team:
   payments:
     members:
@@ -94,6 +290,62 @@ team:
     - heidi
     slack_channel: team-platform
     confluence_space: PLATFORM
+  identity:
+    members:
+    - ivan
+    - judy
+    - mallory
+    - niaj
+    - olivia
+    - peggy
+    - quentin
+    - rupert
+    - sybil
+    - trent
+    slack_channel: team-identity
+    confluence_space: IDENTITY
+  eventbus:
+    members:
+    - ursula
+    - victor
+    - wendy
+    - xavier
+    - yolanda
+    - zach
+    - aaron
+    - brenda
+    - chloe
+    - derek
+    slack_channel: team-eventbus
+    confluence_space: EVENTBUS
+  search:
+    members:
+    - elena
+    - felix
+    - gina
+    - hank
+    - iris
+    - jack
+    - kara
+    - liam
+    - maya
+    - noah
+    slack_channel: team-search
+    confluence_space: SEARCH
+  billing:
+    members:
+    - opal
+    - priya
+    - quinn
+    - ravi
+    - sara
+    - tariq
+    - uma
+    - vince
+    - wanda
+    - xena
+    slack_channel: team-billing
+    confluence_space: BILLING
 slack_channel:
   incidents:
     id: C542575C5
@@ -115,6 +367,84 @@ slack_channel:
     id: C626EB978
   team-platform:
     id: C15EC029F
+  identity-alerts:
+    id: C3D53BB89
+  team-identity:
+    id: C759B6301
+  eventbus-alerts:
+    id: CC541D92B
+  team-eventbus:
+    id: C82872EC7
+  search-alerts:
+    id: CAA4CB25A
+  team-search:
+    id: CA926FA51
+  billing-alerts:
+    id: CCF8DC5BB
+  team-billing:
+    id: CD56FB5E9
+  deploys:
+    id: C98A9B2AC
+  random:
+    id: C8930E156
+  announcements:
+    id: C6AD9B099
+  watercooler:
+    id: C1A2B6C45
+  eng-all:
+    id: C5DB6DA9B
+  support:
+    id: C7AEF0B6B
+  product:
+    id: CE06CD3DA
+  hiring:
+    id: C3186C9B3
+  oncall-handoff:
+    id: C7A469A76
+  retro:
+    id: CC7940859
+  postmortems:
+    id: CEE543A23
+  travel:
+    id: C943F4F0D
+  books-club:
+    id: C9A2FACB6
+  music:
+    id: CFC8B31FA
+  pets:
+    id: C75324F64
+  gardening:
+    id: C0619A449
+  coffee:
+    id: C4FD9A604
+  photography:
+    id: C0B6C125A
+  gaming:
+    id: C77EC9C5D
+  running-club:
+    id: CFFA34FF2
+  book-recs:
+    id: C8A88BDB0
+  career-dev:
+    id: C9D173E2C
+  interview-prep:
+    id: C213FE676
+  security-notices:
+    id: CAAC8F6C2
+  compliance:
+    id: C890446E4
+  legal:
+    id: C3E20201F
+  finance-ops:
+    id: C7C03D0C8
+  facilities:
+    id: C546A308B
+  it-helpdesk:
+    id: C8A81CCA9
+  new-hires:
+    id: C80E9BDBD
+  swag:
+    id: C5935A7E3
   '@alice':
     id: DEA6423F1
     is_im: true
@@ -172,3 +502,123 @@ person:
   heidi:
     slack_id: U0FEBC363
     team: platform
+  ivan:
+    slack_id: UA15F8B81
+    team: identity
+  judy:
+    slack_id: U38FC8CAE
+    team: identity
+  mallory:
+    slack_id: U1BEEF780
+    team: identity
+  niaj:
+    slack_id: U6525ABCC
+    team: identity
+  olivia:
+    slack_id: U5CC9DC7F
+    team: identity
+  peggy:
+    slack_id: UB5382301
+    team: identity
+  quentin:
+    slack_id: UD6B8E48A
+    team: identity
+  rupert:
+    slack_id: U17524895
+    team: identity
+  sybil:
+    slack_id: U4115B6DC
+    team: identity
+  trent:
+    slack_id: U0AA1C221
+    team: identity
+  ursula:
+    slack_id: U878D4536
+    team: eventbus
+  victor:
+    slack_id: U88FA846E
+    team: eventbus
+  wendy:
+    slack_id: U5D0EB97E
+    team: eventbus
+  xavier:
+    slack_id: U402F5892
+    team: eventbus
+  yolanda:
+    slack_id: U57CCF4BC
+    team: eventbus
+  zach:
+    slack_id: U9DE8C448
+    team: eventbus
+  aaron:
+    slack_id: U5A7A6A18
+    team: eventbus
+  brenda:
+    slack_id: UE156BBC5
+    team: eventbus
+  chloe:
+    slack_id: U7785DB84
+    team: eventbus
+  derek:
+    slack_id: UE1C79A58
+    team: eventbus
+  elena:
+    slack_id: U291C6B2D
+    team: search
+  felix:
+    slack_id: U9C69098D
+    team: search
+  gina:
+    slack_id: U868B763A
+    team: search
+  hank:
+    slack_id: U43956EFC
+    team: search
+  iris:
+    slack_id: U3E9AFE23
+    team: search
+  jack:
+    slack_id: U596727C8
+    team: search
+  kara:
+    slack_id: U8E690C18
+    team: search
+  liam:
+    slack_id: U3C5E7EAB
+    team: search
+  maya:
+    slack_id: U13E51919
+    team: search
+  noah:
+    slack_id: U1DB01D43
+    team: search
+  opal:
+    slack_id: U46178BCF
+    team: billing
+  priya:
+    slack_id: U7694B115
+    team: billing
+  quinn:
+    slack_id: UDCA6211F
+    team: billing
+  ravi:
+    slack_id: UAA153B5D
+    team: billing
+  sara:
+    slack_id: UDEA04453
+    team: billing
+  tariq:
+    slack_id: UF846D42E
+    team: billing
+  uma:
+    slack_id: U44710D6B
+    team: billing
+  vince:
+    slack_id: U9B50D1F9
+    team: billing
+  wanda:
+    slack_id: U47D8E1C6
+    team: billing
+  xena:
+    slack_id: U9E80E48D
+    team: billing
