@@ -14,6 +14,9 @@ Set at import time (module-level fixtures in several test files load flows and t
   CRYSTAL_USER_MCP, CRYSTAL_CLAUDE_CONFIG, CRYSTAL_CLAUDE_SETTINGS
                           point ~/.mcp.json, ~/.claude.json and ~/.claude/settings.json at files that do not exist,
                           so whatever the developer keeps in their home never reaches the suite.
+  CRYSTAL_NO_AGENT=1      crystal.trace.driver.run_agent and driver.launch refuse to start Claude Code, whatever a
+                          test mocks: the suite can never spend money. Tests of the driver's plumbing patch
+                          `driver.launch` (the one spawn seam) and unset the variable for their own scope.
 """
 import atexit
 import os
@@ -35,6 +38,7 @@ os.environ.setdefault("CRYSTAL_INPROCESS", "1")
 for var in ("CRYSTAL_USER_MCP", "CRYSTAL_CLAUDE_CONFIG", "CRYSTAL_CLAUDE_SETTINGS"):
     os.environ[var] = str(REPO / "tests" / "no-such-file.json")
 os.environ.pop("CRYSTAL_LIFECYCLE_DB", None)
+os.environ["CRYSTAL_NO_AGENT"] = "1"       # no test may launch Claude Code (crystal/trace/driver.py refuses)
 
 from crystal import state as state_mod  # noqa: E402
 

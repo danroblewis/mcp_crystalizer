@@ -11,6 +11,7 @@
         catalog.yaml              the entity catalog (the foreign-key hub the extractors use)
         lifecycle.sqlite          promotion state and counters (crystal/flow/lifecycle.py)
         feedback.jsonl            the "this didn't help" queue (`mcp-explorer repair`)
+        records/*.json            Claude Code runs launched from the UI (/record): status, cost, session (crystal/app/routes_record.py)
 
 The slug is `<dirname>-<8 hex of sha1(absolute path)>`, so two checkouts called `api` never share flows and a
 workspace keeps its state when the tool is upgraded. Workspaces are isolated: nothing here ever looks across slugs

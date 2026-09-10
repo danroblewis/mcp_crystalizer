@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block title %}Record a session{% endblock %}{% block body %}
+{% set ws = workspace() %}
+<h1>Record a session <span class="muted small" style="font-weight:400">in {{ ws.name }}</span></h1>
+<p class="muted" style="max-width:72ch">Type a question, and Claude Code runs it headless in <span class="mono">{{ ws.root }}</span> with the effective MCP servers and the recording hook on. Every MCP call lands in a trace you can watch here, then compile into a draft flow (no AI) that answers the same kind of question for free next time.</p>
+{% if error %}<div class="notice" style="background:#fdf2f2;border-color:#f3c0c0;color:var(--bad)">{{ error }}</div>{% endif %}
+{% if not claude %}<div class="notice" style="background:#fdf7ee;border-color:#f0d9b5"><b>Claude Code is not installed</b> (no <code>claude</code> on PATH of this server), so nothing can be launched from here.<br>{{ install_hint }}</div>{% endif %}
+{% if running %}<div class="notice">A run is in progress: <a href="/record/{{ running.job }}" class="mono">{{ running.job }}</a> ({{ running.trigger }}: {{ running.question | truncate(80) }}). One run at a time per workspace; the form will refuse until it finishes.</div>{% endif %}
+<form method="post" action="/record" class="start" style="max-width:760px" id="record-form">
+<label for="question"><b>Question</b> <span class="muted small">what you would type into Claude Code here</span></label>
+<textarea id="question" name="question" rows="4" required style="width:100%;font:inherit;padding:8px;border:1px solid #c5cbc7;border-radius:5px;margin:4px 0 10px">{{ form.question or '' }}</textarea>
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+<label>Trigger <span class="muted small">groups sessions for induction</span><br><input type="text" name="trigger" value="{{ form.trigger or default_trigger }}" list="triggers" style="min-width:180px"><datalist id="triggers">{% for t in triggers %}<option value="{{ t }}">{% endfor %}<option value="{{ default_trigger }}"></datalist></label>
+<label>Budget cap (USD)<br><input type="text" name="budget" value="{{ form.budget or default_budget }}" inputmode="decimal" style="min-width:90px;width:110px"></label>
+<label>Model <span class="muted small">blank = your default</span><br><input type="text" name="model" value="{{ form.model or '' }}" placeholder="sonnet, opus, ..." style="min-width:160px;width:200px"></label>
+</div>
+<p style="margin:12px 0 10px"><label><input type="checkbox" name="confirm" value="yes"> <b>I understand this launches Claude Code in this workspace and costs money</b> (capped at the budget above).</label></p>
+<button type="submit"{% if not claude or running %} disabled title="{{ 'a run is in progress' if running else 'claude is not installed' }}"{% endif %}>Launch and record</button>
+<span class="muted small" style="margin-left:10px">Same as <code>mcp-explorer record {{ form.trigger or default_trigger }} question=... --yes --budget {{ form.budget or default_budget }}</code></span>
+</form>
+<h2>Past runs</h2>
+{% if jobs %}<table><tr><th>job</th><th>status</th><th>trigger</th><th>question</th><th>calls</th><th>cost</th><th>turns</th><th>took</th><th>trace</th><th>flow</th></tr>
+{% for j in jobs %}<tr><td><a href="/record/{{ j.job }}" class="mono">{{ j.job }}</a></td>
+<td><span class="pill {{ 'ok' if j.status == 'done' and not j.is_error else ('draft' if j.status == 'running' else 'bad') }}">{{ j.status }}{{ ' (agent error)' if j.status == 'done' and j.is_error }}</span></td>
+<td>{{ j.trigger }}</td><td>{{ j.question | truncate(90) }}</td><td>{{ j.n_calls }}</td>
+<td>{% if j.cost_usd is not none %}${{ '%.4f' % j.cost_usd }}{% else %}<span class="muted">–</span>{% endif %}</td>
+<td>{{ j.num_turns if j.num_turns is not none else '' }}</td><td class="small">{{ j.elapsed_s }}s</td>
+<td>{% if j.n_calls %}<a href="/traces/{{ j.session_id }}">dossier</a>{% endif %}</td>
+<td>{% if j.induced %}<a href="/flows/{{ j.induced.flow }}">{{ j.induced.flow }}</a>{% endif %}</td></tr>{% endfor %}</table>
+{% else %}<p class="muted">No recorded runs from the UI yet.</p>{% endif %}
+{% endblock %}

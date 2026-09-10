@@ -11,17 +11,24 @@ so the trace file is known; a meta record (trigger, inputs, workspace) is writte
 hooks (crystal/hooks.py, written to a temporary settings file and passed with --settings) append the prompt, every
 MCP call and the final message to the same file under the workspace's state dir.
 
-`run_agent` is the library entry point used by `mcp-explorer author` / `repair`; nothing in this codebase calls it
-without an explicit user command, and every call costs real money (cap with budget).
+`run_agent` is the library entry point used by `mcp-explorer author` / `repair` and by the web UI's /record page;
+nothing in this codebase calls it without an explicit user command (or the UI's confirmation checkbox), and every
+call costs real money (cap with budget). `on_start` is called once the process is launched with the session id,
+the trace path and the pid, so a caller running it in the background can follow the trace file while it runs.
+
+`launch()` is the only place this package spawns Claude Code, and the seam tests patch; with $CRYSTAL_NO_AGENT set
+(the test suite sets it) both `run_agent` and `launch` refuse before anything is spawned, whatever else is mocked.
 """
 from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 from crystal import hooks
@@ -58,6 +65,34 @@ PROMPTS = {
 }
 
 
+NO_AGENT_ENV = "CRYSTAL_NO_AGENT"     # set: every agent launch is refused (tests/conftest.py sets it)
+
+INSTALL_HINT = ("Claude Code is not installed (no `claude` on PATH). Install it with "
+                "`npm install -g @anthropic-ai/claude-code` or `curl -fsSL https://claude.ai/install.sh | bash`, "
+                "then run `claude` once to log in.")
+
+
+def claude_path() -> str | None:
+    """Where the `claude` binary is, or None when Claude Code is not installed."""
+    return shutil.which("claude")
+
+
+def _refuse_if_disabled() -> None:
+    if os.environ.get(NO_AGENT_ENV, "").strip():
+        raise RuntimeError(f"agent launches disabled ({NO_AGENT_ENV} is set)")
+
+
+def launch(cmd: list[str], cwd: Path, env: dict[str, str], on_start: Callable[[dict], None] | None = None) -> dict:
+    """Spawn Claude Code and wait for it: the one place this package starts the agent. `on_start({pid, cmd})` fires
+    right after the process starts. Returns {returncode, stdout, stderr, pid}. Refuses under $CRYSTAL_NO_AGENT."""
+    _refuse_if_disabled()
+    proc = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if on_start is not None:
+        on_start({"pid": proc.pid, "cmd": cmd})
+    stdout, stderr = proc.communicate()
+    return {"returncode": proc.returncode, "stdout": stdout, "stderr": stderr, "pid": proc.pid}
+
+
 def build_command(prompt: str, sid: str, budget, model: str | None, servers: list[str], mcp_config: Path,
                   settings: Path) -> list[str]:
     allowed = [f"mcp__{s}" for s in servers] + [f"mcp__{s}__*" for s in servers] + ["Read", "Grep", "Glob"]
@@ -80,10 +115,14 @@ def agent_env(ws: ws_mod.Workspace) -> dict[str, str]:
 
 def run_agent(trigger: str, inputs: dict, prompt: str, budget: str | float = "3", model: str | None = None,
               servers: list[str] | None = None, meta: dict | None = None, session_id: str | None = None,
-              quiet: bool = False, workspace: str | Path | None = None) -> dict:
+              quiet: bool = False, workspace: str | Path | None = None,
+              on_start: Callable[[dict], None] | None = None) -> dict:
     """Launch `claude -p` once with recording, in the workspace (`workspace`, else $CRYSTAL_WORKSPACE, else the
     current directory). Returns {session_id, cost_usd, num_turns, duration_ms, is_error, result, returncode, stderr,
-    trace_path, calls, workspace, mcp_config}. COSTS MONEY: capped by `budget` (USD)."""
+    trace_path, calls, workspace, mcp_config}. COSTS MONEY: capped by `budget` (USD). `on_start(info)` is called
+    right after the process starts with {session_id, trace_path, pid, cmd}; the trace file is known up front.
+    Refuses (RuntimeError, nothing written or spawned) when $CRYSTAL_NO_AGENT is set."""
+    _refuse_if_disabled()
     ws = ws_mod.workspace(workspace)
     st = ws.state.ensure()
     sid = session_id or str(uuid.uuid4())
@@ -102,8 +141,10 @@ def run_agent(trigger: str, inputs: dict, prompt: str, budget: str | float = "3"
     if not quiet:
         print(f"session {sid} in workspace {ws}\n$ {' '.join(cmd[:4])} ... ({len(cfg['mcpServers'])} servers from "
               f"{mcp_config.name}, budget ${budget})", flush=True)
+    trace_path = str(trace_dir / f"{sid}.jsonl")
+    started = (lambda i: on_start({"session_id": sid, "trace_path": trace_path, **i})) if on_start is not None else None
     try:
-        proc = subprocess.run(cmd, cwd=ws.root, env=agent_env(ws), capture_output=True, text=True)
+        proc = launch(cmd, ws.root, agent_env(ws), on_start=started)
     finally:
         mcp_config.unlink(missing_ok=True)
         settings.unlink(missing_ok=True)
@@ -111,15 +152,15 @@ def run_agent(trigger: str, inputs: dict, prompt: str, budget: str | float = "3"
             tmpdir.rmdir()
         except OSError:
             pass
-    out = proc.stdout.strip()
+    out = proc["stdout"].strip()
     res: dict = {}
     try:
         res = json.loads(out)
     except json.JSONDecodeError:
         res = {"result": out[:3000], "is_error": True}
     info = {"session_id": sid, "cost_usd": res.get("total_cost_usd"), "num_turns": res.get("num_turns"), "duration_ms": res.get("duration_ms"),
-            "is_error": bool(res.get("is_error")) or proc.returncode != 0, "result": str(res.get("result", "")), "returncode": proc.returncode,
-            "stderr": proc.stderr[-2000:], "trace_path": str(trace_dir / f"{sid}.jsonl"), "calls": [],
+            "is_error": bool(res.get("is_error")) or proc["returncode"] != 0, "result": str(res.get("result", "")), "returncode": proc["returncode"],
+            "stderr": proc["stderr"][-2000:], "trace_path": trace_path, "calls": [],
             "workspace": ws.slug, "mcp_config": cfg}
     p = Path(info["trace_path"])
     if p.exists():
@@ -163,6 +204,9 @@ def main(argv: list[str]) -> int:
         prompt = prompt.format(**inputs, inputs=json.dumps(inputs))
     except KeyError as e:
         print(f"the {trigger} prompt needs an input {e}; pass it as {str(e).strip(chr(39))}=...")
+        return 1
+    if not claude_path():
+        print(INSTALL_HINT)
         return 1
     if not confirm(argv, f"mcp-explorer record {trigger} {inputs} in {ws_mod.current()}"):
         return 2
