@@ -23,6 +23,13 @@
   install-hook [--uninstall] [--settings p] [--status]   add the recording hooks to ~/.claude/settings.json
   seed --from <dir> [--overwrite]  copy <dir>/flows, traces, catalog.yaml into the workspace's state dir
   workspaces                    list the workspaces this tool has state for
+  import [--all] [--transcripts DIR] [--dry-run] [--force] [--reattribute] [--verbose]
+                                import past Claude Code sessions (~/.claude/projects transcripts) as traces, for free:
+                                only sessions that made MCP calls; default = this workspace's, --all = every project;
+                                a session the hook already recorded gets its subagent calls attributed instead
+                                (--reattribute redoes that join)
+  candidates [--top N] [--min-support N] [--json]   recurring tool sequences across this workspace's episodes
+  candidates induce <n> --name <flow> [--out p]     compile candidate <n> into a draft flow (no AI)
 """
 from __future__ import annotations
 
@@ -316,10 +323,71 @@ def cmd_card(args):
     return 0
 
 
+def _opt(args: list[str], flag: str, default=None):
+    if flag in args and len(args) > args.index(flag) + 1:
+        return args[args.index(flag) + 1]
+    return default
+
+
+def cmd_import(args):
+    """import [--all] [--transcripts DIR] [--dry-run] [--force] [--reattribute] [--verbose]: read past Claude Code
+    session transcripts and write the ones with MCP calls into the workspace's trace dir (crystal/trace/transcripts.py).
+    Default: transcripts whose cwd is this workspace; --all: every project, each into its own workspace."""
+    from crystal.trace.transcripts import format_table, import_transcripts, transcripts_dir
+    base = transcripts_dir(_opt(args, "--transcripts"))
+    if not base.is_dir():
+        print(f"no transcripts directory at {base} (Claude Code keeps them under ~/.claude/projects; --transcripts <dir> overrides)")
+        return 1
+    ws = ws_mod.current()
+    rep = import_transcripts(base, workspace_root=ws.root, all_projects="--all" in args, dry_run="--dry-run" in args,
+                             force="--force" in args, reattribute_again="--reattribute" in args)
+    print(format_table(rep, verbose="--verbose" in args))
+    if not rep.get("dry_run") and (rep["imported"] or rep.get("reattributed")):
+        print(f"traces written under {state_mod.home() / 'workspaces'}; next: `mcp-explorer candidates`")
+    return 0
+
+
+def cmd_candidates(args):
+    """candidates [--top N] [--min-support N] [--json] | candidates induce <n> --name <flow> [--out p]"""
+    from crystal.induce.mining import candidates, format_candidates
+    min_support = int(_opt(args, "--min-support", 2))
+    if args and args[0] == "induce":
+        rest = args[1:]
+        if not rest or not rest[0].isdigit():
+            print("usage: candidates induce <n> --name <flow> [--out path]")
+            return 1
+        n = int(rest[0])
+        cands = candidates(state_mod.current().traces, min_support=min_support)
+        if n < 1 or n > len(cands):
+            print(f"no candidate #{n} ({len(cands)} candidates; `mcp-explorer candidates` lists them)")
+            return 1
+        cand = cands[n - 1]
+        name = _opt(rest, "--name") or f"mined-{cand.servers[0]}-{cand.servers[-1]}-{n}"
+        out = Path(_opt(rest, "--out")) if "--out" in rest else state_mod.current().flows / f"{name}.yaml"
+        from crystal.induce.mining import induce_candidate
+        from crystal.induce.inducer import dump_flow
+        flow, report = induce_candidate(cand, name, workspace_meta=ws_mod.current().meta())
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(dump_flow(flow))
+        print(f"induced {name} from candidate #{n} ({cand.support} episodes, {cand.length} steps) -> {out}")
+        print(json.dumps({k: v for k, v in report.items() if k in ("sessions", "steps", "unresolved", "optional_steps", "ladders", "forEach", "tests")}, indent=1, default=str))
+        return 0
+    top = int(_opt(args, "--top", 20))
+    cands = candidates(state_mod.current().traces, min_support=min_support, limit=top)
+    if "--json" in args:
+        print(json.dumps([c.view() for c in cands], indent=1))
+        return 0
+    print(format_candidates(cands))
+    if cands:
+        print("\n`mcp-explorer candidates induce <#> --name <flow>` compiles one into a draft flow (no AI).")
+    return 0
+
+
 COMMANDS = {"serve": cmd_serve, "flows": cmd_flows, "run": cmd_run, "test": cmd_test, "status": cmd_status, "card": cmd_card,
             "servers": cmd_servers, "tools": cmd_tools, "mcp-config": cmd_mcp_config, "induce": cmd_induce,
             "record": cmd_record, "author": cmd_author, "repair": cmd_repair, "hook": cmd_hook,
-            "install-hook": cmd_install_hook, "seed": cmd_seed, "workspaces": cmd_workspaces}
+            "install-hook": cmd_install_hook, "seed": cmd_seed, "workspaces": cmd_workspaces,
+            "import": cmd_import, "candidates": cmd_candidates}
 NO_WORKSPACE = {"hook", "install-hook", "workspaces"}     # commands that do not act on the current workspace
 
 

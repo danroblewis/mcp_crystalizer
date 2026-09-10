@@ -35,6 +35,8 @@ Commands (`mcp-explorer [--workspace <dir>] <command>`):
 | `author ... --yes`, `repair ... --yes` | agent-assisted authoring and repair (**cost money**) |
 | `servers`, `tools`, `mcp-config [--write]` | the effective MCP servers, their tools, the merged mcp.json |
 | `seed --from <dir>`, `workspaces` | copy starting data into a workspace's state; list known workspaces |
+| `import [--all] [--dry-run]` | import past Claude Code sessions (their transcripts) as traces, for free |
+| `candidates [induce <n> --name f]` | recurring tool sequences across the workspace's episodes; compile one into a flow |
 | `hook` | the hook entry point Claude Code calls (reads JSON on stdin) |
 
 Only `record`, `author` and `repair` launch Claude Code; they ask for confirmation (or `--yes`), are capped with
@@ -91,6 +93,49 @@ session's dossier under `/traces`, and a button to **induce a flow from this ses
 with every earlier session of the same trigger into `<trigger>.v<N>.yaml` (a draft, no LLM) and links to the flow.
 The page updates itself with a few lines of JavaScript and works without it (refresh). Every job is persisted as
 `records/<job>.json` in the state dir, so the history, with cost per run, survives a server restart.
+
+## Capturing flows from past sessions
+
+You do not need the hook to have been installed to get traces: Claude Code keeps a transcript of every session under
+`~/.claude/projects/<project>/<session-id>.jsonl`, and every MCP call in it (tool call, arguments, result, the prompt
+it was made under) is exactly what the hook would have recorded.
+
+```bash
+mcp-explorer import --dry-run          # the sessions run in this directory that made MCP calls, and what they called
+mcp-explorer import                    # write them into this workspace's traces (source: transcript)
+mcp-explorer import --all              # every project on this machine, each into its own workspace
+```
+
+`import` prints one row per session (prompts, MCP calls, subagents, episodes, calls per server, the cwd) and only
+imports sessions that touched an MCP server; a session that only edited code is not an investigation. It is
+idempotent (`--force` rewrites), reads `~/.claude` and never writes there, and `--transcripts <dir>` (or
+`$MCP_EXPLORER_TRANSCRIPTS`) points it elsewhere. A session whose directory no longer exists still imports, flagged.
+
+**Episodes.** A long session holds many prompts; each prompt that made MCP calls starts an episode, and each subagent
+(the Agent tool, whose transcript sits in `<session-id>/subagents/`) is an episode of its own. A session with more
+than one episode is written as the whole session `<sessionId>` for reference plus `<sessionId>-e<N>` (the main
+thread's calls under the N-th prompt) and `<sessionId>-e<N>-a<agentId>` (each subagent spawned under it), with the
+prompt (for a subagent, the instruction it was given) as `meta.prompt` and the inputs. Induction and mining work on
+episodes. If the hook already recorded the session, its trace interleaves the subagents' calls under the parent
+session id with no attribution; importing the transcript then *reattributes* that trace instead of importing it
+twice: hook records are joined to the transcript on `tool_use_id`, each call gets its `agent`, and the episode
+files are written from the hook's records (`--reattribute` redoes the join).
+
+**Candidates.** Across all episodes of a workspace, hook-recorded, `record`ed or imported, `candidates` mines the
+recurring tool-call sequences: each episode becomes its sequence of `server.tool` names (consecutive calls to one
+tool collapse into a fan-out step, shown as `tool*`), and the contiguous subsequences of length >= 2 shared by >= 2
+episodes are ranked by support x length, with the prompts that produced them and the calls a flow would save:
+
+```bash
+mcp-explorer candidates                       # ranked list; --top N, --min-support N, --json
+mcp-explorer candidates induce 1 --name triage-ticket
+```
+
+`candidates induce <n>` slices every supporting episode to the span that matches the sequence and runs the same
+inducer over those partial sessions, so the draft flow (status `draft`, in the workspace's flows dir) contains
+exactly the shared behaviour with its arguments bound the usual way. The UI has the same two pages: `/import` lists
+the importable transcripts of the workspace with an Import button, `/candidates` the mined behaviours with an
+"Induce as flow" button. No LLM is involved anywhere in import, mining or induction.
 
 ## mcp.json
 

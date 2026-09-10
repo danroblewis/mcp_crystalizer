@@ -43,7 +43,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="mcp_explorer", lifespan=lifespan)
+from crystal.app import routes_import  # noqa: E402  (the /import and /candidates pages)
+
 app.include_router(routes_record.router)      # /record: launch Claude Code from the UI, recorded (costs money; confirmed)
+app.include_router(routes_import.router)      # /import, /candidates: past sessions -> traces -> mined flows
 
 
 def _workspace() -> ws_mod.Workspace:

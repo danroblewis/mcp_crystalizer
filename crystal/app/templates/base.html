@@ -70,6 +70,6 @@ svg.dag{display:block;font-family:inherit}svg.dag .node-link:hover rect:first-of
 @media (max-width:640px){main{padding:14px}.lede{font-size:19px}.facts>div{grid-template-columns:100px 1fr}.logline{grid-template-columns:1fr}.commit{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
-{% set ws = workspace() %}<header class="top"><a class="brand" href="/">mcp-explorer</a><nav><a href="/">Flows</a><a href="/runs">Runs</a><a href="/traces">Agent traces</a><a href="/record">Record</a></nav><span class="tag" title="state: {{ ws.state_dir }}"><b class="wsname">{{ ws.name }}</b> <span class="mono">{{ ws.root }}</span>{% if ws.remote %} · <span class="mono">{{ ws.remote }}</span>{% endif %}</span></header>
+{% set ws = workspace() %}<header class="top"><a class="brand" href="/">mcp-explorer</a><nav><a href="/">Flows</a><a href="/runs">Runs</a><a href="/traces">Agent traces</a><a href="/record">Record</a><a href="/import">Import</a><a href="/candidates">Candidates</a></nav><span class="tag" title="state: {{ ws.state_dir }}"><b class="wsname">{{ ws.name }}</b> <span class="mono">{{ ws.root }}</span>{% if ws.remote %} · <span class="mono">{{ ws.remote }}</span>{% endif %}</span></header>
 <main>{% block body %}{% endblock %}</main>
 </body></html>

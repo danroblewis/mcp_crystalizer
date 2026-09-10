@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block title %}Common behaviours{% endblock %}{% block body %}
+{% set ws = workspace() %}
+<h1>Common behaviours <span class="muted small" style="font-weight:400">in {{ ws.name }}</span></h1>
+<p class="muted" style="max-width:76ch">Tool-call sequences that recur across the recorded episodes of this workspace (hook, <code>record</code>, <a href="/import">imported sessions</a>), ranked by how many episodes share them times how long they are. Consecutive calls to one tool count as one fan-out step (<span class="mono">tool*</span>). Each can be compiled into a draft flow from the episodes that contain it, with no AI.</p>
+{% if msg %}<div class="notice">{{ msg }}</div>{% endif %}
+{% if not cands %}<p class="muted">No recurring sequences yet: mining needs at least two episodes that share two or more consecutive MCP calls. <a href="/import">Import past sessions</a>, or record a few with the hook.</p>{% endif %}
+{% for c in cands %}
+<div class="flowcard" id="c{{ c.rank }}">
+<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><b>#{{ c.rank }}</b>
+<span class="pill ok" title="episodes containing this sequence">{{ c.support }} episodes</span>
+<span class="pill" title="steps in the sequence">{{ c.length }} steps</span>
+<span class="pill" title="calls the flow would replay: calls covered, summed over the episodes">saves ~{{ c.saving }} calls</span>
+<span class="muted small">score {{ c.score }}</span></div>
+<div class="mono small" style="margin:8px 0;overflow-wrap:anywhere">{% for t in c.sequence %}<span style="display:inline-block;background:#eef2fb;border:1px solid #d4dcf3;color:#24408a;border-radius:4px;padding:0 6px;margin:2px 4px 2px 0">{{ t }}</span>{% if not loop.last %}<span class="muted">→</span> {% endif %}{% endfor %}</div>
+{% if c.prompts %}<details class="more"><summary>{{ c.prompts | length }} prompt{{ '' if c.prompts | length == 1 else 's' }}</summary>
+<ul class="small" style="margin:6px 0 0;padding-left:18px">{% for p in c.prompts %}<li>{{ p | truncate(240) }}</li>{% endfor %}</ul></details>{% endif %}
+<details class="more"><summary>episodes</summary><div class="mono small" style="margin-top:4px">{% for e in c.episodes %}<a href="/traces/{{ e }}">{{ e }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</div></details>
+<form method="post" action="/candidates/{{ c.rank }}/induce" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<input type="text" name="name" value="{{ c.default_name }}" aria-label="flow name">
+<button type="submit">Induce as flow</button>
+{% if c.default_name in flows %}<span class="small muted">exists: <a href="/flows/{{ c.default_name }}">{{ c.default_name }}</a> (will be overwritten)</span>{% endif %}
+</form>
+</div>
+{% endfor %}
+{% endblock %}
