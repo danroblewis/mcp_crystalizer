@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 import threading
+import time
 from pathlib import Path
 from urllib.parse import quote
 
@@ -68,6 +69,17 @@ async def import_run(request: Request, force: str = Form("")):
 # with thousands of episodes would otherwise hold the request open for minutes (behind a tunnel it just times out),
 # so the page renders progress and does the work in a background thread.
 _ANALYSIS: dict[str, dict] = {}
+# Mining a warm 9,000-episode workspace is ~9s: fine once, tiresome on every reload. The result is memoised per
+# workspace and dropped as soon as the index file changes (a new import, a new recording).
+_MINED: dict[tuple, tuple[float, list]] = {}
+
+
+def _index_stamp(st) -> tuple:
+    try:
+        i = (st.dir / "dataflow" / "index.json").stat()
+        return (i.st_size, i.st_mtime)
+    except OSError:
+        return (0, 0.0)
 INLINE_EPISODES = 150        # few enough to analyse inside the request (~10s); more goes to the background
 
 
@@ -117,8 +129,15 @@ async def candidates_page(request: Request, msg: str = "", miner: str = "dataflo
             return _templates().TemplateResponse(request, "candidates_analysing.html",
                                                  {"job": job, "msg": msg, "miner": miner})
     top = max(1, min(int(request.query_params.get("top") or TOP), 500))
-    allc = (mine_sequences(st.traces) if sequences
-            else mine_dataflow(st.traces, workspace_meta=ws.meta()))
+    key = (st.slug, miner, _index_stamp(st))
+    hit = _MINED.get(key)
+    if hit is None:
+        allc = (mine_sequences(st.traces) if sequences
+                else mine_dataflow(st.traces, workspace_meta=ws.meta()))
+        _MINED.clear()                       # one workspace per server; keep only the current result
+        _MINED[key] = (time.time(), allc)
+    else:
+        allc = hit[1]
     cands = allc[:top]
     views = []
     for c in cands:
@@ -136,8 +155,9 @@ async def candidates_induce(request: Request, rank: int, name: str = Form(""), m
     from crystal.induce.inducer import dump_flow
     ws = _workspace(request)
     st = ws.state
-    cands = (mine_sequences(st.traces) if miner == "sequences"
-             else mine_dataflow(st.traces, workspace_meta=ws.meta()))
+    hit = _MINED.get((st.slug, miner, _index_stamp(st)))
+    cands = hit[1] if hit else (mine_sequences(st.traces) if miner == "sequences"
+                                else mine_dataflow(st.traces, workspace_meta=ws.meta()))
     if rank < 1 or rank > len(cands):
         return RedirectResponse("/candidates?msg=" + quote(f"no candidate #{rank}"), status_code=303)
     cand = cands[rank - 1]

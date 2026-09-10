@@ -275,3 +275,24 @@ def test_candidates_page_analyses_in_the_background_instead_of_holding_the_reque
         assert status["episodes"] == 900 and status["missing"] == 780
         # the sequence view needs no analysis and stays available
         assert "Tool-call sequences" in client.get("/candidates?miner=sequences").text
+
+
+def test_candidates_are_mined_once_until_the_index_changes(monkeypatch):
+    """Mining a large warm workspace takes seconds; reloading the page must not repeat it, and a new import must."""
+    from starlette.testclient import TestClient
+    from crystal.app import routes_import
+    from crystal.app.main import app
+
+    calls = []
+    monkeypatch.setattr(routes_import, "cache_status", lambda *a, **k: {"episodes": 3, "cached": 3, "missing": 0})
+    monkeypatch.setattr(routes_import, "mine_dataflow", lambda *a, **k: calls.append(1) or [])
+    routes_import._MINED.clear()
+    stamps = [(1, 1.0), (1, 1.0), (2, 2.0)]
+    monkeypatch.setattr(routes_import, "_index_stamp", lambda st: stamps[min(len(calls), 2)] if False else stamps.pop(0))
+    with TestClient(app) as client:
+        assert client.get("/candidates").status_code == 200
+        assert client.get("/candidates").status_code == 200      # same index: served from the memo
+        assert len(calls) == 1
+        assert client.get("/candidates").status_code == 200      # index changed: mined again
+        assert len(calls) == 2
+    routes_import._MINED.clear()
