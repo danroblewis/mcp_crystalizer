@@ -26,17 +26,31 @@ Background research lives in `docs/research/`.
 ## Architecture
 
 ```
-sim/            simulated corporate MCP servers over one synthetic, cross-linked incident world
-crystal/        the library
-  trace/        hook that records every MCP call; trace store
-  extract/      typed ID regex catalog, gazetteer over the entity catalog, span synthesis from traces
-  flow/         flow schema (YAML), interpreter (templates, extract, forEach, precision ladders)
-  induce/       traces -> draft flow (deterministic binding search); agent-assisted authoring wrapper
+crystal/        the package behind the `mcp-explorer` command (uvx; hatchling build, console script crystal.cli:main)
+  cli.py        serve (default), flows, run, test, status, card, servers, tools, mcp-config, induce, record,
+                author, repair, hook, install-hook, seed, workspaces
+  workspace.py  the workspace = the current directory (--workspace / $CRYSTAL_WORKSPACE override)
+  state.py      $MCP_EXPLORER_HOME/workspaces/<dirname>-<8 hex>/ {flows, runs, traces, cassettes, catalog.yaml,
+                lifecycle.sqlite, feedback.jsonl, workspace.json}; seeding from <workspace>/.mcp-explorer/
+  registry.py   built-ins (code, git, flows) < ~/.claude.json < ~/.mcp.json < <workspace>/.mcp.json
+  hooks.py      the PostToolUse / UserPromptSubmit / Stop hooks and their install into ~/.claude/settings.json
+  trace/        record.py (the hook entry, Recorder), store.py, driver.py (`record`: headless Claude Code), scripted.py
+  extract/      typed ID regex catalog, gazetteer over the workspace's catalog, span synthesis from traces
+  flow/         flow schema (YAML), interpreter (templates, extract, forEach, precision ladders), cards, lifecycle
+  induce/       traces -> draft flow (deterministic binding search)
   replay/       cassette record/replay for MCP responses; flow regression tests
-app/            FastAPI + plain HTML/JS: flow catalog, parameter form, run view, run history
-flows/          crystallized flows (YAML), each with status: draft | candidate | promoted
-traces/         recorded agent runs (JSONL) and cassettes
+  servers/      built-in code, git (over any workspace root) and flows (the workspace's flows as MCP tools)
+  app/          FastAPI web UI: one workspace per process; flow catalog, run dossier, agent-trace dossier
+examples/sim/   the simulated corporate world: servers/, world.py, scenarios.py, data/world.json, catalog.yaml,
+                flows/, traces/, .mcp.json (the sim servers), .mcp-explorer/ (seed links). Test/dev data only.
+tests/          the suite: temp $MCP_EXPLORER_HOME seeded from examples/sim, CRYSTAL_WORKSPACE=examples/sim,
+                in-process transport, no dependence on ~
 ```
+
+No state lives in this repository (2026-09-10 restructure): flows, runs, traces, cassettes, the catalog, lifecycle
+counters and feedback are all per workspace under `$MCP_EXPLORER_HOME` (default `~/.mcp-explorer`). The project
+root is not a workspace of any special kind; `mcp-explorer --workspace examples/sim` is how the sim is served, and
+its flows/traces/catalog are seeded into the state dir on first use.
 
 ### Flow schema (the crystallized artefact)
 
@@ -220,7 +234,7 @@ store, so no induced extract reads `[*].text` any more.
 Merged from three parallel branches (inducer alignment + position programs; the Slack flows above; lifecycle +
 author/repair). What exists:
 
-- **Promotion lifecycle + circuit breaker** (`crystal/flow/lifecycle.py`, `state/lifecycle.sqlite`, gitignored). The
+- **Promotion lifecycle + circuit breaker** (`crystal/flow/lifecycle.py`, `lifecycle.sqlite` in the workspace state dir). The
   YAML `status` is the author's intent; the runtime keeps an effective status next to it with clean/failed counters,
   a clean streak, test results, complaints and an event log. A step error, a required step with zero hits, a failed
   run, a failed regression test or a UI "This didn't help" demotes one level; N consecutive clean live runs
@@ -229,11 +243,11 @@ author/repair). What exists:
   are saved without touching the lifecycle. `crystal status` prints the table; the UI shows both badges, counters,
   the last failure and recent events.
 - **Regression per flow** (`crystal/replay/regression.py`, `crystal test <flow>`): runs the flow's `tests:` cases
-  (or one built from the inputs' examples, which must find at least something) through `traces/cassettes/<flow>.json`,
+  (or one built from the inputs' examples, which must find at least something) through `<state dir>/cassettes/<flow>.json`,
   seeded from the sessions in `induced_from`; live for cassette misses unless `--offline`; the result feeds the
   lifecycle. The inducer writes the `tests:` block itself: one case per traced input with `min_hits: 1` on every step
   that had hits in every session, so a draft whose steps quietly return nothing fails its own regression.
-- **Flows as tools for the agent** (`sim/servers/flows.py`, registered as `flows` in `servers.yaml`/`.mcp.json`):
+- **Flows as tools for the agent** (`crystal/servers/flows.py`, a built-in server of every workspace):
   `list_flows()` and `run_flow(name, inputs_json)` execute the interpreter and return a size-capped evidence summary.
 - **`crystal author <trigger> k=v --yes`** (`crystal/author.py`): the prompt lists the existing flows ordered by trust
   and tells the agent to call `run_flow` FIRST and use raw tools only for gaps. The run record the agent's `run_flow`
