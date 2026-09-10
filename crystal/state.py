@@ -8,6 +8,8 @@
         traces/*.jsonl            recorded agent sessions (the hook, `record`, the scripted agent); traces/runs/ holds
                                   the run records that recorded sessions refer to
         cassettes/<flow>.json     recorded responses for `mcp-explorer test`
+        dataflow/<trace>.json     each trace's mined dataflow edges, keyed by its size and mtime (a cache the
+                                  candidate miner rebuilds on demand; safe to delete)
         catalog.yaml              the entity catalog (the foreign-key hub the extractors use)
         lifecycle.sqlite          promotion state and counters (crystal/flow/lifecycle.py)
         feedback.jsonl            the "this didn't help" queue (`mcp-explorer repair`)
@@ -76,6 +78,10 @@ class StateDir:
     @property
     def cassettes(self) -> Path:
         return self.dir / "cassettes"
+
+    @property
+    def dataflow(self) -> Path:
+        return self.dir / "dataflow"
 
     @property
     def catalog(self) -> Path:

@@ -28,8 +28,11 @@
                                 only sessions that made MCP calls; default = this workspace's, --all = every project;
                                 a session the hook already recorded gets its subagent calls attributed instead
                                 (--reattribute redoes that join)
-  candidates [--top N] [--min-support N] [--json]   recurring tool sequences across this workspace's episodes
-  candidates induce <n> --name <flow> [--out p]     compile candidate <n> into a draft flow (no AI)
+  candidates [--top N] [--min-support N] [--sequences] [--json]
+                                recurring DATAFLOW across this workspace's episodes: which tool's result feeds which
+                                tool's argument, and what type of value travels. --sequences mines plain tool chains
+                                instead (the old miner, for episodes with no derivable arguments)
+  candidates induce <n> --name <flow> [--out p] [--sequences]   compile candidate <n> into a draft flow (no AI)
 """
 from __future__ import annotations
 
@@ -349,16 +352,30 @@ def cmd_import(args):
 
 
 def cmd_candidates(args):
-    """candidates [--top N] [--min-support N] [--json] | candidates induce <n> --name <flow> [--out p]"""
-    from crystal.induce.mining import candidates, format_candidates
+    """candidates [--top N] [--min-support N] [--sequences] [--json] | candidates induce <n> --name <flow> [--out p]
+
+    By default the candidates are frequent DATAFLOW graphs: sets of edges (an argument of one call carrying a value
+    that an earlier call, the request, the workspace or the catalog produced), so every candidate is bindable by
+    construction and the same task done in a different order is one candidate. `--sequences` falls back to the
+    older tool-chain miner for episodes whose arguments are not derivable at all."""
+    from crystal.induce import dataflow as df_mod
+    from crystal.induce.mining import candidates as seq_candidates, format_candidates as seq_format
     min_support = int(_opt(args, "--min-support", 2))
+    sequences = "--sequences" in args
+    wmeta = ws_mod.current().meta()
+
+    def mined(rest, limit=None):
+        if sequences:
+            return seq_candidates(state_mod.current().traces, min_support=min_support, limit=limit)
+        return df_mod.candidates(state_mod.current().traces, min_support=min_support, limit=limit, workspace_meta=wmeta)
+
     if args and args[0] == "induce":
         rest = args[1:]
         if not rest or not rest[0].isdigit():
-            print("usage: candidates induce <n> --name <flow> [--out path]")
+            print("usage: candidates induce <n> --name <flow> [--out path] [--sequences]")
             return 1
         n = int(rest[0])
-        cands = candidates(state_mod.current().traces, min_support=min_support)
+        cands = mined(rest)
         if n < 1 or n > len(cands):
             print(f"no candidate #{n} ({len(cands)} candidates; `mcp-explorer candidates` lists them)")
             return 1
@@ -367,10 +384,11 @@ def cmd_candidates(args):
         out = Path(_opt(rest, "--out")) if "--out" in rest else state_mod.current().flows / f"{name}.yaml"
         from crystal.induce.mining import induce_candidate
         from crystal.induce.inducer import dump_flow
-        flow, report = induce_candidate(cand, name, workspace_meta=ws_mod.current().meta())
+        flow, report = induce_candidate(cand, name, workspace_meta=wmeta)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(dump_flow(flow))
-        print(f"induced {name} from candidate #{n} ({cand.support} episodes, {cand.length} steps) -> {out}")
+        unit = "steps" if sequences else "edges"
+        print(f"induced {name} from candidate #{n} ({cand.support} episodes, {cand.length} {unit}) -> {out}")
         total = sum(len(st.get("args") or {}) for st in flow.get("steps", []))
         unres = sum(len(a) for a in (report.get("unresolved") or {}).values())
         if total and unres / total > 0.4:
@@ -379,16 +397,18 @@ def cmd_candidates(args):
         print(json.dumps({k: v for k, v in report.items() if k in ("sessions", "steps", "unresolved", "optional_steps", "ladders", "forEach", "tests")}, indent=1, default=str))
         return 0
     top = int(_opt(args, "--top", 20))
-    cands = candidates(state_mod.current().traces, min_support=min_support, limit=top)
+    cands = mined(args, limit=top)
     if "--fast" not in args:
         from crystal.induce.mining import score_bindability
-        score_bindability(cands, workspace_meta=ws_mod.current().meta())
+        score_bindability(cands, workspace_meta=wmeta)
     if "--json" in args:
         print(json.dumps([c.view() for c in cands], indent=1))
         return 0
-    print(format_candidates(cands))
+    print(seq_format(cands) if sequences else df_mod.format_candidates(cands))
     if cands:
         print("\n`mcp-explorer candidates induce <#> --name <flow>` compiles one into a draft flow (no AI).")
+    elif not sequences:
+        print("\n`mcp-explorer candidates --sequences` mines recurring tool chains instead (a weaker signal).")
     return 0
 
 
