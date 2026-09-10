@@ -19,7 +19,7 @@ import json
 from typing import Any
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from crystal.trace.store import Session, load_sessions
@@ -214,8 +214,13 @@ def bindability(cand: Candidate, catalog: dict | None = None, workspace_meta: di
     entity catalog or a time window. A low score means the agent supplied those values from its own knowledge (which
     URL to read next, which file to open), and no program can reproduce that choice: the sequence recurs, but it is
     not a flow. None when the candidate cannot be induced at all."""
+    probe = cand
+    if len(cand.occurrences) > SCORE_SAMPLE:
+        # A candidate can be shared by thousands of episodes; a sample answers "is this derivable" just as well and
+        # keeps `candidates` responsive on a machine with 9k episodes.
+        probe = replace(cand, occurrences=cand.occurrences[:SCORE_SAMPLE], support=SCORE_SAMPLE)
     try:
-        flow, report = induce_candidate(cand, "probe", catalog=catalog, workspace_meta=workspace_meta)
+        flow, report = induce_candidate(probe, "probe", catalog=catalog, workspace_meta=workspace_meta)
     except Exception:  # noqa: BLE001 - a candidate that will not induce is simply unscored
         return None
     # Only arguments that VARY between the supporting episodes say anything: a constant (max_length: 8000) is
@@ -237,6 +242,7 @@ def bindability(cand: Candidate, catalog: dict | None = None, workspace_meta: di
 
 
 AUTHORED_CHARS = 200
+SCORE_SAMPLE = 8            # episodes used to score a candidate's bindability
 
 
 def _is_authored(value: Any) -> bool:
