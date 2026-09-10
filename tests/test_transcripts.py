@@ -258,3 +258,19 @@ def test_candidates_page_and_induce(client, fresh_home):
     assert (fresh_home.flows / "mined-from-ui.yaml").exists()
     assert client.get("/flows/mined-from-ui").status_code == 200
     assert client.post("/candidates/999/induce", data={"name": "x"}, follow_redirects=False).headers["location"].startswith("/candidates?msg=")
+
+
+def test_empty_workspace_import_explains_itself(tmp_path, monkeypatch):
+    """Running `import` where nothing was ever recorded must say so, not print an empty table under a global total."""
+    from crystal.trace import transcripts
+    base = tmp_path / "projects"
+    (base / "-Users-someone-elsewhere").mkdir(parents=True)
+    (base / "-Users-someone-elsewhere" / "s1.jsonl").write_text(
+        '{"type":"user","cwd":"/Users/someone/elsewhere","sessionId":"s1","message":{"role":"user","content":"hi"}}\n')
+    ws = tmp_path / "empty-project"
+    ws.mkdir()
+    rep = transcripts.import_transcripts(base, workspace_root=ws, all_projects=False, dry_run=True)
+    out = transcripts.format_table(rep)
+    assert "No Claude Code sessions to import" in out and str(ws) in out
+    assert "cleanupPeriodDays" in out and "--all" in out
+    assert "transcripts found in" not in out

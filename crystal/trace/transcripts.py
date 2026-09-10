@@ -589,7 +589,8 @@ def import_transcripts(base: Path | None = None, workspace_root: Path | None = N
         episodes_total += len(eps)
     return {"found": len(files), "with_mcp": with_mcp, "imported": imported, "reattributed": reattributed, "skipped": skipped,
             "episodes": episodes_total, "servers": dict(sorted(servers_total.items(), key=lambda kv: (-kv[1], kv[0]))), "rows": rows,
-            "dry_run": dry_run, "base": str(base if base is not None else transcripts_dir())}
+            "dry_run": dry_run, "base": str(base if base is not None else transcripts_dir()),
+            "all_projects": all_projects, "workspace_root": str(workspace_root) if workspace_root else None}
 
 
 def importable(base: Path | None, workspace_root: Path) -> list[dict]:
@@ -612,6 +613,22 @@ def format_table(rep: dict, verbose: bool = False) -> str:
                      f"{r.get('status', ''):30} {servers[:30]:30} {cwd}")
     servers = ", ".join(f"{s}={n}" for s, n in rep["servers"].items())
     verb = "would import" if rep.get("dry_run") else "imported"
+    shown = len(lines) - 1
+    if not shown and not rep.get("all_projects"):
+        # Nothing here is about this directory: say so plainly instead of leaving an empty table under a global total.
+        root = rep.get("workspace_root") or "this directory"
+        here = rep.get("workspace_root")
+        mine = [r for r in rep["rows"] if here and str(r.get("cwd") or "") == str(here)]
+        lines = [f"No Claude Code sessions to import for {root}."]
+        if not mine:
+            lines.append(f"None of the {rep['found']} transcripts in {rep['base']} were recorded in this directory.")
+            lines.append("Claude Code deletes transcripts after `cleanupPeriodDays` (default 30), so older sessions are gone;"
+                         " raise it in ~/.claude.json to keep future ones.")
+        else:
+            lines.append(f"{len(mine)} session(s) ran here but made no MCP tool calls, so there is nothing a flow could replay."
+                         " Configure MCP servers for this directory and the next session will import.")
+        lines.append("Run `mcp-explorer import --all` to see every project on this machine, or `--verbose` for all rows.")
+        return "\n".join(lines)
     lines.append(f"{rep['found']} transcripts found in {rep['base']}; {rep['with_mcp']} with MCP calls; {verb} {rep['imported']}; "
                  f"{rep.get('reattributed', 0)} hook traces reattributed; {rep['skipped']} already present; {rep['episodes']} episodes; "
                  f"calls per server: {servers or '-'}")
