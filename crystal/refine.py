@@ -364,6 +364,12 @@ def _flow_names(flow_dir: Path | None) -> set[str]:
     return out
 
 
+def slugify(text: str) -> str:
+    """A person's typed name as a flow slug: `Sherlock Investigation Turn` -> `sherlock-investigation-turn`."""
+    out = re.sub(r"[^a-z0-9]+", "-", str(text).strip().lower()).strip("-")
+    return re.sub(r"-{2,}", "-", out)
+
+
 def check_name(proposed, flow: dict, flow_dir: Path | None, override: str | None = None) -> dict:
     """kebab-case, and not a flow the workspace already has. Falls back to the draft's own base name."""
     from crystal.author import base_name
@@ -372,6 +378,17 @@ def check_name(proposed, flow: dict, flow_dir: Path | None, override: str | None
     if not want:
         return {"proposed": proposed, "used": fallback, "accepted": False, "reason": "no name proposed; keeping the draft's"}
     want = str(want).strip()
+    if override is not None and not KEBAB_RX.match(want):
+        # A name a person typed is intent, not a proposal to check: tidy it into a slug instead of discarding it.
+        slug = slugify(want)
+        if not slug:
+            return {"proposed": want, "used": fallback, "accepted": False, "reason": "the name has no letters or digits"}
+        if slug != want:
+            return ({"proposed": want, "used": fallback, "accepted": False,
+                     "reason": f"a flow called {slug!r} already exists in this workspace"}
+                    if slug != fallback and slug in _flow_names(flow_dir) else
+                    {"proposed": want, "used": slug, "accepted": True, "reason": f"--name tidied to {slug!r}"})
+        want = slug
     if not KEBAB_RX.match(want):
         return {"proposed": want, "used": fallback, "accepted": False, "reason": "not kebab-case ([a-z0-9] words joined by '-')"}
     if want != fallback and want in _flow_names(flow_dir):

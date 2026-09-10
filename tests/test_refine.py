@@ -503,3 +503,18 @@ def test_the_button_runs_the_job_and_shows_the_accepted_rejected_table(client):
     new = yaml.safe_load((client.state.flows / "payments-incident-dossier.v1.yaml").read_text())
     assert new["status"] == "draft" and new["refined_from"] == UI_FLOW
     assert "nothing" not in (new.get("inputs") or {})
+
+
+def test_a_typed_name_is_tidied_rather_than_rejected(tmp_path):
+    """`--name`/the UI field is a person's intent: 'Sherlock Investigation Turn' should become a slug, not be
+    thrown away in favour of the mined name."""
+    from crystal.refine import check_name, slugify
+
+    assert slugify("Sherlock Investigation Turn") == "sherlock-investigation-turn"
+    assert slugify("  Triage: PROD errors!! ") == "triage-prod-errors"
+    flow = {"name": "mined-jira-slack-1"}
+    got = check_name(None, flow, tmp_path, override="Sherlock Investigation Turn")
+    assert got["accepted"] and got["used"] == "sherlock-investigation-turn"
+    assert check_name(None, flow, tmp_path, override="!!!")["accepted"] is False
+    # an agent-proposed name is still held to kebab-case
+    assert check_name("Not Kebab", flow, tmp_path)["accepted"] is False
