@@ -1,11 +1,11 @@
 {
- "run_id": "20260910T004639-3b6bf8",
+ "run_id": "20260910T010436-ac60e9",
  "flow": "investigate-jira-ticket",
- "flow_path": "/Users/danroblewis/mcp_explorer/.claude/worktrees/agent-a82ab760bb8283900/flows/investigate-jira-ticket.yaml",
+ "flow_path": "/Users/danroblewis/mcp_explorer/flows/investigate-jira-ticket.yaml",
  "inputs": {
   "key": "AUTH-122"
  },
- "started": "2026-09-10T00:46:39.226579+00:00",
+ "started": "2026-09-10T01:04:36.757630+00:00",
  "steps": [
   {
    "id": "issue",
@@ -16,7 +16,7 @@
    },
    "result": {
     "key": "AUTH-122",
-    "id": "27702",
+    "id": "7831",
     "fields": {
      "summary": "auth-service: elevated 5xx after AuthTokenExpired",
      "status": {
@@ -53,7 +53,7 @@
     }
    },
    "error": null,
-   "duration_ms": 316.8,
+   "duration_ms": 288.1,
    "attempts": [],
    "extracts": {
     "summary": "auth-service: elevated 5xx after AuthTokenExpired",
@@ -117,7 +117,7 @@
     "next_cursor": ""
    },
    "error": null,
-   "duration_ms": 305.8,
+   "duration_ms": 278.1,
    "attempts": [
     {
      "rung": 0,
@@ -266,7 +266,7 @@
       ]
      },
      "error": null,
-     "duration_ms": 1.5,
+     "duration_ms": 1.2,
      "attempts": [],
      "extracts": {
       "trace_ids": [
@@ -347,7 +347,7 @@
     "truncated": false
    },
    "error": null,
-   "duration_ms": 309.0,
+   "duration_ms": 286.4,
    "attempts": [],
    "extracts": {
     "files": [
@@ -375,7 +375,7 @@
       ]
      },
      "error": null,
-     "duration_ms": 1.3,
+     "duration_ms": 1.0,
      "attempts": [],
      "extracts": {
       "teams": [
@@ -444,7 +444,7 @@
     ]
    },
    "error": null,
-   "duration_ms": 320.3,
+   "duration_ms": 302.3,
    "attempts": [
     {
      "rung": 0,
@@ -491,7 +491,7 @@
       "body": "h1. auth-service runbook\n\nOwned by team identity (ivan, judy, mallory). Alerts go to #identity-alerts; incidents are discussed in #incidents.\n\nh2. Known failure modes\n\nh3. AuthTokenExpired\nSymptom: log lines containing 'AuthTokenExpired: auth token expired mid-request' from validate_token().\nCheck: error rate panel for service=auth-service; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of auth-service; if persists, page identity on-call.\n\nh3. IdentityProviderTimeout\nSymptom: log lines containing 'IdentityProviderTimeout: identity provider did not respond within 10s' from authenticate().\nCheck: error rate panel for service=auth-service; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of auth-service; if persists, page identity on-call.\n\nh2. Dashboards\nChronosphere: rate(http_requests_total{service=\"auth-service\",code=~\"5..\"}[5m])\n"
      },
      "error": null,
-     "duration_ms": 1.3,
+     "duration_ms": 0.9,
      "attempts": [],
      "extracts": {
       "remediation": [
@@ -530,7 +530,7 @@
       "body": "h1. auth-service postmortem: AuthTokenExpired recurrence\n\nh2. Summary\nTwo incidents on auth-service with the same error class AuthTokenExpired: AUTH-117 and AUTH-122, 39 days apart. The first fix (commit 121446e804) did not fully address the root cause; the second incident was resolved with commit 25acaf6a47.\n\nh2. Timeline\n* AUTH-117 at 2026-11-11T13:02:00Z\n* AUTH-122 at 2026-12-20T13:02:00Z\n\nh2. Follow-ups\nSee the auth-service runbook and the identity architecture page for context."
      },
      "error": null,
-     "duration_ms": 1.1,
+     "duration_ms": 0.8,
      "attempts": [],
      "extracts": {
       "remediation": []
@@ -909,7 +909,7 @@
     }
    },
    "error": null,
-   "duration_ms": 322.7,
+   "duration_ms": 281.3,
    "attempts": [],
    "extracts": {},
    "hits": 1
@@ -1025,7 +1025,7 @@
       ]
      },
      "error": null,
-     "duration_ms": 343.0,
+     "duration_ms": 276.5,
      "attempts": [],
      "extracts": {
       "pods": [
@@ -1158,7 +1158,7 @@
       ]
      },
      "error": null,
-     "duration_ms": 2.3,
+     "duration_ms": 1.1,
      "attempts": [],
      "extracts": {
       "pods": [
@@ -1202,7 +1202,7 @@
       "hits": []
      },
      "error": null,
-     "duration_ms": 1.6,
+     "duration_ms": 1.5,
      "attempts": [],
      "extracts": {
       "pods": [],
@@ -1498,7 +1498,7 @@
     ]
    },
    "error": null,
-   "duration_ms": 1.6,
+   "duration_ms": 1.1,
    "attempts": [
     {
      "rung": 0,
@@ -1531,7 +1531,7 @@
     ]
    },
    "error": null,
-   "duration_ms": 349.1,
+   "duration_ms": 302.8,
    "attempts": [],
    "extracts": {
     "shas": [
@@ -1552,7 +1552,7 @@
      },
      "result": "error: fatal: ambiguous argument '06e3a752d': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'",
      "error": null,
-     "duration_ms": 21.1,
+     "duration_ms": 13.8,
      "attempts": [],
      "extracts": {},
      "hits": 1,
@@ -1565,7 +1565,7 @@
      },
      "result": "commit cc1983767595b7fe1467a6443917a554935aa741\nAuthor: judy <judy@example.com>\nDate:   2026-09-16T10:45:00+00:00\n\n    auth-service: tighten validation in validate_token\n---\n services/auth_service/handler.py | 1 +\n 1 file changed, 1 insertion(+)\n\ndiff --git a/services/auth_service/handler.py b/services/auth_service/handler.py\nindex c721ee8..88c0dbc 100644\n--- a/services/auth_service/handler.py\n+++ b/services/auth_service/handler.py\n@@ -18,6 +18,7 @@ def validate_token(request):\n \n \n def _do_validate_token(request):\n+    # INC-011: tightened validation\n     raise NotImplementedError\n \n \n",
      "error": null,
-     "duration_ms": 17.8,
+     "duration_ms": 14.2,
      "attempts": [],
      "extracts": {},
      "hits": 1,
@@ -1620,14 +1620,136 @@
     "total": 1
    },
    "error": null,
-   "duration_ms": 368.0,
+   "duration_ms": 276.0,
    "attempts": [],
    "extracts": {},
    "hits": 1
+  },
+  {
+   "id": "repeats",
+   "title": "Earlier tickets with the same error on this service",
+   "tool": "jira.jira_search",
+   "args": {
+    "jql": "text ~ \"AuthTokenExpired\" AND component = auth-service AND key != AUTH-122 ORDER BY updated DESC",
+    "limit": 5
+   },
+   "result": {
+    "total": 2,
+    "start_at": 0,
+    "issues": [
+     {
+      "key": "AUTH-117",
+      "id": "29138",
+      "fields": {
+       "summary": "auth-service: elevated 5xx after AuthTokenExpired",
+       "status": {
+        "name": "Done"
+       },
+       "issuetype": {
+        "name": "Bug"
+       },
+       "priority": {
+        "name": "P2"
+       },
+       "project": {
+        "key": "AUTH"
+       },
+       "components": [
+        {
+         "name": "auth-service"
+        }
+       ],
+       "labels": [
+        "incident",
+        "identity"
+       ],
+       "reporter": {
+        "displayName": "olivia"
+       },
+       "assignee": {
+        "displayName": "mallory"
+       },
+       "created": "2026-11-11T13:14:00Z",
+       "updated": "2026-11-11T19:02:00Z",
+       "issuelinks": [],
+       "description": "Alert fired on auth-service at 2026-11-11T13:02:00Z.\n\nError: AuthTokenExpired: auth token expired mid-request\nSample trace: trace_id=67deb9f3ccafc850f5c210b14c4fb62d\nAffected pod: auth-service-11e149dfa-5953c\n\nCustomers saw failures in validate_token(). Slack discussion in #incidents. Runbook: auth-service runbook."
+      }
+     },
+     {
+      "key": "AUTH-106",
+      "id": "55090",
+      "fields": {
+       "summary": "auth-service: elevated 5xx after AuthTokenExpired",
+       "status": {
+        "name": "Done"
+       },
+       "issuetype": {
+        "name": "Bug"
+       },
+       "priority": {
+        "name": "P2"
+       },
+       "project": {
+        "key": "AUTH"
+       },
+       "components": [
+        {
+         "name": "auth-service"
+        }
+       ],
+       "labels": [
+        "incident",
+        "identity"
+       ],
+       "reporter": {
+        "displayName": "quentin"
+       },
+       "assignee": {
+        "displayName": "judy"
+       },
+       "created": "2026-09-17T10:57:00Z",
+       "updated": "2026-09-17T16:45:00Z",
+       "issuelinks": [
+        {
+         "type": "causes",
+         "key": "SSO-103"
+        },
+        {
+         "type": "causes",
+         "key": "DIR-102"
+        }
+       ],
+       "description": "Alert fired on auth-service at 2026-09-17T10:45:00Z.\n\nError: AuthTokenExpired: auth token expired mid-request\nSample trace: trace_id=68d0240776772ddf3f3e5b3e5705a245\nAffected pod: auth-service-4dbfc9782-26439\n\nCustomers saw failures in validate_token(). Slack discussion in #incidents. Runbook: auth-service runbook."
+      }
+     }
+    ]
+   },
+   "error": null,
+   "duration_ms": 2.0,
+   "attempts": [],
+   "extracts": {
+    "jira_keys": [
+     "AUTH-117",
+     "AUTH-106"
+    ],
+    "statuses": [
+     "Done",
+     "Done"
+    ],
+    "summaries": [
+     "auth-service: elevated 5xx after AuthTokenExpired",
+     "auth-service: elevated 5xx after AuthTokenExpired"
+    ],
+    "dates": [
+     "2026-11-11T13:14:00Z",
+     "2026-09-17T10:57:00Z"
+    ]
+   },
+   "hits": 2
   }
  ],
  "status": "ok",
- "finished": "2026-09-10T00:46:42.194605+00:00",
+ "finished": "2026-09-10T01:04:39.368227+00:00",
  "summary": {
   "issue": {
    "hits": 1,
@@ -1691,6 +1813,11 @@
   },
   "pagerduty": {
    "hits": 1,
+   "error": null,
+   "skipped": null
+  },
+  "repeats": {
+   "hits": 2,
    "error": null,
    "skipped": null
   }
