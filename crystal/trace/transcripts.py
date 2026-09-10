@@ -413,11 +413,45 @@ def prompt_inputs(text: str | None, calls: list[dict] | None = None) -> dict:
     out: dict[str, Any] = {"prompt": text[:PROMPT_LIMIT]}
     if calls is None:
         return out
-    used = json.dumps([(c.get("input") if isinstance(c, dict) else getattr(c, "input", None)) or {} for c in calls], default=str)
+    args = [(c.get("input") if isinstance(c, dict) else getattr(c, "input", None)) or {} for c in calls]
+    used = json.dumps(args, default=str)
     for m in ids.typed_mentions(text):
         if m["type"] in INPUT_TYPES and m["value"] in used:
-            out.setdefault(m["type"], m["value"])
+            # Name the input after the argument it feeds when that is unambiguous: `agent_id` says what to type,
+            # `uuid` only says what shape it is (the type is recorded separately anyway).
+            out.setdefault(_arg_name_for(m["value"], args) or m["type"], m["value"])
+    # A value the prompt states and the session passes verbatim as a whole argument is a parameter whatever its
+    # shape: that is how a destination or a channel name gets found, where no id pattern would ever match.
+    for name, value in _whole_arg_values(args):
+        if len(value) < MIN_INPUT_CHARS or value not in text:
+            continue
+        if any(value == v for v in out.values()):
+            continue
+        out.setdefault(name, value)
     return out
+
+
+MIN_INPUT_CHARS = 3
+_PLAIN_NAME = re.compile(r"[a-z][a-z0-9_]{1,39}$", re.I)
+
+
+def _arg_name_for(value: str, args: list[dict]) -> str | None:
+    """The argument name this value is passed as, when every call that passes it uses the same name."""
+    names = {k for a in args for k, v in a.items() if isinstance(v, str) and v == value and _PLAIN_NAME.match(k)}
+    return names.pop() if len(names) == 1 else None
+
+
+def _whole_arg_values(args: list[dict]) -> list[tuple[str, str]]:
+    """(argument name, value) for short string arguments passed whole, one entry per name."""
+    seen: dict[str, str] = {}
+    for a in args:
+        for k, v in a.items():
+            if isinstance(v, str) and MIN_INPUT_CHARS <= len(v) <= MAX_INPUT_CHARS and "\n" not in v and _PLAIN_NAME.match(k):
+                seen.setdefault(k, v)
+    return list(seen.items())
+
+
+MAX_INPUT_CHARS = 80
 
 
 # ---------------------------------------------------------------- writing traces

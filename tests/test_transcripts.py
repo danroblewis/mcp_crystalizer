@@ -57,7 +57,8 @@ def test_parse_pairs_calls_with_results_and_prompts():
     assert tx.episode_prompts() == [0, 1]
     assert tx.results_by_prompt[0].startswith("PAY-108 is a PaymentGatewayTimeout") and tx.result.startswith("PagerDuty incident Q1PAY")
     # an id becomes an input only when the session actually passed it to a tool
-    assert prompt_inputs(tx.first_prompt, tx.calls) == {"prompt": tx.first_prompt, "jira_key": "PAY-108"}
+    # named after the argument it feeds (`issue_key`), not after the id pattern that matched it
+    assert prompt_inputs(tx.first_prompt, tx.calls)["issue_key"] == "PAY-108"
     assert prompt_inputs(tx.first_prompt) == {"prompt": tx.first_prompt}
 
 
@@ -92,7 +93,8 @@ def test_import_writes_hook_format_episodes_and_is_idempotent(tmp_path, monkeypa
     assert files == [f"{SID}-e1.jsonl", f"{SID}-e2.jsonl", f"{SID}.jsonl"]
     whole = load_session(st.traces / f"{SID}.jsonl")
     assert whole.source == "transcript" and whole.meta["trigger"] == "prompt" and whole.meta["episodes"] == 2
-    assert whole.meta["inputs"] == {"prompt": whole.prompts[0]["text"], "jira_key": "PAY-108"}
+    assert whole.meta["inputs"]["prompt"] == whole.prompts[0]["text"]
+    assert whole.meta["inputs"]["issue_key"] == "PAY-108"
     assert whole.meta["cwd"] == str(ws) and whole.meta["cwd_exists"] is True and whole.meta["claude_session_id"] == SID
     assert len(whole.prompts) == 2 and whole.prompt.startswith("Investigate Jira ticket PAY-108")
     assert [f"{c['server']}.{c['tool']}" for c in whole.calls] == ["jira.jira_get_issue", "claude-code.Bash", "slack.conversations_search_messages",
@@ -294,7 +296,8 @@ def test_prompt_inputs_ignores_ids_nothing_consumed():
             "Error 501 was seen. Ticket PAY-108 is related.")
     calls = [C({"url": "https://example.com/kegs"}), C({"issue_key": "PAY-108"})]
     got = prompt_inputs(text, calls)
-    assert set(got) == {"prompt", "jira_key"} and got["jira_key"] == "PAY-108"
+    assert got.get("issue_key") == "PAY-108"
+    assert not {"http_status", "uuid", "email"} & set(got)      # nothing consumed them
 
 
 def test_builtin_map_makes_claude_code_calls_replayable():
@@ -323,3 +326,15 @@ def test_malformed_mcp_tool_names_do_not_crash_the_import():
     for broken in ("mcp__arena-feel", "mcp__play_melody", "mcp__", "mcp__x__"):
         server, tool = split_tool_name(broken)
         assert server == "claude-code" and tool == broken
+
+
+def test_id_catalog_does_not_match_ordinary_words():
+    """Hand-written shape matchers are the weak point: `what-requires-being` (a place in a game) matched the pod
+    pattern and became a required flow input, and `defaced` matched a short SHA."""
+    from crystal.extract import ids
+
+    for word in ("what-requires-being", "the-back-gate-apparatus", "defaced", "deadbeef", "facade"):
+        assert ids.type_of(word) is None, word
+    for real in ("nginx-7d8f4c9b5d-x2k4m", "payments-api-53c134792-7049a"):
+        assert ids.type_of(real) == "k8s_pod", real
+    assert ids.type_of("b4d28f39a3") == "sha_short"

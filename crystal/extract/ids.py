@@ -10,8 +10,17 @@ ID_PATTERNS: dict[str, tuple[str, str]] = {
     "trace_id":     (r"\b[0-9a-f]{32}\b", "32-hex trace id"),
     "uuid":         (r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", "UUID"),
     "trace_id16":   (r"\b[0-9a-f]{16}\b", "16-hex span/trace id"),
-    "sha_short":    (r"\b[0-9a-f]{7,12}\b", "abbreviated git SHA"),
-    "k8s_pod":      (r"\b[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{8,10}-[a-z0-9]{5}\b", "kubernetes pod name (deploy-rs-pod)"),
+    # A digit is required in both: without it, ordinary words match. `defaced` is 7 hex letters, and
+    # `what-requires-being` is three hyphenated words of exactly pod-name lengths (both seen in real projects).
+    "sha_short":    (r"\b(?=[0-9a-f]*\d)[0-9a-f]{7,12}\b", "abbreviated git SHA"),
+    # A pod from a Deployment is `<deployment>-<replicaset hash>-<5>`. Kubernetes generates both suffixes from a
+    # vowel-free alphabet (bcdfghjklmnpqrstvwxz2456789) precisely so they never spell words; we also accept hex,
+    # since plenty of tooling fakes them that way, but require a digit and forbid the whole thing exceeding the
+    # 63-character DNS label limit. Without those guards `what-requires-being` matched, and it is a place name.
+    "k8s_pod":      (r"(?<![\w.-])(?=[a-z0-9-]{1,63}(?![\w.-]))[a-z][a-z0-9]*(?:-[a-z0-9]+)*"
+                     r"-(?=[a-z0-9]{8,10}-)(?:[bcdfghjklmnpqrstvwxz2456789]{8,10}|(?=[a-f0-9]*\d)[a-f0-9]{8,10})"
+                     r"-(?:[bcdfghjklmnpqrstvwxz2456789]{5}|(?=[a-f0-9]*\d)[a-f0-9]{5})(?![\w.-])",
+                     "kubernetes pod name (deployment-replicaset-pod)"),
     "iso_ts":       (r"\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\b", "ISO-8601 timestamp"),
     "date":         (r"\b\d{4}-\d{2}-\d{2}\b", "calendar date"),
     "slack_ts":     (r"\b1[6-9]\d{8}\.\d{6}\b", "Slack message ts"),
