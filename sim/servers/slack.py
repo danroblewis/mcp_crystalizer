@@ -36,8 +36,12 @@ def _all_messages():
             out.append({"channel": ch, "ts": m["ts"], "thread_ts": thread, "user": m["user"], "user_name": m["user_name"],
                         "text": m["text"], "reply_count": len(inc["slack"]["messages"]) - 1 if i == 0 else 0, "is_reply": i > 0})
     for m in w["noise"]["slack"]:
-        out.append({"channel": _channel_by_name(m["channel"]), "ts": m["ts"], "thread_ts": m["ts"], "user": m["user"],
-                    "user_name": m["user_name"], "text": m["text"], "reply_count": 0, "is_reply": False})
+        thread_ts = m.get("thread_ts", m["ts"])
+        out.append({"channel": _channel_by_name(m["channel"]), "ts": m["ts"], "thread_ts": thread_ts, "user": m["user"],
+                    "user_name": m["user_name"], "text": m["text"], "reply_count": 0, "is_reply": thread_ts != m["ts"]})
+    for d in w.get("deploys", []):
+        out.append({"channel": _channel_by_name(d["channel"]), "ts": d["thread_ts"], "thread_ts": d["thread_ts"],
+                    "user": "", "user_name": "deploybot", "text": d["message"], "reply_count": 0, "is_reply": False})
     for ch in _im_channels():
         for m in w["dms"][ch["name"].lstrip("@")]["messages"]:
             out.append({"channel": ch, "ts": m["ts"], "thread_ts": m["ts"], "user": m["user"], "user_name": m["user_name"],

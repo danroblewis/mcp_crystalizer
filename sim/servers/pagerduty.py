@@ -15,7 +15,8 @@ def _fmt(inc: dict) -> dict:
             "assignments": [{"assignee": {"summary": pd["assignee"]}}],
             "teams": [{"summary": svc["team"]}],
             "html_url": f"https://sim.pagerduty.com/incidents/{pd['id']}",
-            "body": {"details": f"{inc['error_sig']}\ntrace_id={inc['trace_ids'][0]}\npod={inc['pods'][0]}"}}
+            "body": {"details": f"{inc['error_sig']}\ntrace_id={inc['trace_ids'][0]}\npod={inc['pods'][0]}"},
+            "related_incidents": pd.get("related_incidents", [])}
 
 
 @mcp.tool(structured_output=False, name="list_incidents", description="List incidents. service_ids comma-separated, statuses comma-separated (triggered,acknowledged,resolved), since/until ISO-8601. limit max 100.")
