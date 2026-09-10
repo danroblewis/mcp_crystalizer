@@ -80,13 +80,14 @@ def test_import_writes_hook_format_episodes_and_is_idempotent(tmp_path, monkeypa
     base = _transcripts_dir(tmp_path, ws)
     _transcripts_dir(tmp_path, other, name="fixture-session-0002", project="gone")
     rep = import_transcripts(base, workspace_root=ws, dry_run=True)
-    assert rep["found"] == 2 and rep["with_mcp"] == 2 and rep["imported"] == 1 and rep["episodes"] == 2
+    # the other workspace's transcript is skipped by its cwd without being parsed, so it is listed but not counted
+    assert rep["found"] == 2 and rep["with_mcp"] == 1 and rep["skipped_elsewhere"] == 1 and rep["imported"] == 1 and rep["episodes"] == 2
     assert {r["status"] for r in rep["rows"]} == {"would import", "other workspace"}
     st = state_mod.state_for(ws)
     assert not st.dir.exists()                              # a dry run writes nothing
 
     rep = import_transcripts(base, workspace_root=ws)
-    assert rep["imported"] == 1 and rep["skipped"] == 0 and rep["episodes"] == 2 and rep["servers"] == {"pagerduty": 4, "code": 2, "jira": 2, "slack": 2}
+    assert rep["imported"] == 1 and rep["skipped"] == 0 and rep["episodes"] == 2 and rep["servers"] == {"pagerduty": 2, "code": 1, "jira": 1, "slack": 1}   # only the parsed transcript counts
     files = sorted(p.name for p in st.traces.glob("*.jsonl"))
     assert files == [f"{SID}-e1.jsonl", f"{SID}-e2.jsonl", f"{SID}.jsonl"]
     whole = load_session(st.traces / f"{SID}.jsonl")
@@ -310,3 +311,14 @@ def test_builtin_map_makes_claude_code_calls_replayable():
     assert map_call("Bash", {"command": "git log | head -3"}) is None
     assert map_call("Bash", {"command": "rm -rf build"}) is None
     assert map_call("Edit", {"file_path": "a.py"}) is None
+
+
+def test_malformed_mcp_tool_names_do_not_crash_the_import():
+    """A session where the agent called a tool that does not exist (`mcp__arena-feel`, no tool part) must import:
+    the call is simply not replayable. Seen on a real machine, where it aborted the whole run."""
+    from crystal.trace.record import split_tool_name
+
+    assert split_tool_name("mcp__jira__jira_get_issue") == ("jira", "jira_get_issue")
+    for broken in ("mcp__arena-feel", "mcp__play_melody", "mcp__", "mcp__x__"):
+        server, tool = split_tool_name(broken)
+        assert server == "claude-code" and tool == broken

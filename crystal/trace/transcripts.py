@@ -30,9 +30,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 from crystal import state as state_mod
 from crystal.extract import ids
@@ -55,6 +56,41 @@ def transcripts_dir(override: str | os.PathLike | None = None) -> Path:
     """`--transcripts <dir>` > $MCP_EXPLORER_TRANSCRIPTS > ~/.claude/projects."""
     raw = str(override) if override not in (None, "") else os.environ.get(TRANSCRIPTS_ENV, "").strip()
     return Path(raw or DEFAULT_TRANSCRIPTS).expanduser()
+
+
+SKIPPED_ROW_CAP = 200        # rows kept for transcripts skipped without parsing
+HEADER_BYTES = 8192          # a transcript's cwd appears in its first line
+_CWD_RX = re.compile(rb'"cwd"\s*:\s*"((?:[^"\\]|\\.)*)"')
+# A file worth parsing mentions a tool we could replay: an MCP call, or one of Claude Code's own that maps.
+_INTERESTING = (b"mcp__", b'"Read"', b'"Grep"', b'"Glob"', b'"Bash"')
+
+
+def peek_cwd(path: Path) -> str | None:
+    """The session's cwd from the first bytes of the file, without parsing it."""
+    try:
+        with path.open("rb") as fh:
+            head = fh.read(HEADER_BYTES)
+    except OSError:
+        return None
+    m = _CWD_RX.search(head)
+    if not m:
+        return None
+    try:
+        return json.loads(b'"' + m.group(1) + b'"')
+    except json.JSONDecodeError:
+        return None
+
+
+def has_replayable_calls(path: Path) -> bool:
+    """Whether the file mentions any tool a flow could replay, by substring scan rather than a JSON parse."""
+    try:
+        with path.open("rb") as fh:
+            while chunk := fh.read(1 << 20):
+                if any(t in chunk for t in _INTERESTING):
+                    return True
+    except OSError:
+        return False
+    return False
 
 
 def find_transcripts(base: Path | None = None) -> list[Path]:
@@ -538,7 +574,7 @@ def _workspace_meta(root: Path) -> dict:
 
 def import_transcripts(base: Path | None = None, workspace_root: Path | None = None, all_projects: bool = False,
                        dry_run: bool = False, force: bool = False, reattribute_again: bool = False,
-                       paths: list[Path] | None = None) -> dict:
+                       paths: list[Path] | None = None, progress: Callable[[str], None] | None = None) -> dict:
     """Scan the transcripts and import those with MCP calls. Default: only transcripts whose cwd is
     `workspace_root`; `all_projects` imports every transcript into the workspace its cwd maps to (created if it
     is new; a cwd that no longer exists still gets a state dir, flagged `cwd_exists: false`). A session the hook
@@ -548,7 +584,32 @@ def import_transcripts(base: Path | None = None, workspace_root: Path | None = N
     files = paths if paths is not None else find_transcripts(base)
     rows, servers_total = [], {}
     imported = reattributed = skipped = episodes_total = with_mcp = 0
-    for p in files:
+    found = len(files)
+    # Two cheap passes first: a machine can hold 100k+ transcripts, and parsing every one to discover it belongs to
+    # another directory (or contains nothing replayable) is what made this unusable. Neither pass parses JSON.
+    elsewhere = uninteresting = 0
+    if paths is None:
+        keep = []
+        for p in files:
+            if not all_projects and workspace_root is not None:
+                cwd = peek_cwd(p)
+                if cwd is not None and not _same_dir(cwd, workspace_root):
+                    elsewhere += 1
+                    if elsewhere <= SKIPPED_ROW_CAP:       # enough to show the table; not 100k dicts
+                        rows.append({"path": str(p), "session_id": p.stem, "cwd": cwd, "status": "other workspace",
+                                     "mcp_calls": 0, "servers": {}, "prompts": 0, "episodes": 0, "agents": 0})
+                    continue
+            if not has_replayable_calls(p):
+                uninteresting += 1
+                continue
+            keep.append(p)
+        files = keep
+        if progress:
+            progress(f"{found} transcripts; {elsewhere} in other directories, {uninteresting} with nothing to replay; "
+                     f"parsing {len(files)}")
+    for i, p in enumerate(files, 1):
+        if progress and len(files) > 200 and i % 200 == 0:
+            progress(f"  parsed {i}/{len(files)}")
         try:
             tx = parse_transcript(p)
         except OSError as e:
@@ -611,7 +672,7 @@ def import_transcripts(base: Path | None = None, workspace_root: Path | None = N
         row["episodes"] = len(eps)
         imported += 1
         episodes_total += len(eps)
-    return {"found": len(files), "with_mcp": with_mcp, "imported": imported, "reattributed": reattributed, "skipped": skipped,
+    return {"found": found, "with_mcp": with_mcp, "skipped_elsewhere": elsewhere, "skipped_empty": uninteresting, "imported": imported, "reattributed": reattributed, "skipped": skipped,
             "episodes": episodes_total, "servers": dict(sorted(servers_total.items(), key=lambda kv: (-kv[1], kv[0]))), "rows": rows,
             "dry_run": dry_run, "base": str(base if base is not None else transcripts_dir()),
             "all_projects": all_projects, "workspace_root": str(workspace_root) if workspace_root else None}

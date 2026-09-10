@@ -340,7 +340,8 @@ def cmd_import(args):
         return 1
     ws = ws_mod.current()
     rep = import_transcripts(base, workspace_root=ws.root, all_projects="--all" in args, dry_run="--dry-run" in args,
-                             force="--force" in args, reattribute_again="--reattribute" in args)
+                             force="--force" in args, reattribute_again="--reattribute" in args,
+                             progress=(lambda m: print(m, flush=True)) if "--quiet" not in args else None)
     print(format_table(rep, verbose="--verbose" in args))
     if not rep.get("dry_run") and (rep["imported"] or rep.get("reattributed")):
         print(f"traces written under {state_mod.home() / 'workspaces'}; next: `mcp-explorer candidates`")

@@ -71,10 +71,13 @@ class Recorder:
 
 
 def split_tool_name(name: str) -> tuple[str, str]:
-    """Claude Code names MCP tools mcp__<server>__<tool>."""
+    """Claude Code names MCP tools mcp__<server>__<tool>. A name with no tool part (`mcp__arena-feel`, an agent
+    calling a tool that does not exist) never resolved to a server, so it is not replayable: it is reported under
+    `claude-code` like any other in-session tool rather than crashing the import."""
     if name.startswith("mcp__"):
-        _, server, tool = name.split("__", 2)
-        return server, tool
+        parts = name.split("__", 2)
+        if len(parts) == 3 and parts[1] and parts[2]:
+            return parts[1], parts[2]
     return "claude-code", name
 
 
