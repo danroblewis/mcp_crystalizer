@@ -34,9 +34,8 @@ def world() -> dict:
 
 @pytest.fixture(scope="module")
 def main_world() -> dict:
-    """sim/data/world.json as committed on main -- the byte-identical baseline for the first parts."""
-    out = subprocess.run(["git", "show", "main:sim/data/world.json"], cwd=ROOT, capture_output=True, text=True, check=True)
-    return json.loads(out.stdout)
+    """The pre-expansion world (10 incidents), frozen as a fixture: the byte-identical baseline for the first parts."""
+    return json.loads((ROOT / "tests" / "fixtures" / "world_baseline.json").read_text())
 
 
 @pytest.fixture(scope="module")
@@ -437,8 +436,7 @@ def test_noise_has_no_linked_entities(world):
 def test_repo_first_11_commits_match_main():
     out = subprocess.run(["git", "log", "--reverse", "--format=%H"], cwd=REPO_PATH, capture_output=True, text=True, check=True)
     shas = out.stdout.split()
-    main_out = subprocess.run(["git", "show", "main:sim/data/world.json"], cwd=ROOT, capture_output=True, text=True, check=True)
-    main_world = json.loads(main_out.stdout)
+    main_world = json.loads((ROOT / "tests" / "fixtures" / "world_baseline.json").read_text())
     main_shas = {i["commit"] for i in main_world["incidents"]}
     assert len(shas) >= 52
     assert shas[0] not in main_shas  # "initial services" tree commit itself isn't an incident commit

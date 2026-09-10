@@ -1,0 +1,4346 @@
+{
+ "generated_from_seed": 7,
+ "me": {
+  "id": "UB1C1D873",
+  "name": "me",
+  "real_name": "On-call Engineer",
+  "team": "oncall"
+ },
+ "dms": {
+  "alice": {
+   "id": "DEA6423F1",
+   "user": "U522B276A",
+   "user_name": "alice",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786323780.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U522B276A",
+     "user_name": "alice",
+     "ts": "1786810380.000530",
+     "text": "quick one: any progress on PLAT-102? notifications customers are asking for an update"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786810560.000531",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U522B276A",
+     "user_name": "alice",
+     "ts": "1786810860.000532",
+     "text": "they also sent a screenshot mentioning pod notifier-f47e24742-f1c4b"
+    },
+    {
+     "user": "U522B276A",
+     "user_name": "alice",
+     "ts": "1787084220.000702",
+     "text": "lunch?"
+    },
+    {
+     "user": "U522B276A",
+     "user_name": "alice",
+     "ts": "1788658500.000700",
+     "text": "are you around for the retro?"
+    }
+   ]
+  },
+  "bob": {
+   "id": "D78C6F02A",
+   "user": "U48181ACD",
+   "user_name": "bob",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786148400.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U48181ACD",
+     "user_name": "bob",
+     "ts": "1788568500.000700",
+     "text": "lunch?"
+    }
+   ]
+  },
+  "carol": {
+   "id": "D26FD8537",
+   "user": "U28B92B56",
+   "user_name": "carol",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787272320.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U28B92B56",
+     "user_name": "carol",
+     "ts": "1788575520.000700",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788645540.000703",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U28B92B56",
+     "user_name": "carol",
+     "ts": "1788741120.000702",
+     "text": "can you review my PR when you get a sec?"
+    }
+   ]
+  },
+  "dan": {
+   "id": "D53881EE9",
+   "user": "U2591E5F4",
+   "user_name": "dan",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786404480.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1786838880.000700",
+     "text": "are you around for the retro?"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1787510520.000702",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1788088980.000570",
+     "text": "hey, are you seeing notification service failures? customers report RateLimited since about 10am"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788089160.000571",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1788089460.000572",
+     "text": "fwiw one of them pasted this from the error page: trace_id=0826f94af685bc62c0d5fc0d6090f802"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788113580.000703",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1788372840.000580",
+     "text": "is payments healthy? a customer says card charges are hanging"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788373020.000581",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U2591E5F4",
+     "user_name": "dan",
+     "ts": "1788373320.000582",
+     "text": "fwiw one of them pasted this from the error page: trace_id=352191ca10a2c355f391251b954cf332"
+    }
+   ]
+  },
+  "erin": {
+   "id": "D59227FD8",
+   "user": "U2A4B17B1",
+   "user_name": "erin",
+   "messages": [
+    {
+     "user": "U2A4B17B1",
+     "user_name": "erin",
+     "ts": "1786020840.000500",
+     "text": "hey, are you on PAY-101? support is getting pinged about it and I have nothing to tell them"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786021020.000501",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U2A4B17B1",
+     "user_name": "erin",
+     "ts": "1786021320.000502",
+     "text": "they also sent a screenshot mentioning pod payments-api-53c134792-85419"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786319760.000703",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U2A4B17B1",
+     "user_name": "erin",
+     "ts": "1786493640.000702",
+     "text": "did the staging deploy go out?"
+    },
+    {
+     "user": "U2A4B17B1",
+     "user_name": "erin",
+     "ts": "1787425020.000700",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787771760.000701",
+     "text": "sure, later today"
+    }
+   ]
+  },
+  "frank": {
+   "id": "D74871682",
+   "user": "U86A8C2DA",
+   "user_name": "frank",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786663920.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "U86A8C2DA",
+     "user_name": "frank",
+     "ts": "1786679580.000700",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "U86A8C2DA",
+     "user_name": "frank",
+     "ts": "1787955960.000702",
+     "text": "can you review my PR when you get a sec?"
+    },
+    {
+     "user": "U86A8C2DA",
+     "user_name": "frank",
+     "ts": "1788616500.000590",
+     "text": "hey, are you on STF-119? support is getting pinged about it and I have nothing to tell them"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788616680.000591",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U86A8C2DA",
+     "user_name": "frank",
+     "ts": "1788616980.000592",
+     "text": "they also sent a screenshot mentioning pod checkout-web-e8a4cc3a7-a6140"
+    }
+   ]
+  },
+  "grace": {
+   "id": "D89FCC4D5",
+   "user": "UFD1CF5E2",
+   "user_name": "grace",
+   "messages": [
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1785882900.000701",
+     "text": "sure, later today"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1786302540.000510",
+     "text": "heads up, support has a few reports of SessionExpired errors in storefront checkout since 6pm, is that known?"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786302720.000511",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1786303020.000512",
+     "text": "fwiw one of them pasted this from the error page: trace_id=cde22ca34c18a4d82e3e8e4dd8003e14"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1786466640.000520",
+     "text": "is warehouse sync healthy? warehouse team says stock levels look stale"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1786466820.000521",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1786467120.000522",
+     "text": "fwiw one of them pasted this from the error page: trace_id=71ab51c775260f172388a29ef9b26aad"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787486340.000550",
+     "text": "is storefront checkout healthy? people can't complete checkout"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787486520.000551",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787486820.000552",
+     "text": "fwiw one of them pasted this from the error page: trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787510760.000700",
+     "text": "thanks for the help yesterday"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787843100.000560",
+     "text": "hey, are you on SUP-105? support is getting pinged about it and I have nothing to tell them"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787843280.000561",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1787843580.000562",
+     "text": "they also sent a screenshot mentioning pod inventory-sync-b74149eab-f0ef4"
+    },
+    {
+     "user": "UFD1CF5E2",
+     "user_name": "grace",
+     "ts": "1788309900.000702",
+     "text": "lunch?"
+    }
+   ]
+  },
+  "heidi": {
+   "id": "D88F07D54",
+   "user": "U0FEBC363",
+   "user_name": "heidi",
+   "messages": [
+    {
+     "user": "U0FEBC363",
+     "user_name": "heidi",
+     "ts": "1786989900.000702",
+     "text": "thanks for the help yesterday"
+    },
+    {
+     "user": "U0FEBC363",
+     "user_name": "heidi",
+     "ts": "1787169360.000540",
+     "text": "heads up, support has a few reports of PaymentGatewayTimeout errors in payments since 6pm, is that known?"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1787169540.000541",
+     "text": "on it, will update here"
+    },
+    {
+     "user": "U0FEBC363",
+     "user_name": "heidi",
+     "ts": "1787169840.000542",
+     "text": "fwiw one of them pasted this from the error page: trace_id=b7db6eca1ec7e1447b4db666b276a8e0"
+    },
+    {
+     "user": "U0FEBC363",
+     "user_name": "heidi",
+     "ts": "1787621940.000700",
+     "text": "thanks for the help yesterday"
+    },
+    {
+     "user": "UB1C1D873",
+     "user_name": "me",
+     "ts": "1788545220.000701",
+     "text": "sure, later today"
+    }
+   ]
+  }
+ },
+ "base_time": "2026-08-03T09:00:00Z",
+ "services": {
+  "payments-api": {
+   "name": "payments-api",
+   "team": "payments",
+   "owners": [
+    "alice",
+    "bob"
+   ],
+   "jira_project": "PAY",
+   "slack_channel": "#payments-alerts",
+   "incident_channel": "#incidents",
+   "pagerduty_service_id": "PXYZ01",
+   "repo_path": "services/payments_api",
+   "aliases": [
+    "payments",
+    "payment gateway"
+   ],
+   "prom_labels": {
+    "service": "payments-api",
+    "env": "prod"
+   },
+   "logz_type": "payments-api"
+  },
+  "checkout-web": {
+   "name": "checkout-web",
+   "team": "storefront",
+   "owners": [
+    "carol",
+    "dan"
+   ],
+   "jira_project": "STF",
+   "slack_channel": "#storefront-alerts",
+   "incident_channel": "#incidents",
+   "pagerduty_service_id": "PABC02",
+   "repo_path": "services/checkout_web",
+   "aliases": [
+    "checkout",
+    "storefront checkout"
+   ],
+   "prom_labels": {
+    "service": "checkout-web",
+    "env": "prod"
+   },
+   "logz_type": "checkout-web"
+  },
+  "inventory-sync": {
+   "name": "inventory-sync",
+   "team": "supply",
+   "owners": [
+    "erin",
+    "frank"
+   ],
+   "jira_project": "SUP",
+   "slack_channel": "#supply-alerts",
+   "incident_channel": "#incidents",
+   "pagerduty_service_id": "PDEF03",
+   "repo_path": "services/inventory_sync",
+   "aliases": [
+    "inventory sync",
+    "inventory",
+    "warehouse sync"
+   ],
+   "prom_labels": {
+    "service": "inventory-sync",
+    "env": "prod"
+   },
+   "logz_type": "inventory-sync"
+  },
+  "notifier": {
+   "name": "notifier",
+   "team": "platform",
+   "owners": [
+    "grace",
+    "heidi"
+   ],
+   "jira_project": "PLAT",
+   "slack_channel": "#platform-alerts",
+   "incident_channel": "#incidents",
+   "pagerduty_service_id": "PGHI04",
+   "repo_path": "services/notifier",
+   "aliases": [
+    "notifications",
+    "notification service",
+    "sms notifier"
+   ],
+   "prom_labels": {
+    "service": "notifier",
+    "env": "prod"
+   },
+   "logz_type": "notifier"
+  }
+ },
+ "teams": {
+  "payments": [
+   "alice",
+   "bob"
+  ],
+  "storefront": [
+   "carol",
+   "dan"
+  ],
+  "supply": [
+   "erin",
+   "frank"
+  ],
+  "platform": [
+   "grace",
+   "heidi"
+  ]
+ },
+ "people": {
+  "alice": {
+   "id": "U522B276A",
+   "name": "alice",
+   "real_name": "Alice Payments",
+   "team": "payments"
+  },
+  "bob": {
+   "id": "U48181ACD",
+   "name": "bob",
+   "real_name": "Bob Payments",
+   "team": "payments"
+  },
+  "carol": {
+   "id": "U28B92B56",
+   "name": "carol",
+   "real_name": "Carol Storefront",
+   "team": "storefront"
+  },
+  "dan": {
+   "id": "U2591E5F4",
+   "name": "dan",
+   "real_name": "Dan Storefront",
+   "team": "storefront"
+  },
+  "erin": {
+   "id": "U2A4B17B1",
+   "name": "erin",
+   "real_name": "Erin Supply",
+   "team": "supply"
+  },
+  "frank": {
+   "id": "U86A8C2DA",
+   "name": "frank",
+   "real_name": "Frank Supply",
+   "team": "supply"
+  },
+  "grace": {
+   "id": "UFD1CF5E2",
+   "name": "grace",
+   "real_name": "Grace Platform",
+   "team": "platform"
+  },
+  "heidi": {
+   "id": "U0FEBC363",
+   "name": "heidi",
+   "real_name": "Heidi Platform",
+   "team": "platform"
+  }
+ },
+ "channels": {
+  "#incidents": {
+   "id": "C542575C5",
+   "name": "incidents"
+  },
+  "#general": {
+   "id": "C3C525685",
+   "name": "general"
+  },
+  "#payments-alerts": {
+   "id": "CF48B2195",
+   "name": "payments-alerts"
+  },
+  "#storefront-alerts": {
+   "id": "C44494DE1",
+   "name": "storefront-alerts"
+  },
+  "#supply-alerts": {
+   "id": "C50670B6D",
+   "name": "supply-alerts"
+  },
+  "#platform-alerts": {
+   "id": "C757E06F4",
+   "name": "platform-alerts"
+  },
+  "#team-payments": {
+   "id": "C692ADB90",
+   "name": "team-payments"
+  },
+  "#team-storefront": {
+   "id": "C73BAEDF1",
+   "name": "team-storefront"
+  },
+  "#team-supply": {
+   "id": "C626EB978",
+   "name": "team-supply"
+  },
+  "#team-platform": {
+   "id": "C15EC029F",
+   "name": "team-platform"
+  }
+ },
+ "incidents": [
+  {
+   "id": "INC-001",
+   "service": "payments-api",
+   "team": "payments",
+   "error_class": "PaymentGatewayTimeout",
+   "error_sig": "PaymentGatewayTimeout: gateway did not respond within 30s",
+   "function": "charge",
+   "started_at": "2026-08-06T11:25:00Z",
+   "trace_ids": [
+    "858ef2d9f6008916df0ebcfbc4ee0b2b",
+    "b4d573b787a38036039b8398373c6150",
+    "8950326a8d58ea91aeea9099f024e795"
+   ],
+   "pods": [
+    "payments-api-53c134792-7049a",
+    "payments-api-53c134792-85419"
+   ],
+   "commit": "b4d28f39a35cc044d59413ff6cae23e025a21b9d",
+   "jira": {
+    "key": "PAY-101",
+    "project": "PAY",
+    "summary": "payments-api: elevated 5xx after PaymentGatewayTimeout",
+    "issuetype": "Bug",
+    "priority": "P1",
+    "status": "Done",
+    "created": "2026-08-06T11:37:00Z",
+    "updated": "2026-08-06T17:25:00Z",
+    "reporter": "bob",
+    "assignee": "alice",
+    "components": [
+     "payments-api"
+    ],
+    "labels": [
+     "incident",
+     "payments"
+    ],
+    "description": "Alert fired on payments-api at 2026-08-06T11:25:00Z.\n\nError: PaymentGatewayTimeout: gateway did not respond within 30s\nSample trace: trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b\nAffected pod: payments-api-53c134792-7049a\n\nCustomers saw failures in charge(). Slack discussion in #incidents. Runbook: payments-api runbook."
+   },
+   "pagerduty": {
+    "id": "Q4DA8404989BF0",
+    "incident_number": 4000,
+    "title": "[payments-api] PaymentGatewayTimeout rate above threshold",
+    "service_id": "PXYZ01",
+    "status": "resolved",
+    "urgency": "high",
+    "created_at": "2026-08-06T11:25:00Z",
+    "resolved_at": "2026-08-06T13:25:00Z",
+    "assignee": "alice"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1786015740.000000",
+    "messages": [
+     {
+      "user": "U522B276A",
+      "user_name": "alice",
+      "ts": "1786015740.000000",
+      "text": "Pager went off for payments-api: PaymentGatewayTimeout. Looking now. Ticket PAY-101 incoming."
+     },
+     {
+      "user": "U522B276A",
+      "user_name": "alice",
+      "ts": "1786016100.000001",
+      "text": "Seeing `PaymentGatewayTimeout: gateway did not respond within 30s` in logs, e.g. trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b on payments-api-53c134792-7049a"
+     },
+     {
+      "user": "U48181ACD",
+      "user_name": "bob",
+      "ts": "1786016280.000002",
+      "text": "Also trace_id=b4d573b787a38036039b8398373c6150 from a customer report, same error."
+     },
+     {
+      "user": "U522B276A",
+      "user_name": "alice",
+      "ts": "1786016940.000003",
+      "text": "Suspect b4d28f39a3 touched charge() yesterday. Rolling back."
+     },
+     {
+      "user": "U522B276A",
+      "user_name": "alice",
+      "ts": "1786019040.000004",
+      "text": "Rollback done, error rate back to baseline. Will write up in PAY-101."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20000",
+    "title": "payments-api runbook",
+    "space": "PAYMENTS"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-08-06T11:20:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "858ef2d9f6008916df0ebcfbc4ee0b2b",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_feed80) trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:22:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "b4d573b787a38036039b8398373c6150",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1defe9) trace_id=b4d573b787a38036039b8398373c6150 pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:24:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "8950326a8d58ea91aeea9099f024e795",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_fa8b58) trace_id=8950326a8d58ea91aeea9099f024e795 pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:26:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "858ef2d9f6008916df0ebcfbc4ee0b2b",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_50005b) trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:28:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "b4d573b787a38036039b8398373c6150",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_85e509) trace_id=b4d573b787a38036039b8398373c6150 pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:30:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "8950326a8d58ea91aeea9099f024e795",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_997f77) trace_id=8950326a8d58ea91aeea9099f024e795 pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:32:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "858ef2d9f6008916df0ebcfbc4ee0b2b",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_0aac7e) trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:34:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "b4d573b787a38036039b8398373c6150",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_6c9c35) trace_id=b4d573b787a38036039b8398373c6150 pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:36:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "8950326a8d58ea91aeea9099f024e795",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e25f71) trace_id=8950326a8d58ea91aeea9099f024e795 pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:38:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "858ef2d9f6008916df0ebcfbc4ee0b2b",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_75e518) trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:40:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "b4d573b787a38036039b8398373c6150",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_dbec60) trace_id=b4d573b787a38036039b8398373c6150 pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:42:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "8950326a8d58ea91aeea9099f024e795",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_398033) trace_id=8950326a8d58ea91aeea9099f024e795 pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:44:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "858ef2d9f6008916df0ebcfbc4ee0b2b",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_95a40d) trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:46:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "b4d573b787a38036039b8398373c6150",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_a59745) trace_id=b4d573b787a38036039b8398373c6150 pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:48:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "8950326a8d58ea91aeea9099f024e795",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_ce8e3b) trace_id=8950326a8d58ea91aeea9099f024e795 pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:50:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "858ef2d9f6008916df0ebcfbc4ee0b2b",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_ec5500) trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:52:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "b4d573b787a38036039b8398373c6150",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_dcee1b) trace_id=b4d573b787a38036039b8398373c6150 pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:54:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "8950326a8d58ea91aeea9099f024e795",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_3103cc) trace_id=8950326a8d58ea91aeea9099f024e795 pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:56:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "858ef2d9f6008916df0ebcfbc4ee0b2b",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_953978) trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T11:58:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "b4d573b787a38036039b8398373c6150",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_38b2bd) trace_id=b4d573b787a38036039b8398373c6150 pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T12:00:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "8950326a8d58ea91aeea9099f024e795",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_16a034) trace_id=8950326a8d58ea91aeea9099f024e795 pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T12:02:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "858ef2d9f6008916df0ebcfbc4ee0b2b",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_aac898) trace_id=858ef2d9f6008916df0ebcfbc4ee0b2b pod=payments-api-53c134792-85419 fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T12:04:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-7049a",
+     "trace_id": "b4d573b787a38036039b8398373c6150",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_2b7fc1) trace_id=b4d573b787a38036039b8398373c6150 pod=payments-api-53c134792-7049a fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-06T12:06:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-53c134792-85419",
+     "trace_id": "8950326a8d58ea91aeea9099f024e795",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_4d28c5) trace_id=8950326a8d58ea91aeea9099f024e795 pod=payments-api-53c134792-85419 fn=charge"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-08-06T11:20:00Z",
+    "end": "2026-08-06T12:15:00Z"
+   },
+   "dm": {
+    "channel_id": "D59227FD8",
+    "ts": "1786020840.000500",
+    "user_name": "erin",
+    "text": "hey, are you on PAY-101? support is getting pinged about it and I have nothing to tell them",
+    "mode": 0
+   }
+  },
+  {
+   "id": "INC-002",
+   "service": "checkout-web",
+   "team": "storefront",
+   "error_class": "SessionExpired",
+   "error_sig": "SessionExpired: session token expired mid-checkout",
+   "function": "submit_order",
+   "started_at": "2026-08-09T18:03:00Z",
+   "trace_ids": [
+    "3fae5cfc0a13103d48de0dc1f417d969",
+    "673d0d4164bf32bd94d3f9f80ed1fb87",
+    "cde22ca34c18a4d82e3e8e4dd8003e14"
+   ],
+   "pods": [
+    "checkout-web-edce1347b-0287f",
+    "checkout-web-edce1347b-d79df"
+   ],
+   "commit": "6fe2743c849c172c39207375fbcd8ea38d4ff8fa",
+   "jira": {
+    "key": "STF-109",
+    "project": "STF",
+    "summary": "checkout-web: elevated 5xx after SessionExpired",
+    "issuetype": "Bug",
+    "priority": "P2",
+    "status": "Done",
+    "created": "2026-08-09T18:15:00Z",
+    "updated": "2026-08-10T00:03:00Z",
+    "reporter": "dan",
+    "assignee": "carol",
+    "components": [
+     "checkout-web"
+    ],
+    "labels": [
+     "incident",
+     "storefront"
+    ],
+    "description": "Alert fired on checkout-web at 2026-08-09T18:03:00Z.\n\nError: SessionExpired: session token expired mid-checkout\nSample trace: trace_id=3fae5cfc0a13103d48de0dc1f417d969\nAffected pod: checkout-web-edce1347b-0287f\n\nCustomers saw failures in submit_order(). Slack discussion in #incidents. Runbook: checkout-web runbook."
+   },
+   "pagerduty": {
+    "id": "Q8B8E6894623CC",
+    "incident_number": 4001,
+    "title": "[checkout-web] SessionExpired rate above threshold",
+    "service_id": "PABC02",
+    "status": "resolved",
+    "urgency": "high",
+    "created_at": "2026-08-09T18:03:00Z",
+    "resolved_at": "2026-08-09T20:03:00Z",
+    "assignee": "carol"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1786298820.000001",
+    "messages": [
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1786298820.000010",
+      "text": "Pager went off for checkout-web: SessionExpired. Looking now. Ticket STF-109 incoming."
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1786299180.000011",
+      "text": "Seeing `SessionExpired: session token expired mid-checkout` in logs, e.g. trace_id=3fae5cfc0a13103d48de0dc1f417d969 on checkout-web-edce1347b-0287f"
+     },
+     {
+      "user": "U2591E5F4",
+      "user_name": "dan",
+      "ts": "1786299360.000012",
+      "text": "Also trace_id=673d0d4164bf32bd94d3f9f80ed1fb87 from a customer report, same error."
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1786300020.000013",
+      "text": "Suspect 6fe2743c84 touched submit_order() yesterday. Rolling back."
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1786302120.000014",
+      "text": "Rollback done, error rate back to baseline. Will write up in STF-109."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20007",
+    "title": "checkout-web runbook",
+    "space": "STOREFRONT"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-08-09T17:58:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "3fae5cfc0a13103d48de0dc1f417d969",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_b7a06b) trace_id=3fae5cfc0a13103d48de0dc1f417d969 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:00:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "673d0d4164bf32bd94d3f9f80ed1fb87",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_8093d9) trace_id=673d0d4164bf32bd94d3f9f80ed1fb87 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:02:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "cde22ca34c18a4d82e3e8e4dd8003e14",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_11d2bf) trace_id=cde22ca34c18a4d82e3e8e4dd8003e14 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:04:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "3fae5cfc0a13103d48de0dc1f417d969",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_1ae16b) trace_id=3fae5cfc0a13103d48de0dc1f417d969 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:06:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "673d0d4164bf32bd94d3f9f80ed1fb87",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_7d279e) trace_id=673d0d4164bf32bd94d3f9f80ed1fb87 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:08:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "cde22ca34c18a4d82e3e8e4dd8003e14",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_f8224c) trace_id=cde22ca34c18a4d82e3e8e4dd8003e14 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:10:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "3fae5cfc0a13103d48de0dc1f417d969",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_d5da78) trace_id=3fae5cfc0a13103d48de0dc1f417d969 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:12:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "673d0d4164bf32bd94d3f9f80ed1fb87",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_33501d) trace_id=673d0d4164bf32bd94d3f9f80ed1fb87 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:14:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "cde22ca34c18a4d82e3e8e4dd8003e14",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_442307) trace_id=cde22ca34c18a4d82e3e8e4dd8003e14 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:16:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "3fae5cfc0a13103d48de0dc1f417d969",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_747567) trace_id=3fae5cfc0a13103d48de0dc1f417d969 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:18:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "673d0d4164bf32bd94d3f9f80ed1fb87",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_ace970) trace_id=673d0d4164bf32bd94d3f9f80ed1fb87 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:20:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "cde22ca34c18a4d82e3e8e4dd8003e14",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_84dbaf) trace_id=cde22ca34c18a4d82e3e8e4dd8003e14 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:22:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "3fae5cfc0a13103d48de0dc1f417d969",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_8c962a) trace_id=3fae5cfc0a13103d48de0dc1f417d969 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:24:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "673d0d4164bf32bd94d3f9f80ed1fb87",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_8738e3) trace_id=673d0d4164bf32bd94d3f9f80ed1fb87 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:26:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "cde22ca34c18a4d82e3e8e4dd8003e14",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_f94967) trace_id=cde22ca34c18a4d82e3e8e4dd8003e14 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:28:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "3fae5cfc0a13103d48de0dc1f417d969",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_25895d) trace_id=3fae5cfc0a13103d48de0dc1f417d969 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:30:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "673d0d4164bf32bd94d3f9f80ed1fb87",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_a1486a) trace_id=673d0d4164bf32bd94d3f9f80ed1fb87 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:32:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "cde22ca34c18a4d82e3e8e4dd8003e14",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_1c1070) trace_id=cde22ca34c18a4d82e3e8e4dd8003e14 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:34:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "3fae5cfc0a13103d48de0dc1f417d969",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_b5b662) trace_id=3fae5cfc0a13103d48de0dc1f417d969 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:36:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "673d0d4164bf32bd94d3f9f80ed1fb87",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_b91fb7) trace_id=673d0d4164bf32bd94d3f9f80ed1fb87 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:38:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "cde22ca34c18a4d82e3e8e4dd8003e14",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_45ded3) trace_id=cde22ca34c18a4d82e3e8e4dd8003e14 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:40:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "3fae5cfc0a13103d48de0dc1f417d969",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_7b9aa3) trace_id=3fae5cfc0a13103d48de0dc1f417d969 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:42:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-0287f",
+     "trace_id": "673d0d4164bf32bd94d3f9f80ed1fb87",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_707e76) trace_id=673d0d4164bf32bd94d3f9f80ed1fb87 pod=checkout-web-edce1347b-0287f fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-09T18:44:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-edce1347b-d79df",
+     "trace_id": "cde22ca34c18a4d82e3e8e4dd8003e14",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_76af7e) trace_id=cde22ca34c18a4d82e3e8e4dd8003e14 pod=checkout-web-edce1347b-d79df fn=submit_order"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-08-09T17:58:00Z",
+    "end": "2026-08-09T18:53:00Z"
+   },
+   "dm": {
+    "channel_id": "D89FCC4D5",
+    "ts": "1786302540.000510",
+    "user_name": "grace",
+    "text": "heads up, support has a few reports of SessionExpired errors in storefront checkout since 6pm, is that known?",
+    "mode": 1
+   }
+  },
+  {
+   "id": "INC-003",
+   "service": "inventory-sync",
+   "team": "supply",
+   "error_class": "UpstreamSchemaDrift",
+   "error_sig": "UpstreamSchemaDrift: unexpected field in warehouse feed",
+   "function": "ingest_feed",
+   "started_at": "2026-08-11T15:26:00Z",
+   "trace_ids": [
+    "33b1ad5e02e7be83985c98d64a6b86fd",
+    "e5a993f6dd31bc5cf697cceeeeb11e74",
+    "71ab51c775260f172388a29ef9b26aad"
+   ],
+   "pods": [
+    "inventory-sync-b7cb0f38c-090ef",
+    "inventory-sync-b7cb0f38c-a59d9"
+   ],
+   "commit": "d3fa3cb8e415d003fca13736433979210182cf8d",
+   "jira": {
+    "key": "SUP-102",
+    "project": "SUP",
+    "summary": "inventory-sync: elevated 5xx after UpstreamSchemaDrift",
+    "issuetype": "Bug",
+    "priority": "P2",
+    "status": "Done",
+    "created": "2026-08-11T15:38:00Z",
+    "updated": "2026-08-11T21:26:00Z",
+    "reporter": "dan",
+    "assignee": "erin",
+    "components": [
+     "inventory-sync"
+    ],
+    "labels": [
+     "incident",
+     "supply"
+    ],
+    "description": "Alert fired on inventory-sync at 2026-08-11T15:26:00Z.\n\nError: UpstreamSchemaDrift: unexpected field in warehouse feed\nSample trace: trace_id=33b1ad5e02e7be83985c98d64a6b86fd\nAffected pod: inventory-sync-b7cb0f38c-090ef\n\nCustomers saw failures in ingest_feed(). Slack discussion in #incidents. Runbook: inventory-sync runbook."
+   },
+   "pagerduty": {
+    "id": "Q4038421A4CE53",
+    "incident_number": 4002,
+    "title": "[inventory-sync] UpstreamSchemaDrift rate above threshold",
+    "service_id": "PDEF03",
+    "status": "resolved",
+    "urgency": "high",
+    "created_at": "2026-08-11T15:26:00Z",
+    "resolved_at": "2026-08-11T17:26:00Z",
+    "assignee": "erin"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1786462200.000002",
+    "messages": [
+     {
+      "user": "U2A4B17B1",
+      "user_name": "erin",
+      "ts": "1786462200.000020",
+      "text": "Pager went off for inventory-sync: UpstreamSchemaDrift. Looking now. Ticket SUP-102 incoming."
+     },
+     {
+      "user": "U2A4B17B1",
+      "user_name": "erin",
+      "ts": "1786462560.000021",
+      "text": "Seeing `UpstreamSchemaDrift: unexpected field in warehouse feed` in logs, e.g. trace_id=33b1ad5e02e7be83985c98d64a6b86fd on inventory-sync-b7cb0f38c-090ef"
+     },
+     {
+      "user": "U2591E5F4",
+      "user_name": "dan",
+      "ts": "1786462740.000022",
+      "text": "Also trace_id=e5a993f6dd31bc5cf697cceeeeb11e74 from a customer report, same error."
+     },
+     {
+      "user": "U2A4B17B1",
+      "user_name": "erin",
+      "ts": "1786463400.000023",
+      "text": "Suspect d3fa3cb8e4 touched ingest_feed() yesterday. Rolling back."
+     },
+     {
+      "user": "U2A4B17B1",
+      "user_name": "erin",
+      "ts": "1786465500.000024",
+      "text": "Rollback done, error rate back to baseline. Will write up in SUP-102."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20014",
+    "title": "inventory-sync runbook",
+    "space": "SUPPLY"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-08-11T15:21:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "33b1ad5e02e7be83985c98d64a6b86fd",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_743041) trace_id=33b1ad5e02e7be83985c98d64a6b86fd pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:23:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "e5a993f6dd31bc5cf697cceeeeb11e74",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_2ec497) trace_id=e5a993f6dd31bc5cf697cceeeeb11e74 pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:25:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "71ab51c775260f172388a29ef9b26aad",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_4a9c49) trace_id=71ab51c775260f172388a29ef9b26aad pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:27:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "33b1ad5e02e7be83985c98d64a6b86fd",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_1ba36e) trace_id=33b1ad5e02e7be83985c98d64a6b86fd pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:29:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "e5a993f6dd31bc5cf697cceeeeb11e74",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_46af42) trace_id=e5a993f6dd31bc5cf697cceeeeb11e74 pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:31:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "71ab51c775260f172388a29ef9b26aad",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_9f8163) trace_id=71ab51c775260f172388a29ef9b26aad pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:33:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "33b1ad5e02e7be83985c98d64a6b86fd",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_d6d901) trace_id=33b1ad5e02e7be83985c98d64a6b86fd pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:35:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "e5a993f6dd31bc5cf697cceeeeb11e74",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_33fbf3) trace_id=e5a993f6dd31bc5cf697cceeeeb11e74 pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:37:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "71ab51c775260f172388a29ef9b26aad",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_518758) trace_id=71ab51c775260f172388a29ef9b26aad pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:39:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "33b1ad5e02e7be83985c98d64a6b86fd",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_b48878) trace_id=33b1ad5e02e7be83985c98d64a6b86fd pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:41:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "e5a993f6dd31bc5cf697cceeeeb11e74",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_dae038) trace_id=e5a993f6dd31bc5cf697cceeeeb11e74 pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:43:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "71ab51c775260f172388a29ef9b26aad",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_2d7b5e) trace_id=71ab51c775260f172388a29ef9b26aad pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:45:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "33b1ad5e02e7be83985c98d64a6b86fd",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_4e307b) trace_id=33b1ad5e02e7be83985c98d64a6b86fd pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:47:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "e5a993f6dd31bc5cf697cceeeeb11e74",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_65b389) trace_id=e5a993f6dd31bc5cf697cceeeeb11e74 pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:49:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "71ab51c775260f172388a29ef9b26aad",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_804b0f) trace_id=71ab51c775260f172388a29ef9b26aad pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:51:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "33b1ad5e02e7be83985c98d64a6b86fd",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_84aeaa) trace_id=33b1ad5e02e7be83985c98d64a6b86fd pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:53:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "e5a993f6dd31bc5cf697cceeeeb11e74",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_ae9372) trace_id=e5a993f6dd31bc5cf697cceeeeb11e74 pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:55:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "71ab51c775260f172388a29ef9b26aad",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_1415fc) trace_id=71ab51c775260f172388a29ef9b26aad pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:57:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "33b1ad5e02e7be83985c98d64a6b86fd",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_ea36ba) trace_id=33b1ad5e02e7be83985c98d64a6b86fd pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T15:59:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "e5a993f6dd31bc5cf697cceeeeb11e74",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_f3e63c) trace_id=e5a993f6dd31bc5cf697cceeeeb11e74 pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T16:01:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "71ab51c775260f172388a29ef9b26aad",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_5bf2eb) trace_id=71ab51c775260f172388a29ef9b26aad pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T16:03:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "33b1ad5e02e7be83985c98d64a6b86fd",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_e9e19d) trace_id=33b1ad5e02e7be83985c98d64a6b86fd pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T16:05:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-090ef",
+     "trace_id": "e5a993f6dd31bc5cf697cceeeeb11e74",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_3b6cdb) trace_id=e5a993f6dd31bc5cf697cceeeeb11e74 pod=inventory-sync-b7cb0f38c-090ef fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-11T16:07:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b7cb0f38c-a59d9",
+     "trace_id": "71ab51c775260f172388a29ef9b26aad",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_fa4bcb) trace_id=71ab51c775260f172388a29ef9b26aad pod=inventory-sync-b7cb0f38c-a59d9 fn=ingest_feed"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-08-11T15:21:00Z",
+    "end": "2026-08-11T16:16:00Z"
+   },
+   "dm": {
+    "channel_id": "D89FCC4D5",
+    "ts": "1786466640.000520",
+    "user_name": "grace",
+    "text": "is warehouse sync healthy? warehouse team says stock levels look stale",
+    "mode": 2
+   }
+  },
+  {
+   "id": "INC-004",
+   "service": "notifier",
+   "team": "platform",
+   "error_class": "RateLimited",
+   "error_sig": "RateLimited: downstream SMS provider rate limited",
+   "function": "send_sms",
+   "started_at": "2026-08-15T15:03:00Z",
+   "trace_ids": [
+    "21a98ecf56bf89b121be08c383658ac0",
+    "d834df910f71c347137027ed03b23bad",
+    "5a06fe7a218b2f7550b40c3180676c46"
+   ],
+   "pods": [
+    "notifier-f47e24742-3c212",
+    "notifier-f47e24742-f1c4b"
+   ],
+   "commit": "129decf2269f4013fe43cd0925d534de89de3aca",
+   "jira": {
+    "key": "PLAT-102",
+    "project": "PLAT",
+    "summary": "notifier: elevated 5xx after RateLimited",
+    "issuetype": "Bug",
+    "priority": "P1",
+    "status": "Done",
+    "created": "2026-08-15T15:15:00Z",
+    "updated": "2026-08-15T21:03:00Z",
+    "reporter": "dan",
+    "assignee": "grace",
+    "components": [
+     "notifier"
+    ],
+    "labels": [
+     "incident",
+     "platform"
+    ],
+    "description": "Alert fired on notifier at 2026-08-15T15:03:00Z.\n\nError: RateLimited: downstream SMS provider rate limited\nSample trace: trace_id=21a98ecf56bf89b121be08c383658ac0\nAffected pod: notifier-f47e24742-3c212\n\nCustomers saw failures in send_sms(). Slack discussion in #incidents. Runbook: notifier runbook."
+   },
+   "pagerduty": {
+    "id": "QB48E0E91D6A7B",
+    "incident_number": 4003,
+    "title": "[notifier] RateLimited rate above threshold",
+    "service_id": "PGHI04",
+    "status": "resolved",
+    "urgency": "high",
+    "created_at": "2026-08-15T15:03:00Z",
+    "resolved_at": "2026-08-15T17:03:00Z",
+    "assignee": "grace"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1786806420.000003",
+    "messages": [
+     {
+      "user": "UFD1CF5E2",
+      "user_name": "grace",
+      "ts": "1786806420.000030",
+      "text": "Pager went off for notifier: RateLimited. Looking now. Ticket PLAT-102 incoming."
+     },
+     {
+      "user": "UFD1CF5E2",
+      "user_name": "grace",
+      "ts": "1786806780.000031",
+      "text": "Seeing `RateLimited: downstream SMS provider rate limited` in logs, e.g. trace_id=21a98ecf56bf89b121be08c383658ac0 on notifier-f47e24742-3c212"
+     },
+     {
+      "user": "U2591E5F4",
+      "user_name": "dan",
+      "ts": "1786806960.000032",
+      "text": "Also trace_id=d834df910f71c347137027ed03b23bad from a customer report, same error."
+     },
+     {
+      "user": "UFD1CF5E2",
+      "user_name": "grace",
+      "ts": "1786807620.000033",
+      "text": "Suspect 129decf226 touched send_sms() yesterday. Rolling back."
+     },
+     {
+      "user": "UFD1CF5E2",
+      "user_name": "grace",
+      "ts": "1786809720.000034",
+      "text": "Rollback done, error rate back to baseline. Will write up in PLAT-102."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20021",
+    "title": "notifier runbook",
+    "space": "PLATFORM"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-08-15T14:58:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "21a98ecf56bf89b121be08c383658ac0",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_3e2feb) trace_id=21a98ecf56bf89b121be08c383658ac0 pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:00:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "d834df910f71c347137027ed03b23bad",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_ffae58) trace_id=d834df910f71c347137027ed03b23bad pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:02:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "5a06fe7a218b2f7550b40c3180676c46",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_416c02) trace_id=5a06fe7a218b2f7550b40c3180676c46 pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:04:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "21a98ecf56bf89b121be08c383658ac0",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_8d10c1) trace_id=21a98ecf56bf89b121be08c383658ac0 pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:06:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "d834df910f71c347137027ed03b23bad",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_0e8754) trace_id=d834df910f71c347137027ed03b23bad pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:08:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "5a06fe7a218b2f7550b40c3180676c46",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_39ee7e) trace_id=5a06fe7a218b2f7550b40c3180676c46 pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:10:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "21a98ecf56bf89b121be08c383658ac0",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_2c3846) trace_id=21a98ecf56bf89b121be08c383658ac0 pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:12:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "d834df910f71c347137027ed03b23bad",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_6e2ab5) trace_id=d834df910f71c347137027ed03b23bad pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:14:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "5a06fe7a218b2f7550b40c3180676c46",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_cf1583) trace_id=5a06fe7a218b2f7550b40c3180676c46 pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:16:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "21a98ecf56bf89b121be08c383658ac0",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_17046e) trace_id=21a98ecf56bf89b121be08c383658ac0 pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:18:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "d834df910f71c347137027ed03b23bad",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_26cbf8) trace_id=d834df910f71c347137027ed03b23bad pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:20:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "5a06fe7a218b2f7550b40c3180676c46",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_dc7585) trace_id=5a06fe7a218b2f7550b40c3180676c46 pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:22:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "21a98ecf56bf89b121be08c383658ac0",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_43414b) trace_id=21a98ecf56bf89b121be08c383658ac0 pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:24:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "d834df910f71c347137027ed03b23bad",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_2a4cbd) trace_id=d834df910f71c347137027ed03b23bad pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:26:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "5a06fe7a218b2f7550b40c3180676c46",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_4876b9) trace_id=5a06fe7a218b2f7550b40c3180676c46 pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:28:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "21a98ecf56bf89b121be08c383658ac0",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_76684d) trace_id=21a98ecf56bf89b121be08c383658ac0 pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:30:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "d834df910f71c347137027ed03b23bad",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_5c6935) trace_id=d834df910f71c347137027ed03b23bad pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:32:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "5a06fe7a218b2f7550b40c3180676c46",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_2fe55b) trace_id=5a06fe7a218b2f7550b40c3180676c46 pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:34:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "21a98ecf56bf89b121be08c383658ac0",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_403778) trace_id=21a98ecf56bf89b121be08c383658ac0 pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:36:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "d834df910f71c347137027ed03b23bad",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_01c55a) trace_id=d834df910f71c347137027ed03b23bad pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:38:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "5a06fe7a218b2f7550b40c3180676c46",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_fea17e) trace_id=5a06fe7a218b2f7550b40c3180676c46 pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:40:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "21a98ecf56bf89b121be08c383658ac0",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_0edcef) trace_id=21a98ecf56bf89b121be08c383658ac0 pod=notifier-f47e24742-f1c4b fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:42:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-3c212",
+     "trace_id": "d834df910f71c347137027ed03b23bad",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_9d0eea) trace_id=d834df910f71c347137027ed03b23bad pod=notifier-f47e24742-3c212 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-15T15:44:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-f47e24742-f1c4b",
+     "trace_id": "5a06fe7a218b2f7550b40c3180676c46",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_91412d) trace_id=5a06fe7a218b2f7550b40c3180676c46 pod=notifier-f47e24742-f1c4b fn=send_sms"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-08-15T14:58:00Z",
+    "end": "2026-08-15T15:53:00Z"
+   },
+   "dm": {
+    "channel_id": "DEA6423F1",
+    "ts": "1786810380.000530",
+    "user_name": "alice",
+    "text": "quick one: any progress on PLAT-102? notifications customers are asking for an update",
+    "mode": 0
+   }
+  },
+  {
+   "id": "INC-005",
+   "service": "payments-api",
+   "team": "payments",
+   "error_class": "PaymentGatewayTimeout",
+   "error_sig": "PaymentGatewayTimeout: gateway did not respond within 30s",
+   "function": "charge",
+   "started_at": "2026-08-19T18:25:00Z",
+   "trace_ids": [
+    "f9cd854e91c387a7d6fcfff220f48043",
+    "bec848460558bea16c1cf28540b158de",
+    "b7db6eca1ec7e1447b4db666b276a8e0"
+   ],
+   "pods": [
+    "payments-api-d596c2f04-70d8f",
+    "payments-api-d596c2f04-419bb"
+   ],
+   "commit": "0f1d7473f3275bb122902851b27bfd0e50bdc0bb",
+   "jira": {
+    "key": "PAY-102",
+    "project": "PAY",
+    "summary": "payments-api: elevated 5xx after PaymentGatewayTimeout",
+    "issuetype": "Bug",
+    "priority": "P2",
+    "status": "Done",
+    "created": "2026-08-19T18:37:00Z",
+    "updated": "2026-08-20T00:25:00Z",
+    "reporter": "dan",
+    "assignee": "alice",
+    "components": [
+     "payments-api"
+    ],
+    "labels": [
+     "incident",
+     "payments"
+    ],
+    "description": "Alert fired on payments-api at 2026-08-19T18:25:00Z.\n\nError: PaymentGatewayTimeout: gateway did not respond within 30s\nSample trace: trace_id=f9cd854e91c387a7d6fcfff220f48043\nAffected pod: payments-api-d596c2f04-70d8f\n\nCustomers saw failures in charge(). Slack discussion in #incidents. Runbook: payments-api runbook."
+   },
+   "pagerduty": {
+    "id": "Q9E1D0FCC45475",
+    "incident_number": 4004,
+    "title": "[payments-api] PaymentGatewayTimeout rate above threshold",
+    "service_id": "PXYZ01",
+    "status": "resolved",
+    "urgency": "high",
+    "created_at": "2026-08-19T18:25:00Z",
+    "resolved_at": "2026-08-19T20:25:00Z",
+    "assignee": "alice"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1787164140.000004",
+    "messages": [
+     {
+      "user": "U522B276A",
+      "user_name": "alice",
+      "ts": "1787164140.000040",
+      "text": "Pager went off for payments-api: PaymentGatewayTimeout. Looking now. Ticket PAY-102 incoming."
+     },
+     {
+      "user": "U522B276A",
+      "user_name": "alice",
+      "ts": "1787164500.000041",
+      "text": "Seeing `PaymentGatewayTimeout: gateway did not respond within 30s` in logs, e.g. trace_id=f9cd854e91c387a7d6fcfff220f48043 on payments-api-d596c2f04-70d8f"
+     },
+     {
+      "user": "U2591E5F4",
+      "user_name": "dan",
+      "ts": "1787164680.000042",
+      "text": "Also trace_id=bec848460558bea16c1cf28540b158de from a customer report, same error."
+     },
+     {
+      "user": "U522B276A",
+      "user_name": "alice",
+      "ts": "1787165340.000043",
+      "text": "Suspect 0f1d7473f3 touched charge() yesterday. Rolling back."
+     },
+     {
+      "user": "U522B276A",
+      "user_name": "alice",
+      "ts": "1787167440.000044",
+      "text": "Rollback done, error rate back to baseline. Will write up in PAY-102."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20028",
+    "title": "payments-api runbook",
+    "space": "PAYMENTS"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-08-19T18:20:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "f9cd854e91c387a7d6fcfff220f48043",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_c59c4c) trace_id=f9cd854e91c387a7d6fcfff220f48043 pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:22:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "bec848460558bea16c1cf28540b158de",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_ed55de) trace_id=bec848460558bea16c1cf28540b158de pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:24:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "b7db6eca1ec7e1447b4db666b276a8e0",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_4347c9) trace_id=b7db6eca1ec7e1447b4db666b276a8e0 pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:26:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "f9cd854e91c387a7d6fcfff220f48043",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_290c4d) trace_id=f9cd854e91c387a7d6fcfff220f48043 pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:28:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "bec848460558bea16c1cf28540b158de",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_57333b) trace_id=bec848460558bea16c1cf28540b158de pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:30:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "b7db6eca1ec7e1447b4db666b276a8e0",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_14543c) trace_id=b7db6eca1ec7e1447b4db666b276a8e0 pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:32:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "f9cd854e91c387a7d6fcfff220f48043",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_c2b067) trace_id=f9cd854e91c387a7d6fcfff220f48043 pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:34:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "bec848460558bea16c1cf28540b158de",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_2dd780) trace_id=bec848460558bea16c1cf28540b158de pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:36:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "b7db6eca1ec7e1447b4db666b276a8e0",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_af7578) trace_id=b7db6eca1ec7e1447b4db666b276a8e0 pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:38:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "f9cd854e91c387a7d6fcfff220f48043",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_dc1c78) trace_id=f9cd854e91c387a7d6fcfff220f48043 pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:40:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "bec848460558bea16c1cf28540b158de",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_99670b) trace_id=bec848460558bea16c1cf28540b158de pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:42:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "b7db6eca1ec7e1447b4db666b276a8e0",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e5e21d) trace_id=b7db6eca1ec7e1447b4db666b276a8e0 pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:44:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "f9cd854e91c387a7d6fcfff220f48043",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_cde63d) trace_id=f9cd854e91c387a7d6fcfff220f48043 pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:46:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "bec848460558bea16c1cf28540b158de",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_f66377) trace_id=bec848460558bea16c1cf28540b158de pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:48:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "b7db6eca1ec7e1447b4db666b276a8e0",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_4b7931) trace_id=b7db6eca1ec7e1447b4db666b276a8e0 pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:50:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "f9cd854e91c387a7d6fcfff220f48043",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_ef6022) trace_id=f9cd854e91c387a7d6fcfff220f48043 pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:52:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "bec848460558bea16c1cf28540b158de",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_531cbd) trace_id=bec848460558bea16c1cf28540b158de pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:54:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "b7db6eca1ec7e1447b4db666b276a8e0",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_f9f0b1) trace_id=b7db6eca1ec7e1447b4db666b276a8e0 pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:56:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "f9cd854e91c387a7d6fcfff220f48043",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_079315) trace_id=f9cd854e91c387a7d6fcfff220f48043 pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T18:58:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "bec848460558bea16c1cf28540b158de",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_d9c586) trace_id=bec848460558bea16c1cf28540b158de pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T19:00:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "b7db6eca1ec7e1447b4db666b276a8e0",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_685f85) trace_id=b7db6eca1ec7e1447b4db666b276a8e0 pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T19:02:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "f9cd854e91c387a7d6fcfff220f48043",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_f262b0) trace_id=f9cd854e91c387a7d6fcfff220f48043 pod=payments-api-d596c2f04-419bb fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T19:04:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-70d8f",
+     "trace_id": "bec848460558bea16c1cf28540b158de",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_deda61) trace_id=bec848460558bea16c1cf28540b158de pod=payments-api-d596c2f04-70d8f fn=charge"
+    },
+    {
+     "@timestamp": "2026-08-19T19:06:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-d596c2f04-419bb",
+     "trace_id": "b7db6eca1ec7e1447b4db666b276a8e0",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_fd926f) trace_id=b7db6eca1ec7e1447b4db666b276a8e0 pod=payments-api-d596c2f04-419bb fn=charge"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-08-19T18:20:00Z",
+    "end": "2026-08-19T19:15:00Z"
+   },
+   "dm": {
+    "channel_id": "D88F07D54",
+    "ts": "1787169360.000540",
+    "user_name": "heidi",
+    "text": "heads up, support has a few reports of PaymentGatewayTimeout errors in payments since 6pm, is that known?",
+    "mode": 1
+   }
+  },
+  {
+   "id": "INC-006",
+   "service": "checkout-web",
+   "team": "storefront",
+   "error_class": "SessionExpired",
+   "error_sig": "SessionExpired: session token expired mid-checkout",
+   "function": "submit_order",
+   "started_at": "2026-08-23T11:18:00Z",
+   "trace_ids": [
+    "4600a2a11fc686f2c3a3173ac0543c5b",
+    "03c778ab266863f265fdc541215c82b8",
+    "1d4e4caa592ae5db2d7e6bce7f3958ff"
+   ],
+   "pods": [
+    "checkout-web-c72440ffb-af967",
+    "checkout-web-c72440ffb-4482b"
+   ],
+   "commit": "49ed70d42dd6e9b6e54bea2f71ffc4f70db3e6f4",
+   "jira": {
+    "key": "STF-116",
+    "project": "STF",
+    "summary": "checkout-web: elevated 5xx after SessionExpired",
+    "issuetype": "Bug",
+    "priority": "P2",
+    "status": "Done",
+    "created": "2026-08-23T11:30:00Z",
+    "updated": "2026-08-23T17:18:00Z",
+    "reporter": "carol",
+    "assignee": "carol",
+    "components": [
+     "checkout-web"
+    ],
+    "labels": [
+     "incident",
+     "storefront"
+    ],
+    "description": "Alert fired on checkout-web at 2026-08-23T11:18:00Z.\n\nError: SessionExpired: session token expired mid-checkout\nSample trace: trace_id=4600a2a11fc686f2c3a3173ac0543c5b\nAffected pod: checkout-web-c72440ffb-af967\n\nCustomers saw failures in submit_order(). Slack discussion in #incidents. Runbook: checkout-web runbook."
+   },
+   "pagerduty": {
+    "id": "Q21184CED9258A",
+    "incident_number": 4005,
+    "title": "[checkout-web] SessionExpired rate above threshold",
+    "service_id": "PABC02",
+    "status": "resolved",
+    "urgency": "high",
+    "created_at": "2026-08-23T11:18:00Z",
+    "resolved_at": "2026-08-23T13:18:00Z",
+    "assignee": "carol"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1787484120.000005",
+    "messages": [
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1787484120.000050",
+      "text": "Pager went off for checkout-web: SessionExpired. Looking now. Ticket STF-116 incoming."
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1787484480.000051",
+      "text": "Seeing `SessionExpired: session token expired mid-checkout` in logs, e.g. trace_id=4600a2a11fc686f2c3a3173ac0543c5b on checkout-web-c72440ffb-af967"
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1787484660.000052",
+      "text": "Also trace_id=03c778ab266863f265fdc541215c82b8 from a customer report, same error."
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1787485320.000053",
+      "text": "Suspect 49ed70d42d touched submit_order() yesterday. Rolling back."
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1787487420.000054",
+      "text": "Rollback done, error rate back to baseline. Will write up in STF-116."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20035",
+    "title": "checkout-web runbook",
+    "space": "STOREFRONT"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-08-23T11:13:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "4600a2a11fc686f2c3a3173ac0543c5b",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_42fca0) trace_id=4600a2a11fc686f2c3a3173ac0543c5b pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:15:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "03c778ab266863f265fdc541215c82b8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_d8deb8) trace_id=03c778ab266863f265fdc541215c82b8 pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:17:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "1d4e4caa592ae5db2d7e6bce7f3958ff",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_823e27) trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:19:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "4600a2a11fc686f2c3a3173ac0543c5b",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_0645cf) trace_id=4600a2a11fc686f2c3a3173ac0543c5b pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:21:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "03c778ab266863f265fdc541215c82b8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_0cd0fc) trace_id=03c778ab266863f265fdc541215c82b8 pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:23:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "1d4e4caa592ae5db2d7e6bce7f3958ff",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_f0c4fe) trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:25:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "4600a2a11fc686f2c3a3173ac0543c5b",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_047942) trace_id=4600a2a11fc686f2c3a3173ac0543c5b pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:27:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "03c778ab266863f265fdc541215c82b8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_11bc85) trace_id=03c778ab266863f265fdc541215c82b8 pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:29:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "1d4e4caa592ae5db2d7e6bce7f3958ff",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_89d432) trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:31:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "4600a2a11fc686f2c3a3173ac0543c5b",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_8ed180) trace_id=4600a2a11fc686f2c3a3173ac0543c5b pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:33:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "03c778ab266863f265fdc541215c82b8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_a71e23) trace_id=03c778ab266863f265fdc541215c82b8 pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:35:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "1d4e4caa592ae5db2d7e6bce7f3958ff",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_4e1650) trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:37:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "4600a2a11fc686f2c3a3173ac0543c5b",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_d16b10) trace_id=4600a2a11fc686f2c3a3173ac0543c5b pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:39:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "03c778ab266863f265fdc541215c82b8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_770a64) trace_id=03c778ab266863f265fdc541215c82b8 pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:41:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "1d4e4caa592ae5db2d7e6bce7f3958ff",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_8fa6c9) trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:43:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "4600a2a11fc686f2c3a3173ac0543c5b",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_85be81) trace_id=4600a2a11fc686f2c3a3173ac0543c5b pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:45:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "03c778ab266863f265fdc541215c82b8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_5ec7d2) trace_id=03c778ab266863f265fdc541215c82b8 pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:47:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "1d4e4caa592ae5db2d7e6bce7f3958ff",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_4e8f9d) trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:49:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "4600a2a11fc686f2c3a3173ac0543c5b",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_1937d8) trace_id=4600a2a11fc686f2c3a3173ac0543c5b pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:51:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "03c778ab266863f265fdc541215c82b8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_5a71c4) trace_id=03c778ab266863f265fdc541215c82b8 pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:53:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "1d4e4caa592ae5db2d7e6bce7f3958ff",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_d941ee) trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:55:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "4600a2a11fc686f2c3a3173ac0543c5b",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_4ce893) trace_id=4600a2a11fc686f2c3a3173ac0543c5b pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:57:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-af967",
+     "trace_id": "03c778ab266863f265fdc541215c82b8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_86a3cd) trace_id=03c778ab266863f265fdc541215c82b8 pod=checkout-web-c72440ffb-af967 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-08-23T11:59:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-c72440ffb-4482b",
+     "trace_id": "1d4e4caa592ae5db2d7e6bce7f3958ff",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_212d9c) trace_id=1d4e4caa592ae5db2d7e6bce7f3958ff pod=checkout-web-c72440ffb-4482b fn=submit_order"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-08-23T11:13:00Z",
+    "end": "2026-08-23T12:08:00Z"
+   },
+   "dm": {
+    "channel_id": "D89FCC4D5",
+    "ts": "1787486340.000550",
+    "user_name": "grace",
+    "text": "is storefront checkout healthy? people can't complete checkout",
+    "mode": 2
+   }
+  },
+  {
+   "id": "INC-007",
+   "service": "inventory-sync",
+   "team": "supply",
+   "error_class": "UpstreamSchemaDrift",
+   "error_sig": "UpstreamSchemaDrift: unexpected field in warehouse feed",
+   "function": "ingest_feed",
+   "started_at": "2026-08-27T13:35:00Z",
+   "trace_ids": [
+    "60f1ff54e0756a4d671a982660cfab02",
+    "0690b10361c7675697562e034998bfc0",
+    "9334e39cdf8214665f025086a8b4911e"
+   ],
+   "pods": [
+    "inventory-sync-b74149eab-9827c",
+    "inventory-sync-b74149eab-f0ef4"
+   ],
+   "commit": "81f78b19765f0d1ed7a0199c22bfcd5c7cda2226",
+   "jira": {
+    "key": "SUP-105",
+    "project": "SUP",
+    "summary": "inventory-sync: elevated 5xx after UpstreamSchemaDrift",
+    "issuetype": "Bug",
+    "priority": "P1",
+    "status": "Done",
+    "created": "2026-08-27T13:47:00Z",
+    "updated": "2026-08-27T19:35:00Z",
+    "reporter": "bob",
+    "assignee": "erin",
+    "components": [
+     "inventory-sync"
+    ],
+    "labels": [
+     "incident",
+     "supply"
+    ],
+    "description": "Alert fired on inventory-sync at 2026-08-27T13:35:00Z.\n\nError: UpstreamSchemaDrift: unexpected field in warehouse feed\nSample trace: trace_id=60f1ff54e0756a4d671a982660cfab02\nAffected pod: inventory-sync-b74149eab-9827c\n\nCustomers saw failures in ingest_feed(). Slack discussion in #incidents. Runbook: inventory-sync runbook."
+   },
+   "pagerduty": {
+    "id": "Q4CAE6AD17A0A9",
+    "incident_number": 4006,
+    "title": "[inventory-sync] UpstreamSchemaDrift rate above threshold",
+    "service_id": "PDEF03",
+    "status": "resolved",
+    "urgency": "high",
+    "created_at": "2026-08-27T13:35:00Z",
+    "resolved_at": "2026-08-27T15:35:00Z",
+    "assignee": "erin"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1787837940.000006",
+    "messages": [
+     {
+      "user": "U2A4B17B1",
+      "user_name": "erin",
+      "ts": "1787837940.000060",
+      "text": "Pager went off for inventory-sync: UpstreamSchemaDrift. Looking now. Ticket SUP-105 incoming."
+     },
+     {
+      "user": "U2A4B17B1",
+      "user_name": "erin",
+      "ts": "1787838300.000061",
+      "text": "Seeing `UpstreamSchemaDrift: unexpected field in warehouse feed` in logs, e.g. trace_id=60f1ff54e0756a4d671a982660cfab02 on inventory-sync-b74149eab-9827c"
+     },
+     {
+      "user": "U48181ACD",
+      "user_name": "bob",
+      "ts": "1787838480.000062",
+      "text": "Also trace_id=0690b10361c7675697562e034998bfc0 from a customer report, same error."
+     },
+     {
+      "user": "U2A4B17B1",
+      "user_name": "erin",
+      "ts": "1787839140.000063",
+      "text": "Suspect 81f78b1976 touched ingest_feed() yesterday. Rolling back."
+     },
+     {
+      "user": "U2A4B17B1",
+      "user_name": "erin",
+      "ts": "1787841240.000064",
+      "text": "Rollback done, error rate back to baseline. Will write up in SUP-105."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20042",
+    "title": "inventory-sync runbook",
+    "space": "SUPPLY"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-08-27T13:30:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "60f1ff54e0756a4d671a982660cfab02",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_e45cee) trace_id=60f1ff54e0756a4d671a982660cfab02 pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:32:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "0690b10361c7675697562e034998bfc0",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_33c7d0) trace_id=0690b10361c7675697562e034998bfc0 pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:34:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "9334e39cdf8214665f025086a8b4911e",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_decb41) trace_id=9334e39cdf8214665f025086a8b4911e pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:36:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "60f1ff54e0756a4d671a982660cfab02",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_b1fbd2) trace_id=60f1ff54e0756a4d671a982660cfab02 pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:38:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "0690b10361c7675697562e034998bfc0",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_e79255) trace_id=0690b10361c7675697562e034998bfc0 pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:40:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "9334e39cdf8214665f025086a8b4911e",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_23c6fe) trace_id=9334e39cdf8214665f025086a8b4911e pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:42:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "60f1ff54e0756a4d671a982660cfab02",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_c99949) trace_id=60f1ff54e0756a4d671a982660cfab02 pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:44:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "0690b10361c7675697562e034998bfc0",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_58f131) trace_id=0690b10361c7675697562e034998bfc0 pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:46:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "9334e39cdf8214665f025086a8b4911e",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_ed07a1) trace_id=9334e39cdf8214665f025086a8b4911e pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:48:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "60f1ff54e0756a4d671a982660cfab02",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_a4b380) trace_id=60f1ff54e0756a4d671a982660cfab02 pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:50:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "0690b10361c7675697562e034998bfc0",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_54f459) trace_id=0690b10361c7675697562e034998bfc0 pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:52:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "9334e39cdf8214665f025086a8b4911e",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_200caf) trace_id=9334e39cdf8214665f025086a8b4911e pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:54:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "60f1ff54e0756a4d671a982660cfab02",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_550336) trace_id=60f1ff54e0756a4d671a982660cfab02 pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:56:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "0690b10361c7675697562e034998bfc0",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_6e32b1) trace_id=0690b10361c7675697562e034998bfc0 pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T13:58:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "9334e39cdf8214665f025086a8b4911e",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_4d11f9) trace_id=9334e39cdf8214665f025086a8b4911e pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T14:00:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "60f1ff54e0756a4d671a982660cfab02",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_190077) trace_id=60f1ff54e0756a4d671a982660cfab02 pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T14:02:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "0690b10361c7675697562e034998bfc0",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_0e88c8) trace_id=0690b10361c7675697562e034998bfc0 pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T14:04:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "9334e39cdf8214665f025086a8b4911e",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_a5c145) trace_id=9334e39cdf8214665f025086a8b4911e pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T14:06:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "60f1ff54e0756a4d671a982660cfab02",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_69cb10) trace_id=60f1ff54e0756a4d671a982660cfab02 pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T14:08:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "0690b10361c7675697562e034998bfc0",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_12262c) trace_id=0690b10361c7675697562e034998bfc0 pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T14:10:00Z",
+     "level": "WARN",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "9334e39cdf8214665f025086a8b4911e",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_d373ec) trace_id=9334e39cdf8214665f025086a8b4911e pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T14:12:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "60f1ff54e0756a4d671a982660cfab02",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_0b152a) trace_id=60f1ff54e0756a4d671a982660cfab02 pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T14:14:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-9827c",
+     "trace_id": "0690b10361c7675697562e034998bfc0",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_e2dacf) trace_id=0690b10361c7675697562e034998bfc0 pod=inventory-sync-b74149eab-9827c fn=ingest_feed"
+    },
+    {
+     "@timestamp": "2026-08-27T14:16:00Z",
+     "level": "ERROR",
+     "service": "inventory-sync",
+     "kubernetes.pod_name": "inventory-sync-b74149eab-f0ef4",
+     "trace_id": "9334e39cdf8214665f025086a8b4911e",
+     "logger": "services.inventory_sync.handler",
+     "message": "UpstreamSchemaDrift: unexpected field in warehouse feed (account=acc_7f3cb5) trace_id=9334e39cdf8214665f025086a8b4911e pod=inventory-sync-b74149eab-f0ef4 fn=ingest_feed"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-08-27T13:30:00Z",
+    "end": "2026-08-27T14:25:00Z"
+   },
+   "dm": {
+    "channel_id": "D89FCC4D5",
+    "ts": "1787843100.000560",
+    "user_name": "grace",
+    "text": "hey, are you on SUP-105? support is getting pinged about it and I have nothing to tell them",
+    "mode": 0
+   }
+  },
+  {
+   "id": "INC-008",
+   "service": "notifier",
+   "team": "platform",
+   "error_class": "RateLimited",
+   "error_sig": "RateLimited: downstream SMS provider rate limited",
+   "function": "send_sms",
+   "started_at": "2026-08-30T10:35:00Z",
+   "trace_ids": [
+    "9453fb5068401587beae2784ea8c4e80",
+    "97d82693ef81a020503c35ce047cc2ea",
+    "0826f94af685bc62c0d5fc0d6090f802"
+   ],
+   "pods": [
+    "notifier-da5703a94-b0c43",
+    "notifier-da5703a94-36500"
+   ],
+   "commit": "01fce42fdaa6781d56f1c039ac2fea36a8561a71",
+   "jira": {
+    "key": "PLAT-104",
+    "project": "PLAT",
+    "summary": "notifier: elevated 5xx after RateLimited",
+    "issuetype": "Bug",
+    "priority": "P2",
+    "status": "In Progress",
+    "created": "2026-08-30T10:47:00Z",
+    "updated": "2026-08-30T16:35:00Z",
+    "reporter": "alice",
+    "assignee": "grace",
+    "components": [
+     "notifier"
+    ],
+    "labels": [
+     "incident",
+     "platform"
+    ],
+    "description": "Alert fired on notifier at 2026-08-30T10:35:00Z.\n\nError: RateLimited: downstream SMS provider rate limited\nSample trace: trace_id=9453fb5068401587beae2784ea8c4e80\nAffected pod: notifier-da5703a94-b0c43\n\nCustomers saw failures in send_sms(). Slack discussion in #incidents. Runbook: notifier runbook."
+   },
+   "pagerduty": {
+    "id": "Q1266C3245D130",
+    "incident_number": 4007,
+    "title": "[notifier] RateLimited rate above threshold",
+    "service_id": "PGHI04",
+    "status": "resolved",
+    "urgency": "high",
+    "created_at": "2026-08-30T10:35:00Z",
+    "resolved_at": "2026-08-30T12:35:00Z",
+    "assignee": "grace"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1788086340.000007",
+    "messages": [
+     {
+      "user": "UFD1CF5E2",
+      "user_name": "grace",
+      "ts": "1788086340.000070",
+      "text": "Pager went off for notifier: RateLimited. Looking now. Ticket PLAT-104 incoming."
+     },
+     {
+      "user": "UFD1CF5E2",
+      "user_name": "grace",
+      "ts": "1788086700.000071",
+      "text": "Seeing `RateLimited: downstream SMS provider rate limited` in logs, e.g. trace_id=9453fb5068401587beae2784ea8c4e80 on notifier-da5703a94-b0c43"
+     },
+     {
+      "user": "U522B276A",
+      "user_name": "alice",
+      "ts": "1788086880.000072",
+      "text": "Also trace_id=97d82693ef81a020503c35ce047cc2ea from a customer report, same error."
+     },
+     {
+      "user": "UFD1CF5E2",
+      "user_name": "grace",
+      "ts": "1788087540.000073",
+      "text": "Suspect 01fce42fda touched send_sms() yesterday. Rolling back."
+     },
+     {
+      "user": "UFD1CF5E2",
+      "user_name": "grace",
+      "ts": "1788089640.000074",
+      "text": "Rollback done, error rate back to baseline. Will write up in PLAT-104."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20049",
+    "title": "notifier runbook",
+    "space": "PLATFORM"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-08-30T10:30:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "9453fb5068401587beae2784ea8c4e80",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_5d2e0f) trace_id=9453fb5068401587beae2784ea8c4e80 pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:32:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "97d82693ef81a020503c35ce047cc2ea",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_7c55fc) trace_id=97d82693ef81a020503c35ce047cc2ea pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:34:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "0826f94af685bc62c0d5fc0d6090f802",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_11d4cf) trace_id=0826f94af685bc62c0d5fc0d6090f802 pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:36:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "9453fb5068401587beae2784ea8c4e80",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_b8f4d0) trace_id=9453fb5068401587beae2784ea8c4e80 pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:38:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "97d82693ef81a020503c35ce047cc2ea",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_4bbe03) trace_id=97d82693ef81a020503c35ce047cc2ea pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:40:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "0826f94af685bc62c0d5fc0d6090f802",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_9fcb26) trace_id=0826f94af685bc62c0d5fc0d6090f802 pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:42:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "9453fb5068401587beae2784ea8c4e80",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_a985b0) trace_id=9453fb5068401587beae2784ea8c4e80 pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:44:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "97d82693ef81a020503c35ce047cc2ea",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_91b2f5) trace_id=97d82693ef81a020503c35ce047cc2ea pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:46:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "0826f94af685bc62c0d5fc0d6090f802",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_6e2779) trace_id=0826f94af685bc62c0d5fc0d6090f802 pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:48:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "9453fb5068401587beae2784ea8c4e80",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_8545bb) trace_id=9453fb5068401587beae2784ea8c4e80 pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:50:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "97d82693ef81a020503c35ce047cc2ea",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_3be7c6) trace_id=97d82693ef81a020503c35ce047cc2ea pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:52:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "0826f94af685bc62c0d5fc0d6090f802",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_b3fa3d) trace_id=0826f94af685bc62c0d5fc0d6090f802 pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:54:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "9453fb5068401587beae2784ea8c4e80",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_a8f72c) trace_id=9453fb5068401587beae2784ea8c4e80 pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:56:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "97d82693ef81a020503c35ce047cc2ea",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_687392) trace_id=97d82693ef81a020503c35ce047cc2ea pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T10:58:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "0826f94af685bc62c0d5fc0d6090f802",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_db4c37) trace_id=0826f94af685bc62c0d5fc0d6090f802 pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T11:00:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "9453fb5068401587beae2784ea8c4e80",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_0d6fc9) trace_id=9453fb5068401587beae2784ea8c4e80 pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T11:02:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "97d82693ef81a020503c35ce047cc2ea",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_8b3e69) trace_id=97d82693ef81a020503c35ce047cc2ea pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T11:04:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "0826f94af685bc62c0d5fc0d6090f802",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_d7d78d) trace_id=0826f94af685bc62c0d5fc0d6090f802 pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T11:06:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "9453fb5068401587beae2784ea8c4e80",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_f799fb) trace_id=9453fb5068401587beae2784ea8c4e80 pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T11:08:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "97d82693ef81a020503c35ce047cc2ea",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_06ec9e) trace_id=97d82693ef81a020503c35ce047cc2ea pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T11:10:00Z",
+     "level": "WARN",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "0826f94af685bc62c0d5fc0d6090f802",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_3fa7e3) trace_id=0826f94af685bc62c0d5fc0d6090f802 pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T11:12:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "9453fb5068401587beae2784ea8c4e80",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_c64434) trace_id=9453fb5068401587beae2784ea8c4e80 pod=notifier-da5703a94-36500 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T11:14:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-b0c43",
+     "trace_id": "97d82693ef81a020503c35ce047cc2ea",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_57e87e) trace_id=97d82693ef81a020503c35ce047cc2ea pod=notifier-da5703a94-b0c43 fn=send_sms"
+    },
+    {
+     "@timestamp": "2026-08-30T11:16:00Z",
+     "level": "ERROR",
+     "service": "notifier",
+     "kubernetes.pod_name": "notifier-da5703a94-36500",
+     "trace_id": "0826f94af685bc62c0d5fc0d6090f802",
+     "logger": "services.notifier.handler",
+     "message": "RateLimited: downstream SMS provider rate limited (account=acc_6de2be) trace_id=0826f94af685bc62c0d5fc0d6090f802 pod=notifier-da5703a94-36500 fn=send_sms"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-08-30T10:30:00Z",
+    "end": "2026-08-30T11:25:00Z"
+   },
+   "dm": {
+    "channel_id": "D53881EE9",
+    "ts": "1788088980.000570",
+    "user_name": "dan",
+    "text": "hey, are you seeing notification service failures? customers report RateLimited since about 10am",
+    "mode": 1
+   }
+  },
+  {
+   "id": "INC-009",
+   "service": "payments-api",
+   "team": "payments",
+   "error_class": "PaymentGatewayTimeout",
+   "error_sig": "PaymentGatewayTimeout: gateway did not respond within 30s",
+   "function": "charge",
+   "started_at": "2026-09-02T17:27:00Z",
+   "trace_ids": [
+    "6e29aec28930b46ce15d68e5691ecaaa",
+    "fc9cea1c190eb876e7e40ecadb7879a3",
+    "352191ca10a2c355f391251b954cf332"
+   ],
+   "pods": [
+    "payments-api-99988c8b3-57e26",
+    "payments-api-99988c8b3-5758c"
+   ],
+   "commit": "2e437f3dde3d9a26af62bdec9198cf6599946e24",
+   "jira": {
+    "key": "PAY-108",
+    "project": "PAY",
+    "summary": "payments-api: elevated 5xx after PaymentGatewayTimeout",
+    "issuetype": "Bug",
+    "priority": "P2",
+    "status": "In Progress",
+    "created": "2026-09-02T17:39:00Z",
+    "updated": "2026-09-02T23:27:00Z",
+    "reporter": "heidi",
+    "assignee": "bob",
+    "components": [
+     "payments-api"
+    ],
+    "labels": [
+     "incident",
+     "payments"
+    ],
+    "description": "Alert fired on payments-api at 2026-09-02T17:27:00Z.\n\nError: PaymentGatewayTimeout: gateway did not respond within 30s\nSample trace: trace_id=6e29aec28930b46ce15d68e5691ecaaa\nAffected pod: payments-api-99988c8b3-57e26\n\nCustomers saw failures in charge(). Slack discussion in #incidents. Runbook: payments-api runbook."
+   },
+   "pagerduty": {
+    "id": "Q8373D4D012CC8",
+    "incident_number": 4008,
+    "title": "[payments-api] PaymentGatewayTimeout rate above threshold",
+    "service_id": "PXYZ01",
+    "status": "acknowledged",
+    "urgency": "high",
+    "created_at": "2026-09-02T17:27:00Z",
+    "resolved_at": null,
+    "assignee": "bob"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1788370260.000008",
+    "messages": [
+     {
+      "user": "U48181ACD",
+      "user_name": "bob",
+      "ts": "1788370260.000080",
+      "text": "Pager went off for payments-api: PaymentGatewayTimeout. Looking now. Ticket PAY-108 incoming."
+     },
+     {
+      "user": "U48181ACD",
+      "user_name": "bob",
+      "ts": "1788370620.000081",
+      "text": "Seeing `PaymentGatewayTimeout: gateway did not respond within 30s` in logs, e.g. trace_id=6e29aec28930b46ce15d68e5691ecaaa on payments-api-99988c8b3-57e26"
+     },
+     {
+      "user": "U0FEBC363",
+      "user_name": "heidi",
+      "ts": "1788370800.000082",
+      "text": "Also trace_id=fc9cea1c190eb876e7e40ecadb7879a3 from a customer report, same error."
+     },
+     {
+      "user": "U48181ACD",
+      "user_name": "bob",
+      "ts": "1788371460.000083",
+      "text": "Suspect 2e437f3dde touched charge() yesterday. Rolling back."
+     },
+     {
+      "user": "U48181ACD",
+      "user_name": "bob",
+      "ts": "1788373560.000084",
+      "text": "Rollback done, error rate back to baseline. Will write up in PAY-108."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20056",
+    "title": "payments-api runbook",
+    "space": "PAYMENTS"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-09-02T17:22:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_532fca) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:24:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_564ba6) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:26:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "352191ca10a2c355f391251b954cf332",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1944a0) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:28:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_98ab12) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:30:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_990959) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:32:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "352191ca10a2c355f391251b954cf332",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_ae2f30) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:34:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1629d4) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:36:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_bf3896) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:38:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "352191ca10a2c355f391251b954cf332",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_b65616) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:40:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5c7dd5) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:42:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e4fa92) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:44:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "352191ca10a2c355f391251b954cf332",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_ceabe0) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:46:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_878eeb) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:48:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_770783) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:50:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "352191ca10a2c355f391251b954cf332",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5ae134) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:52:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_1e6f14) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:54:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_5b46bd) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:56:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "352191ca10a2c355f391251b954cf332",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_25d0db) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T17:58:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_07d3a9) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T18:00:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_e0037c) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T18:02:00Z",
+     "level": "WARN",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "352191ca10a2c355f391251b954cf332",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_fef95e) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T18:04:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "6e29aec28930b46ce15d68e5691ecaaa",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_7b7e9f) trace_id=6e29aec28930b46ce15d68e5691ecaaa pod=payments-api-99988c8b3-5758c fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T18:06:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-57e26",
+     "trace_id": "fc9cea1c190eb876e7e40ecadb7879a3",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_afe171) trace_id=fc9cea1c190eb876e7e40ecadb7879a3 pod=payments-api-99988c8b3-57e26 fn=charge"
+    },
+    {
+     "@timestamp": "2026-09-02T18:08:00Z",
+     "level": "ERROR",
+     "service": "payments-api",
+     "kubernetes.pod_name": "payments-api-99988c8b3-5758c",
+     "trace_id": "352191ca10a2c355f391251b954cf332",
+     "logger": "services.payments_api.handler",
+     "message": "PaymentGatewayTimeout: gateway did not respond within 30s (account=acc_67bf1a) trace_id=352191ca10a2c355f391251b954cf332 pod=payments-api-99988c8b3-5758c fn=charge"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-09-02T17:22:00Z",
+    "end": "2026-09-02T18:17:00Z"
+   },
+   "dm": {
+    "channel_id": "D53881EE9",
+    "ts": "1788372840.000580",
+    "user_name": "dan",
+    "text": "is payments healthy? a customer says card charges are hanging",
+    "mode": 2
+   }
+  },
+  {
+   "id": "INC-010",
+   "service": "checkout-web",
+   "team": "storefront",
+   "error_class": "SessionExpired",
+   "error_sig": "SessionExpired: session token expired mid-checkout",
+   "function": "submit_order",
+   "started_at": "2026-09-05T13:15:00Z",
+   "trace_ids": [
+    "0cd35128b73f7f6347b228358ad3a396",
+    "51c5d7ef17cb2b16e6d2026081b24cd8",
+    "b3122b6ee6c233a385763a88750850d7"
+   ],
+   "pods": [
+    "checkout-web-e8a4cc3a7-ab80e",
+    "checkout-web-e8a4cc3a7-a6140"
+   ],
+   "commit": "30a622bda97020b3c8326ac68c18a09087d392a7",
+   "jira": {
+    "key": "STF-119",
+    "project": "STF",
+    "summary": "checkout-web: elevated 5xx after SessionExpired",
+    "issuetype": "Bug",
+    "priority": "P1",
+    "status": "In Progress",
+    "created": "2026-09-05T13:27:00Z",
+    "updated": "2026-09-05T19:15:00Z",
+    "reporter": "dan",
+    "assignee": "carol",
+    "components": [
+     "checkout-web"
+    ],
+    "labels": [
+     "incident",
+     "storefront"
+    ],
+    "description": "Alert fired on checkout-web at 2026-09-05T13:15:00Z.\n\nError: SessionExpired: session token expired mid-checkout\nSample trace: trace_id=0cd35128b73f7f6347b228358ad3a396\nAffected pod: checkout-web-e8a4cc3a7-ab80e\n\nCustomers saw failures in submit_order(). Slack discussion in #incidents. Runbook: checkout-web runbook."
+   },
+   "pagerduty": {
+    "id": "Q3ACBCD9529DB7",
+    "incident_number": 4009,
+    "title": "[checkout-web] SessionExpired rate above threshold",
+    "service_id": "PABC02",
+    "status": "acknowledged",
+    "urgency": "high",
+    "created_at": "2026-09-05T13:15:00Z",
+    "resolved_at": null,
+    "assignee": "carol"
+   },
+   "slack": {
+    "channel": "#incidents",
+    "thread_ts": "1788614340.000009",
+    "messages": [
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1788614340.000090",
+      "text": "Pager went off for checkout-web: SessionExpired. Looking now. Ticket STF-119 incoming."
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1788614700.000091",
+      "text": "Seeing `SessionExpired: session token expired mid-checkout` in logs, e.g. trace_id=0cd35128b73f7f6347b228358ad3a396 on checkout-web-e8a4cc3a7-ab80e"
+     },
+     {
+      "user": "U2591E5F4",
+      "user_name": "dan",
+      "ts": "1788614880.000092",
+      "text": "Also trace_id=51c5d7ef17cb2b16e6d2026081b24cd8 from a customer report, same error."
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1788615540.000093",
+      "text": "Suspect 30a622bda9 touched submit_order() yesterday. Rolling back."
+     },
+     {
+      "user": "U28B92B56",
+      "user_name": "carol",
+      "ts": "1788617640.000094",
+      "text": "Rollback done, error rate back to baseline. Will write up in STF-119."
+     }
+    ]
+   },
+   "confluence": {
+    "page_id": "20063",
+    "title": "checkout-web runbook",
+    "space": "STOREFRONT"
+   },
+   "logs": [
+    {
+     "@timestamp": "2026-09-05T13:10:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "0cd35128b73f7f6347b228358ad3a396",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_060cf3) trace_id=0cd35128b73f7f6347b228358ad3a396 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:12:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "51c5d7ef17cb2b16e6d2026081b24cd8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_cd057a) trace_id=51c5d7ef17cb2b16e6d2026081b24cd8 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:14:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "b3122b6ee6c233a385763a88750850d7",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_1368c9) trace_id=b3122b6ee6c233a385763a88750850d7 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:16:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "0cd35128b73f7f6347b228358ad3a396",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_538de5) trace_id=0cd35128b73f7f6347b228358ad3a396 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:18:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "51c5d7ef17cb2b16e6d2026081b24cd8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_ad5330) trace_id=51c5d7ef17cb2b16e6d2026081b24cd8 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:20:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "b3122b6ee6c233a385763a88750850d7",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_8fe328) trace_id=b3122b6ee6c233a385763a88750850d7 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:22:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "0cd35128b73f7f6347b228358ad3a396",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_80ed65) trace_id=0cd35128b73f7f6347b228358ad3a396 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:24:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "51c5d7ef17cb2b16e6d2026081b24cd8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_363bc2) trace_id=51c5d7ef17cb2b16e6d2026081b24cd8 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:26:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "b3122b6ee6c233a385763a88750850d7",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_33a668) trace_id=b3122b6ee6c233a385763a88750850d7 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:28:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "0cd35128b73f7f6347b228358ad3a396",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_b8251a) trace_id=0cd35128b73f7f6347b228358ad3a396 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:30:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "51c5d7ef17cb2b16e6d2026081b24cd8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_be1558) trace_id=51c5d7ef17cb2b16e6d2026081b24cd8 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:32:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "b3122b6ee6c233a385763a88750850d7",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_f398e4) trace_id=b3122b6ee6c233a385763a88750850d7 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:34:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "0cd35128b73f7f6347b228358ad3a396",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_aa9da0) trace_id=0cd35128b73f7f6347b228358ad3a396 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:36:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "51c5d7ef17cb2b16e6d2026081b24cd8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_be8345) trace_id=51c5d7ef17cb2b16e6d2026081b24cd8 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:38:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "b3122b6ee6c233a385763a88750850d7",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_730d95) trace_id=b3122b6ee6c233a385763a88750850d7 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:40:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "0cd35128b73f7f6347b228358ad3a396",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_83e680) trace_id=0cd35128b73f7f6347b228358ad3a396 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:42:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "51c5d7ef17cb2b16e6d2026081b24cd8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_ba03d9) trace_id=51c5d7ef17cb2b16e6d2026081b24cd8 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:44:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "b3122b6ee6c233a385763a88750850d7",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_3e4d8c) trace_id=b3122b6ee6c233a385763a88750850d7 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:46:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "0cd35128b73f7f6347b228358ad3a396",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_e6f464) trace_id=0cd35128b73f7f6347b228358ad3a396 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:48:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "51c5d7ef17cb2b16e6d2026081b24cd8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_aecc9d) trace_id=51c5d7ef17cb2b16e6d2026081b24cd8 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:50:00Z",
+     "level": "WARN",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "b3122b6ee6c233a385763a88750850d7",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_59f265) trace_id=b3122b6ee6c233a385763a88750850d7 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:52:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "0cd35128b73f7f6347b228358ad3a396",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_f96474) trace_id=0cd35128b73f7f6347b228358ad3a396 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:54:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-ab80e",
+     "trace_id": "51c5d7ef17cb2b16e6d2026081b24cd8",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_0db46b) trace_id=51c5d7ef17cb2b16e6d2026081b24cd8 pod=checkout-web-e8a4cc3a7-ab80e fn=submit_order"
+    },
+    {
+     "@timestamp": "2026-09-05T13:56:00Z",
+     "level": "ERROR",
+     "service": "checkout-web",
+     "kubernetes.pod_name": "checkout-web-e8a4cc3a7-a6140",
+     "trace_id": "b3122b6ee6c233a385763a88750850d7",
+     "logger": "services.checkout_web.handler",
+     "message": "SessionExpired: session token expired mid-checkout (account=acc_90a51e) trace_id=b3122b6ee6c233a385763a88750850d7 pod=checkout-web-e8a4cc3a7-a6140 fn=submit_order"
+    }
+   ],
+   "metric_spike": {
+    "start": "2026-09-05T13:10:00Z",
+    "end": "2026-09-05T14:05:00Z"
+   },
+   "dm": {
+    "channel_id": "D74871682",
+    "ts": "1788616500.000590",
+    "user_name": "frank",
+    "text": "hey, are you on STF-119? support is getting pinged about it and I have nothing to tell them",
+    "mode": 0
+   }
+  }
+ ],
+ "noise": {
+  "jira": [
+   {
+    "key": "PAY-109",
+    "project": "PAY",
+    "summary": "Refactor config loading (payments-api)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "Done",
+    "created": "2026-08-18T09:00:00Z",
+    "updated": "2026-09-04T09:00:00Z",
+    "reporter": "heidi",
+    "assignee": "bob",
+    "components": [
+     "payments-api"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on payments-api. No incident."
+   },
+   {
+    "key": "STF-120",
+    "project": "STF",
+    "summary": "Upgrade dependency (checkout-web)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "To Do",
+    "created": "2026-08-19T09:00:00Z",
+    "updated": "2026-09-05T09:00:00Z",
+    "reporter": "carol",
+    "assignee": "dan",
+    "components": [
+     "checkout-web"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on checkout-web. No incident."
+   },
+   {
+    "key": "SUP-106",
+    "project": "SUP",
+    "summary": "Add metrics dashboard (inventory-sync)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "In Progress",
+    "created": "2026-08-16T09:00:00Z",
+    "updated": "2026-09-02T09:00:00Z",
+    "reporter": "bob",
+    "assignee": "frank",
+    "components": [
+     "inventory-sync"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on inventory-sync. No incident."
+   },
+   {
+    "key": "PLAT-105",
+    "project": "PLAT",
+    "summary": "Refactor config loading (notifier)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "Done",
+    "created": "2026-08-14T09:00:00Z",
+    "updated": "2026-09-06T09:00:00Z",
+    "reporter": "heidi",
+    "assignee": "heidi",
+    "components": [
+     "notifier"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on notifier. No incident."
+   },
+   {
+    "key": "PAY-110",
+    "project": "PAY",
+    "summary": "Upgrade dependency (payments-api)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "To Do",
+    "created": "2026-09-02T09:00:00Z",
+    "updated": "2026-09-04T09:00:00Z",
+    "reporter": "heidi",
+    "assignee": "alice",
+    "components": [
+     "payments-api"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on payments-api. No incident."
+   },
+   {
+    "key": "STF-121",
+    "project": "STF",
+    "summary": "Upgrade dependency (checkout-web)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "Done",
+    "created": "2026-08-25T09:00:00Z",
+    "updated": "2026-09-04T09:00:00Z",
+    "reporter": "heidi",
+    "assignee": "dan",
+    "components": [
+     "checkout-web"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on checkout-web. No incident."
+   },
+   {
+    "key": "SUP-107",
+    "project": "SUP",
+    "summary": "Flaky test in CI (inventory-sync)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "Done",
+    "created": "2026-08-14T09:00:00Z",
+    "updated": "2026-09-02T09:00:00Z",
+    "reporter": "heidi",
+    "assignee": "frank",
+    "components": [
+     "inventory-sync"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on inventory-sync. No incident."
+   },
+   {
+    "key": "PLAT-106",
+    "project": "PLAT",
+    "summary": "Add metrics dashboard (notifier)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "Done",
+    "created": "2026-08-06T09:00:00Z",
+    "updated": "2026-09-05T09:00:00Z",
+    "reporter": "alice",
+    "assignee": "grace",
+    "components": [
+     "notifier"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on notifier. No incident."
+   },
+   {
+    "key": "PAY-111",
+    "project": "PAY",
+    "summary": "Refactor config loading (payments-api)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "To Do",
+    "created": "2026-08-26T09:00:00Z",
+    "updated": "2026-09-03T09:00:00Z",
+    "reporter": "grace",
+    "assignee": "bob",
+    "components": [
+     "payments-api"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on payments-api. No incident."
+   },
+   {
+    "key": "STF-122",
+    "project": "STF",
+    "summary": "Flaky test in CI (checkout-web)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "To Do",
+    "created": "2026-08-08T09:00:00Z",
+    "updated": "2026-09-05T09:00:00Z",
+    "reporter": "grace",
+    "assignee": "dan",
+    "components": [
+     "checkout-web"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on checkout-web. No incident."
+   },
+   {
+    "key": "SUP-108",
+    "project": "SUP",
+    "summary": "Add metrics dashboard (inventory-sync)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "In Progress",
+    "created": "2026-08-30T09:00:00Z",
+    "updated": "2026-09-06T09:00:00Z",
+    "reporter": "erin",
+    "assignee": "frank",
+    "components": [
+     "inventory-sync"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on inventory-sync. No incident."
+   },
+   {
+    "key": "PLAT-107",
+    "project": "PLAT",
+    "summary": "Refactor config loading (notifier)",
+    "issuetype": "Task",
+    "priority": "P3",
+    "status": "Done",
+    "created": "2026-08-31T09:00:00Z",
+    "updated": "2026-09-05T09:00:00Z",
+    "reporter": "dan",
+    "assignee": "grace",
+    "components": [
+     "notifier"
+    ],
+    "labels": [
+     "chore"
+    ],
+    "description": "Routine work on notifier. No incident."
+   }
+  ],
+  "slack": [
+   {
+    "channel": "#general",
+    "user": "U28B92B56",
+    "user_name": "carol",
+    "ts": "1786567320.000900",
+    "text": "deploying to staging"
+   },
+   {
+    "channel": "#incidents",
+    "user": "U0FEBC363",
+    "user_name": "heidi",
+    "ts": "1786742280.000901",
+    "text": "lunch?"
+   },
+   {
+    "channel": "#payments-alerts",
+    "user": "UFD1CF5E2",
+    "user_name": "grace",
+    "ts": "1788734340.000902",
+    "text": "PR review please"
+   },
+   {
+    "channel": "#platform-alerts",
+    "user": "U28B92B56",
+    "user_name": "carol",
+    "ts": "1788576060.000903",
+    "text": "standup in 5"
+   },
+   {
+    "channel": "#incidents",
+    "user": "U0FEBC363",
+    "user_name": "heidi",
+    "ts": "1788823500.000904",
+    "text": "reminder: retro at 3"
+   },
+   {
+    "channel": "#team-payments",
+    "user": "U48181ACD",
+    "user_name": "bob",
+    "ts": "1788405900.000905",
+    "text": "lunch?"
+   },
+   {
+    "channel": "#storefront-alerts",
+    "user": "U48181ACD",
+    "user_name": "bob",
+    "ts": "1786925400.000906",
+    "text": "lunch?"
+   },
+   {
+    "channel": "#platform-alerts",
+    "user": "U522B276A",
+    "user_name": "alice",
+    "ts": "1786296960.000907",
+    "text": "deploying to staging"
+   },
+   {
+    "channel": "#team-supply",
+    "user": "U48181ACD",
+    "user_name": "bob",
+    "ts": "1787796060.000908",
+    "text": "lunch?"
+   },
+   {
+    "channel": "#storefront-alerts",
+    "user": "UFD1CF5E2",
+    "user_name": "grace",
+    "ts": "1786590960.000909",
+    "text": "anyone seen the dashboard link?"
+   },
+   {
+    "channel": "#team-platform",
+    "user": "U86A8C2DA",
+    "user_name": "frank",
+    "ts": "1788372420.000910",
+    "text": "reminder: retro at 3"
+   },
+   {
+    "channel": "#team-storefront",
+    "user": "U0FEBC363",
+    "user_name": "heidi",
+    "ts": "1788383100.000911",
+    "text": "deploying to staging"
+   },
+   {
+    "channel": "#general",
+    "user": "U86A8C2DA",
+    "user_name": "frank",
+    "ts": "1787187180.000912",
+    "text": "standup in 5"
+   },
+   {
+    "channel": "#payments-alerts",
+    "user": "U522B276A",
+    "user_name": "alice",
+    "ts": "1786929780.000913",
+    "text": "deploying to staging"
+   },
+   {
+    "channel": "#team-supply",
+    "user": "U522B276A",
+    "user_name": "alice",
+    "ts": "1788644460.000914",
+    "text": "lunch?"
+   },
+   {
+    "channel": "#supply-alerts",
+    "user": "U86A8C2DA",
+    "user_name": "frank",
+    "ts": "1786661340.000915",
+    "text": "deploying to staging"
+   },
+   {
+    "channel": "#team-supply",
+    "user": "U86A8C2DA",
+    "user_name": "frank",
+    "ts": "1787021460.000916",
+    "text": "deploying to staging"
+   },
+   {
+    "channel": "#storefront-alerts",
+    "user": "UFD1CF5E2",
+    "user_name": "grace",
+    "ts": "1786998780.000917",
+    "text": "reminder: retro at 3"
+   },
+   {
+    "channel": "#platform-alerts",
+    "user": "U522B276A",
+    "user_name": "alice",
+    "ts": "1785879000.000918",
+    "text": "anyone seen the dashboard link?"
+   },
+   {
+    "channel": "#storefront-alerts",
+    "user": "U86A8C2DA",
+    "user_name": "frank",
+    "ts": "1788214980.000919",
+    "text": "lunch?"
+   },
+   {
+    "channel": "#storefront-alerts",
+    "user": "U48181ACD",
+    "user_name": "bob",
+    "ts": "1787011920.000920",
+    "text": "anyone seen the dashboard link?"
+   },
+   {
+    "channel": "#storefront-alerts",
+    "user": "U0FEBC363",
+    "user_name": "heidi",
+    "ts": "1785805080.000921",
+    "text": "standup in 5"
+   },
+   {
+    "channel": "#platform-alerts",
+    "user": "U48181ACD",
+    "user_name": "bob",
+    "ts": "1786405800.000922",
+    "text": "standup in 5"
+   },
+   {
+    "channel": "#storefront-alerts",
+    "user": "U0FEBC363",
+    "user_name": "heidi",
+    "ts": "1786751400.000923",
+    "text": "standup in 5"
+   },
+   {
+    "channel": "#platform-alerts",
+    "user": "U48181ACD",
+    "user_name": "bob",
+    "ts": "1787963100.000924",
+    "text": "standup in 5"
+   },
+   {
+    "channel": "#general",
+    "user": "U28B92B56",
+    "user_name": "carol",
+    "ts": "1786647660.000925",
+    "text": "deploying to staging"
+   },
+   {
+    "channel": "#team-platform",
+    "user": "U0FEBC363",
+    "user_name": "heidi",
+    "ts": "1786589520.000926",
+    "text": "PR review please"
+   },
+   {
+    "channel": "#team-storefront",
+    "user": "U86A8C2DA",
+    "user_name": "frank",
+    "ts": "1786584900.000927",
+    "text": "deploying to staging"
+   },
+   {
+    "channel": "#incidents",
+    "user": "U522B276A",
+    "user_name": "alice",
+    "ts": "1786326420.000928",
+    "text": "deploying to staging"
+   },
+   {
+    "channel": "#team-payments",
+    "user": "U2591E5F4",
+    "user_name": "dan",
+    "ts": "1786900560.000929",
+    "text": "deploying to staging"
+   }
+  ]
+ },
+ "confluence_pages": [
+  {
+   "id": "20000",
+   "title": "payments-api runbook",
+   "space": "PAYMENTS",
+   "labels": [
+    "runbook",
+    "payments-api"
+   ],
+   "created": "2026-06-04T09:00:00Z",
+   "last_modified": "2026-08-06T09:00:00Z",
+   "body": "h1. payments-api runbook\n\nOwned by team payments (alice, bob). Alerts go to #payments-alerts; incidents are discussed in #incidents.\n\nh2. Known failure modes\n\nh3. PaymentGatewayTimeout\nSymptom: log lines containing 'PaymentGatewayTimeout: gateway did not respond within 30s' from charge().\nCheck: error rate panel for service=payments-api; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of payments-api; if persists, page payments on-call.\n\nh3. LedgerMismatch\nSymptom: log lines containing 'LedgerMismatch: ledger balance mismatch for account' from reconcile().\nCheck: error rate panel for service=payments-api; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of payments-api; if persists, page payments on-call.\n\nh2. Dashboards\nChronosphere: rate(http_requests_total{service=\"payments-api\",code=~\"5..\"}[5m])\n"
+  },
+  {
+   "id": "20007",
+   "title": "checkout-web runbook",
+   "space": "STOREFRONT",
+   "labels": [
+    "runbook",
+    "checkout-web"
+   ],
+   "created": "2026-06-04T09:00:00Z",
+   "last_modified": "2026-08-06T09:00:00Z",
+   "body": "h1. checkout-web runbook\n\nOwned by team storefront (carol, dan). Alerts go to #storefront-alerts; incidents are discussed in #incidents.\n\nh2. Known failure modes\n\nh3. CartSerializationError\nSymptom: log lines containing 'CartSerializationError: failed to serialize cart' from render_cart().\nCheck: error rate panel for service=checkout-web; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of checkout-web; if persists, page storefront on-call.\n\nh3. SessionExpired\nSymptom: log lines containing 'SessionExpired: session token expired mid-checkout' from submit_order().\nCheck: error rate panel for service=checkout-web; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of checkout-web; if persists, page storefront on-call.\n\nh2. Dashboards\nChronosphere: rate(http_requests_total{service=\"checkout-web\",code=~\"5..\"}[5m])\n"
+  },
+  {
+   "id": "20014",
+   "title": "inventory-sync runbook",
+   "space": "SUPPLY",
+   "labels": [
+    "runbook",
+    "inventory-sync"
+   ],
+   "created": "2026-06-04T09:00:00Z",
+   "last_modified": "2026-08-06T09:00:00Z",
+   "body": "h1. inventory-sync runbook\n\nOwned by team supply (erin, frank). Alerts go to #supply-alerts; incidents are discussed in #incidents.\n\nh2. Known failure modes\n\nh3. UpstreamSchemaDrift\nSymptom: log lines containing 'UpstreamSchemaDrift: unexpected field in warehouse feed' from ingest_feed().\nCheck: error rate panel for service=inventory-sync; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of inventory-sync; if persists, page supply on-call.\n\nh3. StaleSnapshot\nSymptom: log lines containing 'StaleSnapshot: snapshot older than threshold' from publish_snapshot().\nCheck: error rate panel for service=inventory-sync; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of inventory-sync; if persists, page supply on-call.\n\nh2. Dashboards\nChronosphere: rate(http_requests_total{service=\"inventory-sync\",code=~\"5..\"}[5m])\n"
+  },
+  {
+   "id": "20021",
+   "title": "notifier runbook",
+   "space": "PLATFORM",
+   "labels": [
+    "runbook",
+    "notifier"
+   ],
+   "created": "2026-06-04T09:00:00Z",
+   "last_modified": "2026-08-06T09:00:00Z",
+   "body": "h1. notifier runbook\n\nOwned by team platform (grace, heidi). Alerts go to #platform-alerts; incidents are discussed in #incidents.\n\nh2. Known failure modes\n\nh3. TemplateNotFound\nSymptom: log lines containing 'TemplateNotFound: no template registered for event' from render().\nCheck: error rate panel for service=notifier; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of notifier; if persists, page platform on-call.\n\nh3. RateLimited\nSymptom: log lines containing 'RateLimited: downstream SMS provider rate limited' from send_sms().\nCheck: error rate panel for service=notifier; search logs for the trace_id in the alert.\nRemediation: roll back the latest deploy of notifier; if persists, page platform on-call.\n\nh2. Dashboards\nChronosphere: rate(http_requests_total{service=\"notifier\",code=~\"5..\"}[5m])\n"
+  },
+  {
+   "id": "40004",
+   "title": "Team payments on-call guide",
+   "space": "PAYMENTS",
+   "labels": [
+    "oncall"
+   ],
+   "created": "2026-05-05T09:00:00Z",
+   "last_modified": "2026-07-24T09:00:00Z",
+   "body": "h1. Team payments on-call\n\nRotation in PagerDuty. Escalate in #team-payments. Services: payments-api"
+  },
+  {
+   "id": "40005",
+   "title": "Team storefront on-call guide",
+   "space": "STOREFRONT",
+   "labels": [
+    "oncall"
+   ],
+   "created": "2026-05-05T09:00:00Z",
+   "last_modified": "2026-07-24T09:00:00Z",
+   "body": "h1. Team storefront on-call\n\nRotation in PagerDuty. Escalate in #team-storefront. Services: checkout-web"
+  },
+  {
+   "id": "40006",
+   "title": "Team supply on-call guide",
+   "space": "SUPPLY",
+   "labels": [
+    "oncall"
+   ],
+   "created": "2026-05-05T09:00:00Z",
+   "last_modified": "2026-07-24T09:00:00Z",
+   "body": "h1. Team supply on-call\n\nRotation in PagerDuty. Escalate in #team-supply. Services: inventory-sync"
+  },
+  {
+   "id": "40007",
+   "title": "Team platform on-call guide",
+   "space": "PLATFORM",
+   "labels": [
+    "oncall"
+   ],
+   "created": "2026-05-05T09:00:00Z",
+   "last_modified": "2026-07-24T09:00:00Z",
+   "body": "h1. Team platform on-call\n\nRotation in PagerDuty. Escalate in #team-platform. Services: notifier"
+  }
+ ]
+}
