@@ -10,6 +10,9 @@
         cassettes/<flow>.json     recorded responses for `mcp-explorer test`
         dataflow/<trace>.json     each trace's mined dataflow edges, keyed by its size and mtime (a cache the
                                   candidate miner rebuilds on demand; safe to delete)
+        dataflow/index.json       ONE file: every trace reduced to what mining reads off it (size, mtime, session
+                                  id, prompt, the server.tool of each call), rebuilt incrementally so listing
+                                  candidates never re-parses the workspace's traces (also safe to delete)
         catalog.yaml              the entity catalog (the foreign-key hub the extractors use)
         lifecycle.sqlite          promotion state and counters (crystal/flow/lifecycle.py)
         feedback.jsonl            the "this didn't help" queue (`mcp-explorer repair`)

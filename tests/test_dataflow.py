@@ -5,6 +5,8 @@ in-process run of an induced flow against the sim servers (CRYSTAL_INPROCESS=1, 
 """
 import asyncio
 import json
+import os
+from pathlib import Path
 
 import pytest
 
@@ -221,3 +223,158 @@ def test_cli_defaults_to_dataflow_and_accepts_sequences(capsys, monkeypatch):
     assert "dataflow" in out and "--ids:jira_key-->" in out
     assert cli.main(["candidates", "--top", "1", "--fast", "--sequences"]) == 0
     assert "sequence" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------- the trace index
+def _counting_loader(monkeypatch):
+    """Record every trace file the store is asked to parse."""
+    from crystal.trace import store as trace_store
+    seen: list[str] = []
+    real = trace_store.load_session
+
+    def spy(path):
+        seen.append(Path(path).stem)
+        return real(path)
+
+    monkeypatch.setattr(trace_store, "load_session", spy)
+    return seen
+
+
+def _two_traces(tmp_path):
+    traces = tmp_path / "traces"
+    traces.mkdir()
+    _write_trace(traces / "one.jsonl", [_ticket_call(), _logs_call()], {"key": "ZZ-42"})
+    _write_trace(traces / "two.jsonl", [_ticket_call(), _logs_call(), _read_call()], {"key": "ZZ-42"})
+    return traces, tmp_path / "dataflow" / "index.json"
+
+
+def test_the_index_is_written_once_and_reused(tmp_path, monkeypatch):
+    traces, idx_path = _two_traces(tmp_path)
+    seen = _counting_loader(monkeypatch)
+
+    cold = df.build_index(traces, path=idx_path)
+    assert (cold.parsed, cold.reused, cold.dropped) == (2, 0, 0)
+    assert sorted(seen) == ["one", "two"]
+    assert idx_path.exists()
+    blob = json.loads(idx_path.read_text())
+    assert blob["v"] == df.INDEX_VERSION and blob["dir"] == str(traces)
+    assert set(blob["traces"]) == {"one", "two"}
+    assert blob["traces"]["one"]["nodes"] == ["jira.get_issue", "logz.search_logs"]
+    assert blob["traces"]["two"]["n_calls"] == 3
+
+    seen.clear()
+    warm = df.build_index(traces, path=idx_path)
+    assert (warm.parsed, warm.reused, warm.dropped) == (0, 2, 0)
+    assert seen == [], "a warm index parses nothing"
+    assert [e.session_id for e in warm.episodes()] == ["one", "two"]
+
+
+def test_a_changed_trace_reparses_only_that_one(tmp_path, monkeypatch):
+    traces, idx_path = _two_traces(tmp_path)
+    df.build_index(traces, path=idx_path)
+    seen = _counting_loader(monkeypatch)
+
+    # a touch that changes only the mtime is a change: the trace could have been rewritten byte for byte
+    p = traces / "one.jsonl"
+    st = p.stat()
+    os.utime(p, (st.st_atime, st.st_mtime + 10))
+    idx = df.build_index(traces, path=idx_path)
+    assert seen == ["one"] and (idx.parsed, idx.reused) == (1, 1)
+
+    # and so is altering its content
+    seen.clear()
+    _write_trace(traces / "two.jsonl", [_ticket_call(), _logs_call()], {"key": "ZZ-42"})
+    idx = df.build_index(traces, path=idx_path)
+    assert seen == ["two"] and (idx.parsed, idx.reused) == (1, 1)
+    assert idx.entries["two"].nodes == ["jira.get_issue", "logz.search_logs"]
+    assert json.loads(idx_path.read_text())["traces"]["two"]["n_calls"] == 2
+
+
+def test_a_deleted_trace_is_dropped_from_the_index(tmp_path, monkeypatch):
+    traces, idx_path = _two_traces(tmp_path)
+    df.build_index(traces, path=idx_path)
+    (traces / "two.jsonl").unlink()
+    seen = _counting_loader(monkeypatch)
+
+    idx = df.build_index(traces, path=idx_path)
+    assert (idx.parsed, idx.reused, idx.dropped) == (0, 1, 1)
+    assert seen == []
+    assert set(json.loads(idx_path.read_text())["traces"]) == {"one"}
+    assert [e.stem for e in idx.episodes()] == ["one"]
+
+
+def test_mining_from_the_index_matches_mining_from_full_episodes(sim_candidates):
+    """The whole point of the index: the same candidates, byte for byte, without reading a trace."""
+    from crystal.extract.catalog import load_catalog
+    catalog = load_catalog()
+    graphs, lite_cands = sim_candidates
+    assert all(isinstance(g, df.LiteGraph) for g in graphs), "the sim is mined from the index"
+    full = df.mine(df.build_graphs(df.load_episodes(SIM_STATE.traces), catalog, None, None))
+    assert json.dumps([c.view() for c in full], sort_keys=True) == \
+           json.dumps([c.view() for c in lite_cands], sort_keys=True)
+
+
+def test_a_warm_index_loads_no_trace_until_a_candidate_is_induced(sim_candidates):
+    """Mining reads nothing; `slice_sessions` reads exactly the episodes of the candidate being induced."""
+    graphs = df.episode_graphs(SIM_STATE.traces)
+    assert graphs and all(g.episode is None for g in graphs)   # even a cold pass releases what it parsed
+    cands = df.mine(graphs)
+    top = cands[0].sample(3)
+    assert len(top.slice_sessions()) == 3
+    assert sum(1 for g in graphs if g.episode is not None) == 3, "only the sampled episodes were parsed"
+
+
+def test_induced_flow_from_the_index_runs_on_an_unseen_ticket():
+    """The lazy load has to give the inducer the same calls a full parse would: induce off index-mined candidates
+    and run the flow in process against the sim on a ticket no trace mentions."""
+    from crystal.flow.runner import FlowRunner
+    from crystal.mcp_client import ServerPool
+    cands = df.mine(df.episode_graphs(SIM_STATE.traces))
+    flow, report = induce_candidate(cands[0], "mined-from-index")
+    assert not report.get("unresolved"), report["unresolved"]
+    assert flow["inputs"]["key"]["type"] == "jira_key"
+
+    async def go():
+        async with ServerPool() as pool:
+            return await FlowRunner(pool).run(flow, {"key": "STF-116"}, save=False)
+
+    rec = asyncio.run(go())
+    assert rec["status"] == "ok", rec.get("error")
+    assert not {s["id"]: s.get("error") for s in rec["steps"] if s.get("error")}
+    assert sum(s.get("hits") or 0 for s in rec["steps"]) > 0
+
+
+def test_cache_status_never_parses_a_trace(monkeypatch):
+    """`/candidates` asks this on every poll, with 9,000 episodes behind it: it answers from the index and the
+    presence of each edge file, so no trace may be opened."""
+    df.episode_graphs(SIM_STATE.traces)                # warm the index and the edge cache
+    warm = df.cache_status(SIM_STATE.traces)
+    assert warm["episodes"] == 52 and warm["missing"] == 0
+
+    from crystal.induce import mining as mining_mod
+    from crystal.trace import store as trace_store
+
+    def refuse(*a, **kw):
+        raise AssertionError("cache_status parsed a trace")
+
+    monkeypatch.setattr(trace_store, "load_session", refuse)
+    monkeypatch.setattr(trace_store, "load_sessions", refuse)
+    monkeypatch.setattr(mining_mod, "load_sessions", refuse)
+    assert df.cache_status(SIM_STATE.traces) == warm
+
+
+def test_a_stale_edge_file_still_counts_as_missing(tmp_path):
+    """The cheap freshness check reads only the header of an edge file, so it must still notice a fingerprint or
+    a trace that moved -- otherwise the page would claim the analysis is done and then block in the request."""
+    traces, idx_path = _two_traces(tmp_path)
+    cdir = tmp_path / "dataflow"
+    idx = df.build_index(traces, path=idx_path)
+    cache = EdgeCache(dir=cdir, fingerprint="fp")
+    for e in idx.episodes():
+        cache.put_entry(e, df.extract_call_edges(df.load_trace_episode(Path(e.path)), {}))
+    assert all(cache.fresh_entry(e) for e in idx.episodes())
+    assert not any(EdgeCache(dir=cdir, fingerprint="other").fresh_entry(e) for e in idx.episodes())
+
+    _write_trace(traces / "one.jsonl", [_ticket_call(), _logs_call(), _read_call()], {"key": "ZZ-42"})
+    idx = df.build_index(traces, path=idx_path)
+    assert {e.stem: cache.fresh_entry(e) for e in idx.episodes()} == {"one": False, "two": True}
