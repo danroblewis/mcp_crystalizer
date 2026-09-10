@@ -323,3 +323,24 @@ and store it in the flow YAML: `use_case` (when a person reaches for this flow),
 tools and extract types; the agent writes the prose and the judgment. The UI shows the card in the catalog and at the top
 of the dossier, and `expected_outputs` doubles as acceptance criteria: the run page opens with "found N of M expected
 things" and names the gaps, which makes "This didn't help" specific. Cards regenerate on repair so they never drift.
+
+## Real-codebase experiments (2026-09-10)
+
+Two real workspaces, each with one real Claude Code session recorded through the hook, crystallized with no LLM, and
+re-run with no AI against the real servers.
+
+| Workspace | Servers | Agent run | Crystallized flow |
+|---|---|---|---|
+| `aabbcdl/AgentArena` (stand-in: the requested `kadajett/AgentArena` returns 404) | github (npx, no token), git, code, deepwiki | 14 calls, $1.50 | `codebase-agentarena`: 13 steps, runs end to end; PRs, issues, commits, PR files, README |
+| `modelcontextprotocol/python-sdk` | github, deepwiki (http), context7 (http), git, code | 12 calls, $1.31 | `codebase-python-sdk`: 11 steps incl. a DeepWiki answer, 15 merged PRs, a 4-file fan-out |
+
+Findings:
+- The agent knew the repo owner/name without any tool call (Claude Code shows it the git remote). Single-session
+  induction bound `owner` to the first commit author, a plausible-but-wrong coincidence. Fix: workspace metadata
+  (remote owner/name, from `git remote`) is now a first-class binding source (`{{ workspace.repo_owner }}`).
+- The `question` input is prose; nothing in the flow binds to it. A codebase flow is really one flow per question
+  shape ("what are the open PRs about", "how does X work"); the trigger should carry a question type, not free text.
+- No renderers exist yet for GitHub issue/PR results; the dossier falls back to JSON cards, and the headline is
+  incident-shaped. The dossier needs a "codebase" profile: repo facts, open PRs, recent commits, files that matter.
+- DeepWiki only serves indexed repos; Context7 and DeepWiki need no auth; the GitHub server reads public repos
+  without a token (rate-limited).
