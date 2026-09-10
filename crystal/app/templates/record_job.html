@@ -1,0 +1,53 @@
+{% extends "base.html" %}{% block title %}Recording {{ j.job }}{% endblock %}{% block body %}
+{% if not s.done %}<noscript><meta http-equiv="refresh" content="5"></noscript>{% endif %}
+<div class="kicker"><a href="/record">Record</a> · <span class="mono">{{ j.job }}</span> · trigger <b class="sub">{{ j.trigger }}</b> · budget ${{ j.budget }}{% if j.model %} · model {{ j.model }}{% endif %} · session <span class="mono">{{ j.session_id }}</span></div>
+<h1 style="margin-top:8px">{{ j.question }}</h1>
+{% if msg %}<div class="notice">{{ msg }}</div>{% endif %}
+<div class="facts" id="facts">
+<div><dt>Status</dt><dd><span class="pill {{ 'ok' if j.status == 'done' and not j.is_error else ('draft' if j.status == 'running' else 'bad') }}" id="status-pill">{{ j.status }}{{ ' (agent reported an error)' if j.status == 'done' and j.is_error }}</span>{% if not s.done %} <span class="muted small">Claude Code is running; this page follows the trace.</span>{% endif %}</dd></div>
+<div><dt>Elapsed</dt><dd><span id="elapsed">{{ s.elapsed_s }}</span>s</dd></div>
+<div><dt>Calls recorded</dt><dd><span id="n-calls">{{ s.n_calls }}</span></dd></div>
+<div><dt>Cost</dt><dd id="cost">{% if s.cost_usd is not none %}${{ '%.4f' % s.cost_usd }}{% else %}<span class="muted">{{ 'not reported' if s.done else 'pending' }}</span>{% endif %}</dd></div>
+<div><dt>Turns</dt><dd id="turns">{{ s.num_turns if s.num_turns is not none else '' }}</dd></div>
+<div><dt>Trace</dt><dd id="trace-link">{% if s.trace_url %}<a href="{{ s.trace_url }}">dossier of this session</a> · <a href="/traces/{{ j.session_id }}/json">raw jsonl</a>{% else %}<span class="muted">{{ 'nothing recorded' if s.done else 'no calls yet' }}</span>{% endif %}</dd></div>
+</div>
+{% if j.error %}<div class="notice" style="background:#fdf2f2;border-color:#f3c0c0"><b>Error</b><pre class="excerpt" style="margin:4px 0 0">{{ j.error }}</pre></div>{% endif %}
+{% if s.done %}
+<div class="flowcard" style="margin-top:16px"><h3>Induce a flow from this session</h3>
+{% if j.induced %}<p>Induced <a href="/flows/{{ j.induced.flow }}"><b>{{ j.induced.flow }}</b></a> from {{ j.induced.sessions }} session(s) of trigger <code>{{ j.trigger }}</code> as a draft{% if j.induced.unresolved %} ({{ j.induced.unresolved }} unresolved){% endif %}. <a href="/flows/{{ j.induced.flow }}/yaml">YAML</a></p>
+<form method="post" action="/record/{{ j.job }}/induce" style="display:inline"><button type="submit" class="secondary">Induce again (new version)</button></form>
+{% elif s.n_calls %}<p class="muted">Compiles this session and every earlier session of trigger <code>{{ j.trigger }}</code> into <code>{{ j.trigger | replace('_', '-') }}.v&lt;N&gt;.yaml</code> (status draft). No AI.</p>
+<form method="post" action="/record/{{ j.job }}/induce"><button type="submit">Induce a flow from this session</button></form>
+{% else %}<p class="muted">The session recorded no MCP calls, so there is nothing to induce.</p>{% endif %}</div>
+{% endif %}
+<h2>Agent's final message</h2>
+<pre class="excerpt" id="result" style="max-width:100ch;white-space:pre-wrap">{{ s.result if s.result else ('' if s.done else '(waiting for the agent to finish)') }}</pre>
+<h2>Calls <span class="muted small" style="font-weight:400">the MCP calls the hook recorded, oldest first{% if not s.done %} · updates every 2s, or <a href="">refresh</a>{% endif %}</span></h2>
+<table id="calls"><thead><tr><th>#</th><th>time</th><th>tool</th><th>input</th><th class="n">ms</th></tr></thead><tbody>
+{% for c in s.calls %}<tr{% if c.is_error %} style="color:var(--bad)"{% endif %}><td>{{ c.seq }}</td><td class="small">{{ c.ts }}</td><td class="mono">{{ c.server }}.{{ c.tool }}</td><td class="mono small">{{ c.input }}</td><td class="n small">{{ c.duration_ms | round | int if c.duration_ms else '' }}</td></tr>{% endfor %}
+</tbody></table>
+{% if not s.calls %}<p class="muted" id="no-calls">No calls yet.</p>{% endif %}
+<details class="more" style="margin-top:16px"><summary>prompt sent to the agent</summary><pre class="excerpt">{{ prompt }}</pre></details>
+{% if not s.done %}
+<script>
+(function () {
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); };
+  var tick = function () {
+    fetch('/record/{{ j.job }}/status', {cache: 'no-store'}).then(function (r) { return r.json(); }).then(function (s) {
+      if (s.done) { location.reload(); return; }
+      document.getElementById('elapsed').textContent = s.elapsed_s;
+      document.getElementById('n-calls').textContent = s.n_calls;
+      if (s.trace_url) { document.getElementById('trace-link').innerHTML = '<a href="' + s.trace_url + '">dossier of this session</a>'; }
+      var rows = s.calls.map(function (c) {
+        return '<tr' + (c.is_error ? ' style="color:var(--bad)"' : '') + '><td>' + c.seq + '</td><td class="small">' + esc(c.ts) + '</td><td class="mono">' + esc(c.server) + '.' + esc(c.tool) + '</td><td class="mono small">' + esc(c.input) + '</td><td class="n small">' + (c.duration_ms ? Math.round(c.duration_ms) : '') + '</td></tr>';
+      }).join('');
+      document.querySelector('#calls tbody').innerHTML = rows;
+      var nc = document.getElementById('no-calls'); if (nc && s.n_calls) { nc.remove(); }
+      setTimeout(tick, 2000);
+    }).catch(function () { setTimeout(tick, 4000); });
+  };
+  setTimeout(tick, 2000);
+})();
+</script>
+{% endif %}
+{% endblock %}

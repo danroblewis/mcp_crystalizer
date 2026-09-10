@@ -120,14 +120,12 @@ def test_driver_builds_a_workspace_command(tmp_path, monkeypatch):
     monkeypatch.setenv("CRYSTAL_WORKSPACE", str(repo))
     seen = {}
 
-    class Proc:
-        returncode, stdout, stderr = 0, json.dumps({"result": "done", "total_cost_usd": 0.01, "num_turns": 1}), ""
-
-    def fake_run(cmd, cwd=None, env=None, capture_output=True, text=True):
+    def fake_launch(cmd, cwd, env, on_start=None):
         seen.update(cmd=cmd, cwd=cwd, env=env, config=json.loads(Path(cmd[cmd.index("--mcp-config") + 1]).read_text()),
                     settings=json.loads(Path(cmd[cmd.index("--settings") + 1]).read_text()))
-        return Proc()
-    monkeypatch.setattr(driver.subprocess, "run", fake_run)
+        return {"returncode": 0, "stdout": json.dumps({"result": "done", "total_cost_usd": 0.01, "num_turns": 1}), "stderr": "", "pid": 4242}
+    monkeypatch.setattr(driver, "launch", fake_launch)     # the one spawn seam; nothing real is started
+    monkeypatch.delenv("CRYSTAL_NO_AGENT")                  # the suite-wide refusal, lifted for this patched call only
     info = driver.run_agent("codebase", {"question": "q"}, "prompt", budget="1", quiet=True)
     ws = ws_mod.current()
     assert Path(seen["cwd"]) == repo.resolve() and seen["env"]["CRYSTAL_WORKSPACE"] == str(repo.resolve())

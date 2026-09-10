@@ -16,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 from crystal import hooks
 from crystal import state as state_mod
 from crystal import workspace as ws_mod
-from crystal.app import dossier
+from crystal.app import dossier, routes_record
 from crystal.flow.lifecycle import describe, get_lifecycle
 from crystal.flow.runner import FlowRunner, list_flows, load_flow
 from crystal.mcp_client import ServerPool
@@ -43,6 +43,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="mcp_explorer", lifespan=lifespan)
+app.include_router(routes_record.router)      # /record: launch Claude Code from the UI, recorded (costs money; confirmed)
 
 
 def _workspace() -> ws_mod.Workspace:

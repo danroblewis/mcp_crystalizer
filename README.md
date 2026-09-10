@@ -78,6 +78,20 @@ calls an LLM.
    flow first through the built-in `flows` MCP server and explore only for what it lacked; `repair` does the same for
    each queued complaint. Each produces `<flow>.v<N>.yaml`, never overwriting anything.
 
+## Recording from the UI
+
+The **Record** page (`/record`) is `mcp-explorer record` without the terminal: type a question, pick a trigger name
+(the default `prompt` groups plain questions; a known trigger such as `codebase` wraps the question in its prompt
+template), cap the budget in USD (default 2, passed to Claude Code as `--max-budget-usd`), optionally name a model,
+and tick the box that says it launches Claude Code and costs money. Nothing starts without the box, without
+`claude` on PATH (the page says how to install it), or while another run is in progress in the workspace (one at a
+time, a lock file in the state dir). The launch runs in the background and the job page follows the trace the
+recording hook writes: calls so far, elapsed time, then the cost, turns and the agent's final message, a link to the
+session's dossier under `/traces`, and a button to **induce a flow from this session**, which compiles it together
+with every earlier session of the same trigger into `<trigger>.v<N>.yaml` (a draft, no LLM) and links to the flow.
+The page updates itself with a few lines of JavaScript and works without it (refresh). Every job is persisted as
+`records/<job>.json` in the state dir, so the history, with cost per run, survives a server restart.
+
 ## mcp.json
 
 The servers a workspace sees are the `mcpServers` format Claude Code, Claude Desktop and Cursor read, layered:
@@ -109,6 +123,7 @@ $MCP_EXPLORER_HOME/                     default ~/.mcp-explorer
     catalog.yaml                         the entity catalog (services, teams, channels, people) the extractors use
     lifecycle.sqlite                     promotion state and counters
     feedback.jsonl                       the "this didn't help" queue
+    records/*.json                       Claude Code runs launched from the UI's /record page (status, cost, session)
 ```
 
 Workspaces are isolated: the UI, CLI and `flows` server for one directory never show another's flows, runs or
