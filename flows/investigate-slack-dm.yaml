@@ -209,3 +209,66 @@ steps:
       assignee:  { from: fields.assignee.displayName }
       created:   { from: fields.created }
       error_sig: { from: fields.description, using: regex, pattern: '^Error:\s*(.+)$' }
+
+# Flow card (catalog + top of the dossier; expected_outputs are the run's acceptance criteria). Hand-written.
+card:
+  use_case: >-
+    A colleague DM'd you something vague ("is payments healthy? a customer says card charges are hanging", "hey, are
+    you on PAY-101?") and you want to answer with facts: the incident thread it is about, the ticket, the runbook,
+    the code and its owners, the error rate in the hours before the DM and the logs behind any trace id anyone pasted.
+  inputs_explained:
+    text: >-
+      The DM text as written. The flow finds the message in Slack by searching for it (that yields the sender, the DM
+      channel and the time, which anchors the windows: -6h..+2h); a paraphrase will not be found. A ticket key, an
+      error class or a service alias in the text ("checkout", "warehouse sync") is what the rest keys off.
+  expected_outputs:
+    - name: dm
+      steps: [dm, history]
+      description: >-
+        The DM itself (sender, time, channel) and the rest of that conversation, with whatever they name: a ticket
+        key, an error class, a service resolved through the catalog's aliases, trace ids and pods.
+      required: true
+    - name: incident discussion
+      steps: [incidents, thread]
+      description: >-
+        The incident thread the DM is about, found by ticket key first, then by error class or service in the
+        service's incident channel around the DM's time, then wider; and its replies (service, error signature, keys,
+        trace ids, shas, people).
+      required: true
+    - name: runbook
+      steps: [confluence, runbook]
+      description: The service's runbook and its Remediation line.
+      required: false
+    - name: code
+      steps: [code, owners]
+      description: The source lines that raise or log the error class, and the CODEOWNERS team.
+      required: false
+    - name: metrics
+      steps: [metrics]
+      description: The service's 5xx rate from six hours before the DM to two hours after.
+      required: false
+    - name: logs
+      steps: [logs, logs_by_error]
+      description: >-
+        Log lines per trace id (from the DM, its conversation, the search hits and the thread; the first 6), then
+        every line with the error on the service in the window.
+      required: false
+    - name: ticket
+      steps: [issues, issue]
+      description: >-
+        The Jira ticket named anywhere in the DM, its conversation or the thread; when nobody named one, the newest
+        incident ticket on the service. Summary, status, assignee, error signature.
+      required: false
+  not_covered:
+    - A DM naming neither a ticket, an error class nor a known service alias stops at the DM; nothing else has a query to run.
+    - Whether it is still happening; the windows end two hours after the DM (the real agent ran two "now" checks).
+    - The PagerDuty incident and the commits before the incident; run investigate-jira-ticket on the ticket this flow finds.
+    - Recurrence on the same service.
+    - A DM about "today" that is really about last week; the window is anchored on the DM's time, not on the incident.
+  example:
+    inputs: { text: "hey, are you on PAY-101? support is getting pinged about it" }
+    found: >-
+      erin's DM and the seven messages after it (one names PAY-101 and a payments-api pod), the PAY-101 thread in
+      #incidents, the payments-api runbook, the handler and @payments as owner, the 5xx rate, 16 log lines for two
+      trace ids plus 24 with the error, and the ticket (Done, assigned to alice).
+  authored_by: human

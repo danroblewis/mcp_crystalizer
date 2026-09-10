@@ -171,3 +171,68 @@ steps:
       max_count: 10
     extract:
       shas: { from: "commits[*].sha", all: true }
+
+# Flow card (catalog + top of the dossier; expected_outputs are the run's acceptance criteria). Hand-written.
+card:
+  use_case: >-
+    Someone added you to a Slack thread (in #incidents or a team's alerts channel) and you want to know what it is
+    about without reading eight messages and five tools: the ticket it names (or the one matching its error class),
+    the runbook, the code, the error rate around the thread, the logs behind every trace id pasted, the PagerDuty
+    incident and what shipped just before.
+  inputs_explained:
+    channel_id: The channel the thread is in, e.g. C542575C5 (#incidents). The flow reads the thread; it does not search for it.
+    thread_ts: >-
+      The ts of the thread's parent message, e.g. "1786015740.000000". The messages' times anchor the windows
+      (-1h..+6h for logs, metrics and PagerDuty; -4d..+1d for commits).
+  expected_outputs:
+    - name: thread
+      steps: [thread]
+      description: >-
+        The thread's messages with what they name: the service (resolved through the catalog's aliases), the error
+        class and signature, Jira keys, trace ids, pods, short shas, and the people talking.
+      required: true
+    - name: ticket
+      steps: [issues, issue]
+      description: >-
+        The Jira ticket the thread names; when it names none, the newest ticket whose text carries the error class.
+        Brings the ticket's own error signature and trace ids into the log searches.
+      required: false
+    - name: runbook
+      steps: [confluence, runbook]
+      description: The service's runbook in the team's Confluence space (by error class, then by title) and its Remediation line.
+      required: false
+    - name: code
+      steps: [code]
+      description: The source lines that raise or log the error class.
+      required: false
+    - name: metrics
+      steps: [metrics]
+      description: The service's 5xx rate from an hour before the thread started to six hours after.
+      required: false
+    - name: logs
+      steps: [logs, logs_by_error]
+      description: >-
+        Log lines per trace id from the thread or the ticket (the first 6) with their pods, then every line with the
+        error signature or class on the service in the window.
+      required: true
+    - name: pagerduty incident
+      steps: [pagerduty]
+      description: The PagerDuty incident on the service in the window (needs a service named in the thread).
+      required: false
+    - name: commits
+      steps: [commits]
+      description: Commits touching the service's directory in the four days before the thread (needs a service named in the thread).
+      required: false
+  not_covered:
+    - The ticket's comments, and the diff of a commit the thread names (the real agent git_show'ed it at once); the sha is extracted but not shown.
+    - Recurrence; no search for earlier threads or tickets with the same error class (the real agent did both).
+    - Threads this one links to by permalink (a team-channel escalation, a cascade's downstream threads) are not followed.
+    - The owning team; there is no CODEOWNERS lookup, PagerDuty's team field is the only owner signal.
+    - A thread naming neither a service nor an error class yields the thread only; metrics, PagerDuty and commits need a service.
+  example:
+    inputs: { channel_id: C542575C5, thread_ts: "1787837940.000006" }
+    found: >-
+      SUP-105's five-message thread on inventory-sync (UpstreamSchemaDrift), the ticket, the inventory-sync runbook
+      and its remediation, the code in services/inventory_sync/handler.py, the 5xx spike, 16 log lines for the two
+      trace ids plus 24 with the error, the PagerDuty incident and the one commit to the service just before.
+  authored_by: human

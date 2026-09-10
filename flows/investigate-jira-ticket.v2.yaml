@@ -266,6 +266,29 @@ steps:
     incident_id: '{{ pagerduty.pd_incident_ids | first }}'
   optional: true
   seen_in: 2/17 sessions
+- id: repeats
+  title: earlier tickets with the same error on this service
+  tool: jira.jira_search
+  when: '{{ issue.error_class and issue.service }}'
+  hits: issues
+  args:
+    jql: text ~ "{{ issue.error_class }}" AND component = {{ issue.service }} AND key != {{ inputs.key }} ORDER BY updated DESC
+    limit: 5
+  extract:
+    jira_keys:
+      from: issues[*].key
+      all: true
+    statuses:
+      from: issues[*].fields.status.name
+      all: true
+    summaries:
+      from: issues[*].fields.summary
+      all: true
+    dates:
+      from: issues[*].fields.created
+      all: true
+  optional: true
+  hand_added: repeat check (not in any traced session)
 tests:
 - inputs:
     key: SUP-105
@@ -480,3 +503,104 @@ authored:
   cost_usd: 0.49841824999999995
   ran_flows:
   - investigate-jira-ticket
+
+card:
+  use_case: 'investigate jira ticket.v2. Run it on a jira issue (key) to gather: ticket, ticket comments, slack discussion,
+    pagerduty services, thread, code, owning team, runbook, metrics, logs, commits, suspect commit, pagerduty incident, repeats.'
+  inputs_explained:
+    key: key (jira_key), e.g. SUP-105
+  expected_outputs:
+  - name: ticket
+    steps:
+    - issue
+    description: the Jira ticket (jira.jira_get_issue); extracts error_class, service, trace_id, error, window, window_4d_1d,
+      slack_channel, iso_ts, window_7d_r1d
+    required: true
+  - name: ticket comments
+    steps:
+    - jira_get_issue_comments
+    description: the comments on the ticket (jira.jira_get_issue_comments); extracts sha_shorts
+    required: false
+  - name: slack discussion
+    steps:
+    - slack
+    description: Slack messages found by search (slack.conversations_search_messages, 4-rung ladder on search_query); extracts
+      slack_channel_ids, slack_ts_list
+    required: true
+  - name: pagerduty services
+    steps:
+    - list_services
+    description: the PagerDuty service list (pagerduty.list_services)
+    required: false
+  - name: thread
+    steps:
+    - thread
+    description: the replies of the Slack thread (slack.conversations_replies); extracts sha_shorts, trace_ids
+    required: true
+  - name: code
+    steps:
+    - code
+    - source
+    description: source lines that raise or log the error (code.grep); extracts files; the source file that handles the request
+      (code.read_file)
+    required: true
+  - name: owning team
+    steps:
+    - owners
+    description: CODEOWNERS entries for the matching files (code.codeowners); extracts path
+    required: true
+  - name: runbook
+    steps:
+    - confluence
+    - runbook
+    description: Confluence pages found by search (confluence.confluence_search, 2-rung ladder on query); extracts ids; the
+      runbook page body (confluence.confluence_get_page)
+    required: true
+  - name: metrics
+    steps:
+    - metrics
+    description: a metric series over the window (chronosphere.query_prometheus_range, 2-rung ladder on query)
+    required: true
+  - name: logs
+    steps:
+    - logs_2
+    - logs
+    - logs_3
+    description: log lines (logz.search_logs, 2-rung ladder on query); extracts trace_ids; log lines (logz.search_logs, per
+      item of `([issue.trace_id] + logs_2.trace_ids + thread.trace_ids) | unique | list`, first 4); log lines (logz.search_logs);
+      extracts trace_ids
+    required: true
+  - name: commits
+    steps:
+    - commits_2
+    - commits
+    description: commits touching the service just before (git.git_log); commits touching the service just before (git.git_log)
+    required: true
+  - name: suspect commit
+    steps:
+    - commit
+    - commit_2
+    description: the diff of a commit named in the evidence (git.git_show, 2-rung ladder on sha); the diff of a commit named
+      in the evidence (git.git_show)
+    required: true
+  - name: pagerduty incident
+    steps:
+    - pagerduty
+    - pagerduty_incident
+    description: PagerDuty incidents on the service in the window (pagerduty.list_incidents); extracts pd_incident_ids; the
+      PagerDuty incident (pagerduty.get_incident)
+    required: true
+  - name: repeats
+    steps:
+    - repeats
+    description: Jira tickets found by search (jira.jira_search); only when `{{ issue.error_class and issue.service }}`; extracts
+      jira_keys, statuses, summaries, dates
+    required: false
+  not_covered:
+  - logs looks at the first 4 items of its fan-out only
+  example:
+    inputs:
+      key: SUP-105
+    found: 'Every traced run had hits on: code, commit, commits, confluence, issue, logs, logs_2, metrics, owners, pagerduty,
+      runbook, slack, thread.'
+  authored_by: skeleton

@@ -28,8 +28,9 @@ from pathlib import Path
 import yaml
 
 from crystal import PROJECT_ROOT
+from crystal.flow.cards import card_prompt, merge_card, parse_card, skeleton_card
 from crystal.flow.runner import FLOW_DIR, RUN_DIR, list_flows, load_flow
-from crystal.induce.inducer import dump_flow, induce
+from crystal.induce.inducer import STEP_NAMES, dump_flow, induce
 from crystal.trace.driver import PROMPTS, run_agent
 from crystal.trace.record import TRACE_DIR
 from crystal.trace.store import Session, load_session, load_sessions
@@ -93,8 +94,21 @@ def author_prompt(trigger: str, inputs: dict, flows: list[dict]) -> str:
     else:
         lines += [f"No crystallized flow exists yet for trigger {trigger}. Use the raw MCP tools ({RAW_SERVERS}) directly.",
                   "Finish with a short summary of what you found and which calls produced it."]
-    lines += ["Use the tools directly; do not ask questions."]
+    lines += ["Use the tools directly; do not ask questions.", "", card_request(flows[0] if flows else _stub_flow(trigger, inputs))]
     return "\n".join(lines)
+
+
+def _stub_flow(trigger: str, inputs: dict) -> dict:
+    """What the induced flow will look like when no flow exists yet: inputs from the command, no steps."""
+    return {"name": f"induced-{trigger.replace('_', '-')}", "title": f"induced {trigger.replace('_', ' ')}",
+            "trigger": {"type": trigger}, "inputs": {k: {"type": "string", "required": True, "example": v} for k, v in inputs.items()}, "steps": []}
+
+
+def card_request(flow: dict) -> str:
+    """The flow-card instructions for the end of the agent's message, with the skeleton of `flow` as the draft and the
+    step names the inducer will give hand-added calls."""
+    names = ", ".join(f"{tool} -> {sid}" for tool, sid in STEP_NAMES.items())
+    return card_prompt(flow, skeleton_card(flow)) + f"\nThe inducer names steps after their tool ({names}; other tools keep their tool name)."
 
 
 def compact_evidence(record: dict | None, max_chars: int = 3500) -> str:
@@ -134,6 +148,7 @@ def repair_prompt(complaint: dict, flow: dict | None, flow_yaml: str, record: di
         "Step 3: finish with a short summary: what was missing, which tool calls (with their arguments) produce it, and how the "
         "values in those arguments derive from earlier results.",
         "Use the tools directly; do not ask questions.",
+        "", card_request(flow or _stub_flow((flow or {}).get("trigger", {}).get("type") or "unknown", inputs)),
     ])
 
 
@@ -262,9 +277,12 @@ def next_version(base: str, flow_dir: Path | None = None) -> tuple[Path, int]:
 
 
 def induce_version(trigger: str, base: str, new_session: Session, trace_dir: Path | None = None, flow_dir: Path | None = None,
-                   catalog: dict | None = None, note: dict | None = None, run_dir: Path | None = None) -> dict:
+                   catalog: dict | None = None, note: dict | None = None, run_dir: Path | None = None,
+                   agent_text: str | None = None) -> dict:
     """Induce <base>.v<N> from the new session plus every existing session of the trigger (earlier agent sessions
-    get their run_flow calls expanded too). Writes the file."""
+    get their run_flow calls expanded too). Writes the file. `agent_text` is the agent's final message: the flow card
+    it ends with (a fenced yaml block) is merged over the inducer's skeleton card, its step ids checked against the
+    new flow; without a parseable card the skeleton stays, with a warning in the report."""
     others = [expand_flow_calls(s, run_dir, trace_dir)[0] for s in load_sessions(trace_dir, trigger=trigger) if s.session_id != new_session.session_id]
     sessions = [s for s in others if s.calls] + [new_session]
     out, n = next_version(base, flow_dir)
@@ -273,6 +291,11 @@ def induce_version(trigger: str, base: str, new_session: Session, trace_dir: Pat
     flow["base"] = base
     flow["status"] = "draft"
     flow["authored"] = {"at": datetime.now(timezone.utc).isoformat(), "session": new_session.session_id, **(note or {})}
+    if agent_text is not None:
+        flow["card"], warnings = merge_card(flow, parse_card(agent_text), flow.get("card"))
+        report["card"] = {"authored_by": flow["card"]["authored_by"], "warnings": warnings}
+        for w in warnings:
+            print(f"warning: card for {flow['name']}: {w}", file=sys.stderr)
     # steps that only this session contributed are the diff the agent added
     added = [s["id"] for s in flow["steps"] if s.get("optional") and s.get("seen_in", "").startswith("1/")]
     out.write_text(dump_flow(flow))
@@ -301,6 +324,8 @@ def print_induction(res: dict) -> None:
         print(f"  tests: {r['tests']['cases']} cases; min_hits on {', '.join(r['tests']['min_hits'])}")
     if r.get("forEach"):
         print("  forEach:", json.dumps(r["forEach"]))
+    if r.get("card"):
+        print(f"  card: authored_by {r['card']['authored_by']}" + (f"; warnings: {'; '.join(r['card']['warnings'])}" if r["card"]["warnings"] else ""))
 
 
 # ---------------------------------------------------------------- feedback queue
@@ -385,7 +410,8 @@ def author(trigger: str, inputs: dict, budget="3", model=None, name: str | None 
         res["error"] = _no_calls_error(info)
         return res
     ind = induce_version(trigger, base, expanded, trace_dir, flow_dir, catalog, run_dir=run_dir,
-                         note={"command": "author", "inputs": inputs, "cost_usd": info.get("cost_usd"), "ran_flows": ran})
+                         note={"command": "author", "inputs": inputs, "cost_usd": info.get("cost_usd"), "ran_flows": ran},
+                         agent_text=info.get("result") or "")
     res.update(ind)
     if test:
         res["test"] = _test_new(ind["flow"])
@@ -419,7 +445,8 @@ def repair(selector: str, budget="3", model=None, driver_fn=run_agent, feedback_
         res = {"complaint": c, "agent": info, "ran_flows": ran}
         if expanded.calls:
             ind = induce_version(trigger, base_name(fname or f"induced-{trigger}"), expanded, trace_dir, flow_dir, catalog, run_dir=run_dir,
-                                 note={"command": "repair", "complaint_run": c["run_id"], "complaint": c.get("text"), "cost_usd": info.get("cost_usd")})
+                                 note={"command": "repair", "complaint_run": c["run_id"], "complaint": c.get("text"), "cost_usd": info.get("cost_usd")},
+                                 agent_text=info.get("result") or "")
             res.update(ind)
             if test:
                 res["test"] = _test_new(ind["flow"])

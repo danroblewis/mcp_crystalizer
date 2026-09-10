@@ -39,8 +39,8 @@ uv run pytest -q
 ```
 
 Commands (`uv run python -m crystal.cli <command>`): `flows`, `run`, `induce`, `test`, `status`, `author`, `repair`,
-`tools`, `mcp-config`. Only `author`, `repair` and `python -m crystal.trace.driver` launch Claude Code; nothing else
-ever calls an LLM.
+`card`, `tools`, `mcp-config`. Only `author`, `repair` and `python -m crystal.trace.driver` launch Claude Code; nothing
+else ever calls an LLM.
 
 ## Crystallization loop
 
@@ -155,6 +155,38 @@ use 12:00Z instead of created−1h), `position` (a span program learned from tra
 start and end positions given as the k-th place where a left-context and a right-context token regex meet, e.g.
 `{start: {left: ['lit:on', WS], right: [], k: 1}, end: {left: [], right: [WS, 'lit:at'], k: 1}}`). `all: true`
 returns every match.
+
+## Flow cards
+
+Every flow may carry a top-level `card:` (`crystal/flow/cards.py`): the one-screen description the catalog and the top
+of the dossier show, and the acceptance criteria a run is judged against.
+
+```yaml
+card:
+  use_case: when a person reaches for this flow (1-2 sentences)
+  inputs_explained: { key: "The Jira issue key, e.g. PAY-101 ..." }
+  expected_outputs:                 # ordered, one per evidence group; step ids must exist in the flow
+    - { name: logs, steps: [logs, logs_by_error], description: "...", required: true }
+  not_covered: ["Jira comments and issue links", "..."]
+  example: { inputs: { key: PAY-101 }, found: "one sentence of what a real run found" }
+  authored_by: skeleton | agent | human
+```
+
+`skeleton_card(flow, report)` drafts one deterministically from the steps' tools, extracts and fan-outs (the inducer
+attaches it to every draft, `required` from `required:` steps and the steps that had hits in every traced session);
+`crystal author`/`repair` ask the agent to end its message with the card as a fenced yaml block and merge it over the
+skeleton (`authored_by: agent`; unknown step ids are dropped with a warning, no card at all keeps the skeleton); the
+three candidate flows carry hand-written cards (`authored_by: human`). `coverage(flow, run)` turns `expected_outputs`
+into "found N of M" (an output is found when any of its steps has hits; fan-outs sum their items) and names the missing
+and the required-missing ones; `headline(flow, run)` derives the dossier facts (what, when, service, team owners, Jira
+and PagerDuty status, commits just before and the suspect sha, repeat tickets, people, trace ids, pods) from the run's
+extracts and typed results only. `investigate-jira-ticket` ends with a `repeats` step (same error class and component,
+other keys) that feeds `repeat_of`.
+
+```bash
+uv run python -m crystal.cli card investigate-jira-ticket          # print the card (a skeleton when the YAML has none)
+uv run python -m crystal.cli card induced-jira-ticket --write      # append the skeleton to the YAML if it has no card
+```
 
 ## Pointing at real servers
 
